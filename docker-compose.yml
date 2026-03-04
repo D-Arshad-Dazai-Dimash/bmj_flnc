@@ -1,0 +1,126 @@
+# ============================================================
+# Barnamaj — High-Load Freelance Platform
+# Docker Compose: db (PostgreSQL 16) + pgAdmin + api (ASP.NET Core 8)
+# ============================================================
+
+networks:
+  barnamaj-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+services:
+
+  # ──────────────────────────────────────────
+  # db — PostgreSQL 16
+  # Настройки оптимизированы под высокую нагрузку
+  # ──────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: barnamaj-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=768MB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
+      - "-c"
+      - "log_min_duration_statement=500"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barnamaj_user -d barnamaj_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - barnamaj-net
+
+  # ──────────────────────────────────────────
+  # pgadmin — визуальное управление БД
+  # Доступен на http://localhost:5050
+  # ──────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: barnamaj-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - barnamaj-net
+
+  # ──────────────────────────────────────────
+  # api — Barnamaj Backend (ASP.NET Core 8)
+  # Доступен на http://localhost:8080
+  # ──────────────────────────────────────────
+  api:
+    build:
+      context: ./src/Barnamaj.API
+      dockerfile: Dockerfile
+    image: barnamaj-api:latest
+    container_name: barnamaj-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      # Хост — имя сервиса `db` внутри Docker-сети
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Maximum Pool Size=100;Minimum Pool Size=5;Connection Idle Lifetime=300;
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Jwt__Issuer=barnamaj-api
+      - Jwt__Audience=barnamaj-clients
+    ports:
+      - "8080:8080"
+    volumes:
+      # Папка логов на хосте
+      - ./logs:/app/logs
+      # Статические файлы: монтируем wwwroot из C# проекта (логотип, index.html)
+      - ./src/Barnamaj.API/wwwroot:/app/wwwroot:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - barnamaj-net

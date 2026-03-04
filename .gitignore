@@ -1,0 +1,59 @@
+# ============================================================
+# .gitignore — Barnamaj Project
+# ============================================================
+
+# Build outputs
+bin/
+obj/
+out/
+
+# .NET
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+
+# Logs
+logs/
+*.log
+
+# Секреты — НИКОГДА не коммитить!
+*.env
+.env
+.env.local
+.env.production
+src/Barnamaj.API/appsettings.Production.json
+
+# Docker volumes (при локальной разработке)
+postgres_data/
+pgadmin_data/
+
+# VS Code
+.vscode/
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Rider / ReSharper
+.idea/
+
+# macOS
+.DS_Store
+
+# Thumbnails
+Thumbs.db
+
+# Node.js / Next.js
+node_modules/
+.next/
+.cache/
+*.tsbuildinfo
+playwright-report/
+test-results/
+results.json
+
+# Claude memory (local AI assistant state)
+.claude/
+
+# Windows artifacts
+nul

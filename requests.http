@@ -1,0 +1,339 @@
+### ============================================================
+### Barnamaj API — REST Client requests
+### Требует расширение: REST Client (humao.rest-client)
+###
+### Как использовать:
+###   1. Нажмите «Send Request» над нужным запросом
+###   2. Сначала выполните «Login» и скопируйте accessToken в @token
+### ============================================================
+
+@baseUrl    = http://localhost:5001
+@contentType = application/json
+
+### Вставьте токен после выполнения Login ▼
+@token = REPLACE_WITH_ACCESS_TOKEN
+
+
+# ──────────────────────────────────────────────────────────────
+# HEALTH
+# ──────────────────────────────────────────────────────────────
+
+### Health — liveness
+GET {{baseUrl}}/health/live
+
+###
+
+### Health — readiness (проверяет PostgreSQL)
+GET {{baseUrl}}/health/ready
+
+###
+
+### Логотип (статический файл)
+GET {{baseUrl}}/static/logo.png
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# AUTH — Регистрация и вход
+# ──────────────────────────────────────────────────────────────
+
+### Register — новый пользователь (Individual)
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email":       "john@barnamaj.dev",
+  "password":    "Secret123!",
+  "name":        "John Doe",
+  "accountType": 1,
+  "bio":         "Full-stack developer"
+}
+
+###
+
+### Login — получить JWT токен
+# После выполнения скопируйте accessToken → @token выше
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email":    "bob@barnamaj.dev",
+  "password": "Test1234!"
+}
+
+###
+
+### Me — информация о текущем пользователе (требует Bearer токен)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# PROFILES — Кланы и Компании
+# ──────────────────────────────────────────────────────────────
+
+### Создание клана (accountType: 3 = Clan)
+# Текущий пользователь автоматически становится Owner
+POST {{baseUrl}}/api/profiles/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "name":        "BarnamajDevTeam",
+  "bio":         "Команда разработчиков платформы",
+  "accountType": 3
+}
+
+###
+
+### Создание компании (accountType: 2 = Company)
+POST {{baseUrl}}/api/profiles/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "name":        "Acme Corp",
+  "bio":         "Ведущая IT-компания",
+  "logoUrl":     "https://example.com/logo.png",
+  "accountType": 2
+}
+
+###
+
+### Мои команды — список кланов/компаний пользователя
+# Возвращает Active + Pending членства текущего пользователя
+GET {{baseUrl}}/api/profiles/my-teams
+Authorization: Bearer {{token}}
+
+###
+
+### Приглашение пользователя в клан
+# Замените {profileId} на реальный ID из ответа «Создание клана»
+# Только Owner может отправлять приглашения
+# @name = profileId
+@profileId = REPLACE_WITH_PROFILE_ID
+
+POST {{baseUrl}}/api/profiles/{{profileId}}/invite
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "email": "alice@barnamaj.dev"
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# VALIDATION ERRORS — проверка правил валидации
+# ──────────────────────────────────────────────────────────────
+
+### Регистрация с невалидным паролем (нет цифры → 400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email":       "bad@barnamaj.dev",
+  "password":    "onlylowercase",
+  "name":        "Bad User",
+  "accountType": 1
+}
+
+###
+
+### Создание профиля с accountType=1 Individual (→ 400)
+POST {{baseUrl}}/api/profiles/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "name":        "ForbiddenIndividual",
+  "accountType": 1
+}
+
+###
+
+### Приглашение без авторизации (→ 401)
+POST {{baseUrl}}/api/profiles/{{profileId}}/invite
+Content-Type: {{contentType}}
+
+{
+  "email": "alice@barnamaj.dev"
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────
+# PROJECTS — Проекты / Технические задания
+# ──────────────────────────────────────────────────────────────
+
+### Создание ТЗ от имени компании
+# clientProfileId — замените на ID профиля Company/Clan, созданного через /api/profiles/create
+# Текущий пользователь должен быть Owner этого профиля
+@clientProfileId = REPLACE_WITH_CLIENT_PROFILE_ID
+
+POST {{baseUrl}}/api/projects
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "title":           "Разработка REST API для маркетплейса",
+  "description":     "Нужен REST API с JWT авторизацией и пагинацией. Стек ASP.NET Core 8, PostgreSQL.",
+  "clientProfileId": "{{clientProfileId}}",
+  "budget":          5000.00,
+  "deadline":        "2026-12-31T00:00:00Z"
+}
+
+###
+
+### Создание ТЗ без бюджета (договорная цена)
+POST {{baseUrl}}/api/projects
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "title":           "Аудит безопасности веб-приложения",
+  "description":     "Пентест и penetration testing для e-commerce платформы.",
+  "clientProfileId": "{{clientProfileId}}",
+  "deadline":        "2026-09-01T00:00:00Z"
+}
+
+###
+
+### Публичная лента открытых проектов (без авторизации)
+GET {{baseUrl}}/api/projects/feed
+
+###
+
+### Публичная лента — 2-я страница по 5 проектов
+GET {{baseUrl}}/api/projects/feed?page=2&pageSize=5
+
+###
+
+### Подача заявки на проект (от имени клана)
+# projectId   — ID проекта из ответа на создание ТЗ
+# executorProfileId — ID профиля клана/исполнителя
+@targetProjectId = REPLACE_WITH_PROJECT_ID
+@executorProfileId = REPLACE_WITH_EXECUTOR_PROFILE_ID
+
+POST {{baseUrl}}/api/projects/{{targetProjectId}}/apply
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "applicantProfileId": "{{executorProfileId}}",
+  "coverLetter":        "Наша команда специализируется на бэкенд-разработке. Имеем опыт в подобных проектах.",
+  "proposedBudget":     4500.00
+}
+
+###
+
+### Подача заявки без авторизации (→ 401)
+POST {{baseUrl}}/api/projects/{{targetProjectId}}/apply
+Content-Type: {{contentType}}
+
+{
+  "applicantProfileId": "{{executorProfileId}}"
+}
+
+###
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ASSESSMENT — Тестирование и верификация навыков
+# ──────────────────────────────────────────────────────────────────────────────
+# Seed IDs (из seed_skills.sql):
+#   C#         = 11111111-0000-0000-0000-000000000001
+#   UI/UX      = 11111111-0000-0000-0000-000000000003
+# Порог прохождения: 80%
+
+@skillCsharp  = 11111111-0000-0000-0000-000000000001
+@skillUiux    = 11111111-0000-0000-0000-000000000003
+
+### Список доступных навыков (публично)
+GET {{baseUrl}}/api/assessment/skills
+
+###
+
+### Получить 10 случайных вопросов по C# (публично, без правильных ответов)
+GET {{baseUrl}}/api/assessment/questions/{{skillCsharp}}
+
+###
+
+### Получить 5 вопросов по C# (параметр count)
+GET {{baseUrl}}/api/assessment/questions/{{skillCsharp}}?count=5
+
+###
+
+### Получить вопросы по UI/UX дизайну
+GET {{baseUrl}}/api/assessment/questions/{{skillUiux}}
+
+###
+
+### Сдать тест по C# — все правильные ответы (→ Passed, badge awarded)
+# Перед отправкой замените profileId на ваш profileId из /api/auth/me
+# Замените questionId на реальные ID из GET /api/assessment/questions/...
+@testProfileId = REPLACE_WITH_YOUR_PROFILE_ID
+
+POST {{baseUrl}}/api/assessment/submit
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "profileId": "{{testProfileId}}",
+  "skillId":   "{{skillCsharp}}",
+  "answers": [
+    { "questionId": "22222222-0001-0000-0000-000000000001", "selectedIndex": 0 },
+    { "questionId": "22222222-0001-0000-0000-000000000002", "selectedIndex": 0 },
+    { "questionId": "22222222-0001-0000-0000-000000000003", "selectedIndex": 2 },
+    { "questionId": "22222222-0001-0000-0000-000000000004", "selectedIndex": 0 },
+    { "questionId": "22222222-0001-0000-0000-000000000005", "selectedIndex": 0 }
+  ]
+}
+
+###
+
+### Сдать тест с провальными ответами (→ Failed, badge NOT awarded)
+POST {{baseUrl}}/api/assessment/submit
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "profileId": "{{testProfileId}}",
+  "skillId":   "{{skillCsharp}}",
+  "answers": [
+    { "questionId": "22222222-0001-0000-0000-000000000001", "selectedIndex": 3 },
+    { "questionId": "22222222-0001-0000-0000-000000000002", "selectedIndex": 2 },
+    { "questionId": "22222222-0001-0000-0000-000000000003", "selectedIndex": 0 }
+  ]
+}
+
+###
+
+### Сдать тест без авторизации (→ 401)
+POST {{baseUrl}}/api/assessment/submit
+Content-Type: {{contentType}}
+
+{
+  "profileId": "{{testProfileId}}",
+  "skillId":   "{{skillCsharp}}",
+  "answers": [
+    { "questionId": "22222222-0001-0000-0000-000000000001", "selectedIndex": 0 }
+  ]
+}
+
+###
+
+### Посмотреть бейджи профиля (публично)
+GET {{baseUrl}}/api/assessment/badges/{{testProfileId}}
+
+###
+
+### Список навыков для несуществующего навыка (→ 404)
+GET {{baseUrl}}/api/assessment/questions/00000000-0000-0000-0000-000000000000
+
+###

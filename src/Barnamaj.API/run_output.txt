@@ -1,0 +1,74 @@
+﻿[03:13:53 WRN] Entity 'Profile' has a global query filter defined and is the required end of a relationship with the entity 'Membership'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information. {"EventId": {"Id": 10622, "Name": "Microsoft.EntityFrameworkCore.Model.Validation.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning"}, "SourceContext": "Microsoft.EntityFrameworkCore.Model.Validation"}
+[03:13:53 WRN] Entity 'Profile' has a global query filter defined and is the required end of a relationship with the entity 'Membership'. This may lead to unexpected results when the required entity is filtered out. Either configure the navigation as optional, or define matching query filters for both entities in the navigation. See https://go.microsoft.com/fwlink/?linkid=2131316 for more information.
+[03:13:53 INF] Executed DbCommand (68ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+) {"EventId": {"Id": 20101, "Name": "Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted"}, "SourceContext": "Microsoft.EntityFrameworkCore.Database.Command"}
+[03:13:53 INF] Executed DbCommand (68ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+[03:13:53 INF] Executed DbCommand (11ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT migration_id, product_version
+FROM "__EFMigrationsHistory"
+ORDER BY migration_id; {"EventId": {"Id": 20101, "Name": "Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted"}, "SourceContext": "Microsoft.EntityFrameworkCore.Database.Command"}
+[03:13:53 INF] Executed DbCommand (11ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT migration_id, product_version
+FROM "__EFMigrationsHistory"
+ORDER BY migration_id;
+[03:13:53 INF] Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+) {"EventId": {"Id": 20101, "Name": "Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted"}, "SourceContext": "Microsoft.EntityFrameworkCore.Database.Command"}
+[03:13:53 INF] Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+[03:13:53 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+) {"EventId": {"Id": 20101, "Name": "Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted"}, "SourceContext": "Microsoft.EntityFrameworkCore.Database.Command"}
+[03:13:53 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+[03:13:53 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT migration_id, product_version
+FROM "__EFMigrationsHistory"
+ORDER BY migration_id; {"EventId": {"Id": 20101, "Name": "Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted"}, "SourceContext": "Microsoft.EntityFrameworkCore.Database.Command"}
+[03:13:53 INF] Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT migration_id, product_version
+FROM "__EFMigrationsHistory"
+ORDER BY migration_id;
+[03:13:53 INF] Database migrations applied successfully {}
+[03:13:53 INF] Database migrations applied successfully
+[03:13:53 INF] Barnamaj API started on Development {}
+[03:13:53 INF] Barnamaj API started on Development
+[03:13:53 INF] User profile is available. Using 'C:\Users\User\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest. {"EventId": {"Id": 63, "Name": "UsingProfileAsKeyRepositoryWithDPAPI"}, "SourceContext": "Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager"}
+[03:13:53 INF] User profile is available. Using 'C:\Users\User\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+[03:13:54 INF] Now listening on: http://localhost:5000 {"EventId": {"Id": 14, "Name": "ListeningOnAddress"}, "SourceContext": "Microsoft.Hosting.Lifetime"}
+[03:13:54 INF] Now listening on: http://localhost:5000
+[03:13:54 INF] Application started. Press Ctrl+C to shut down. {"SourceContext": "Microsoft.Hosting.Lifetime"}
+[03:13:54 INF] Application started. Press Ctrl+C to shut down.
+[03:13:54 INF] Hosting environment: Development {"SourceContext": "Microsoft.Hosting.Lifetime"}
+[03:13:54 INF] Hosting environment: Development
+[03:13:54 INF] Content root path: C:\Users\User\Desktop\html code\BJ\src\Barnamaj.API {"SourceContext": "Microsoft.Hosting.Lifetime"}
+[03:13:54 INF] Content root path: C:\Users\User\Desktop\html code\BJ\src\Barnamaj.API
