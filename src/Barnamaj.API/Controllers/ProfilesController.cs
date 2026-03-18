@@ -48,6 +48,7 @@ public sealed class ProfilesController : ControllerBase
     /// <response code="200">Список профилей.</response>
     [HttpGet]
     [AllowAnonymous]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = new[] { "q" })]
     [ProducesResponseType(typeof(IReadOnlyList<ProfileSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Search(
         [FromQuery] string? q,

@@ -164,11 +164,126 @@ docker compose run -e "ConnectionStrings__DefaultConnection=..." api
 
 ---
 
+## Performance
+
+Оптимизация производительности выполнена — см. [docs/performance/README.md](docs/performance/README.md).
+
+**Бекенд:**
+- `[ResponseCache]` на всех публичных GET эндпоинтах (30s — 1ч)
+- MiniProfiler для мониторинга SQL запросов (Development)
+- ResponseCaching middleware
+- Serilog: лимит размера файлов 50MB
+
+**Фронтенд:**
+- Image cache TTL: 1 год (31536000s)
+- Bundle analyzer: `npm run analyze`
+
+---
+
+## Auth & Stats
+
+- Email уникальность: индекс `ix_users_email` + проверка в сервисе
+- `GET /api/stats` — публичные счётчики с кэшем 60s
+- Подробнее: [docs/auth/README.md](docs/auth/README.md)
+
+---
+
+## ИИ-аттестация
+
+Модуль аттестации разработчиков через диалог с Claude (Anthropic).
+Подробнее: [docs/attestation/README.md](docs/attestation/README.md).
+
+- Специализации: frontend, backend, fullstack, mobile
+- Уровни: junior, middle, senior
+- 10 вопросов от простых к сложным
+- Повторная аттестация через 30 дней
+- Голосовой ввод/вывод (Web Speech API)
+
+---
+
+## Заказы: фильтры, избранное, предложения
+
+Расширенная лента заказов с фильтрацией и предложениями.
+Подробнее: [docs/orders/README.md](docs/orders/README.md).
+
+- Фильтры: тип, бюджет (мин/макс), дата публикации
+- Избранное с оптимистичным обновлением
+- Детальные предложения (цена, срок, cover letter)
+- Скрытие персональных данных заказчика
+
+---
+
+## Объявления
+
+Карусель объявлений на лендинге с автопрокруткой.
+Подробнее: [docs/announcements/README.md](docs/announcements/README.md).
+
+- Автопрокрутка 5 сек, навигация стрелками
+- RLS: только активные и не истёкшие
+- 3 seed-записи в миграции
+
+---
+
+## Тарифные пакеты
+
+3 пакета с автоматическим расчётом комиссии.
+Подробнее: [docs/pricing/README.md](docs/pricing/README.md).
+
+- Пакет 1: до 100К ₸ — 600 ₸ фиксированная
+- Пакет 2: 100К–500К ₸ — 1%
+- Пакет 3: от 500К ₸ — 10% включена + технадзор
+
+---
+
+## Платёжная система
+
+Escrow с абстракцией шлюза и HMAC-верификацией.
+Подробнее: [docs/payment/README.md](docs/payment/README.md).
+
+- MockPaymentGateway для разработки
+- HMAC-SHA256 webhook верификация
+- Автоматическое распределение выплат (90/3/7% для пакета 3)
+
+---
+
+## Административная панель
+
+Полная панель управления платформой.
+Подробнее: [docs/admin/README.md](docs/admin/README.md).
+
+- 7 разделов: обзор, объявления, пользователи, заказы, чаты, фичи, технадзор
+- Drag & drop сортировка объявлений
+- Автовыделение паттернов обхода в чатах
+- Feature flags (ai_manager toggle)
+
+---
+
+## Технический надзор
+
+Роль технадзорщика для заказов пакета 3.
+Подробнее: [docs/supervision/README.md](docs/supervision/README.md).
+
+- Заявка на роль: только senior fullstack
+- Чеклист проверки + отчёт
+- Распределение 90/3/7%
+
+---
+
+## ИИ Менеджер ТЗ (Gemini)
+
+Виджет-помощник для составления ТЗ через диалог с Gemini AI.
+Подробнее: [docs/ai-manager/README.md](docs/ai-manager/README.md).
+
+- Плавающий виджет в дашборде (drag & drop)
+- Уточняющие вопросы → технические концепты → генерация ТЗ
+- Копирование и сохранение ТЗ как файл
+- Feature flag: включается администратором через `/admin/features`
+
+---
+
 ## Следующие шаги
 
-- [ ] Добавить модели `User`, `FreelancerProfile`, `Job`, `Proposal`
-- [ ] Настроить JWT авторизацию (`ServiceExtensions.cs` готов)
-- [ ] Добавить Redis для кэша (заменить `AddMemoryCache`)
+- [ ] Добавить Redis для распределённого кэша (заменить `AddMemoryCache`)
 - [ ] Настроить CI/CD (GitHub Actions / GitLab CI)
 - [ ] Добавить Nginx как reverse proxy перед API
 - [ ] Настроить мониторинг (Prometheus + Grafana)

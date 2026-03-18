@@ -33,6 +33,7 @@ public sealed class AssessmentController : ControllerBase
     /// <summary>Список доступных навыков для тестирования.</summary>
     [HttpGet("skills")]
     [AllowAnonymous]
+    [ResponseCache(Duration = 3600)]
     [ProducesResponseType<IReadOnlyList<SkillDto>>(200)]
     public async Task<IActionResult> GetSkills(CancellationToken ct)
     {
@@ -99,6 +100,7 @@ public sealed class AssessmentController : ControllerBase
     /// <summary>Список верифицированных навыков (бейджей) профиля.</summary>
     [HttpGet("badges/{profileId:guid}")]
     [AllowAnonymous]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = new[] { "profileId" })]
     [ProducesResponseType<IReadOnlyList<ProfileBadgeDto>>(200)]
     public async Task<IActionResult> GetBadges(
         Guid profileId,

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
 import { createClient } from '@/lib/supabase'
 import type { OrderType } from '@/lib/database.types'
+import { calculateCommission, tengeToTiyn, tiynToTenge, formatTenge } from '@/lib/pricing'
 import dynamic from 'next/dynamic'
 
 const AiTzWizard = dynamic(() => import('@/components/dashboard/AiTzWizard'), { ssr: false })
@@ -284,13 +285,31 @@ export default function CreateProjectPage() {
 
     try {
       const fullDesc = buildDescription(base.description, selectedType, extras)
+      const budgetNum = base.budget ? Number(base.budget) : null
+
+      // Calculate pricing if budget is set
+      let packageTier: number | null = null
+      let commissionAmount: number | null = null
+      let totalAmount: number | null = null
+      if (budgetNum && budgetNum > 0) {
+        try {
+          const calc = calculateCommission(tengeToTiyn(budgetNum))
+          packageTier = calc.package
+          commissionAmount = calc.commissionTiyn
+          totalAmount = calc.totalFromClientTiyn
+        } catch { /* budget too small or invalid */ }
+      }
+
       const { error } = await supabase.from('projects').insert({
-        title:       base.title,
-        description: fullDesc || null,
-        client_id:   user.id,
-        budget:      base.budget   ? Number(base.budget)  : null,
-        deadline:    base.deadline || null,
-        order_type:  selectedType,
+        title:             base.title,
+        description:       fullDesc || null,
+        client_id:         user.id,
+        budget:            budgetNum,
+        deadline:          base.deadline || null,
+        order_type:        selectedType,
+        package_tier:      packageTier,
+        commission_amount: commissionAmount,
+        total_amount:      totalAmount,
       })
       if (error) throw error
       setSuccess(true)
@@ -487,6 +506,43 @@ export default function CreateProjectPage() {
             />
           </div>
         </div>
+
+        {/* Pricing calculator */}
+        {base.budget && Number(base.budget) > 0 && (() => {
+          try {
+            const calc = calculateCommission(tengeToTiyn(Number(base.budget)))
+            return (
+              <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono uppercase tracking-widest text-text-faint">
+                    Пакет {calc.package}
+                  </span>
+                  {calc.includesTechSupervision && (
+                    <span className="text-xs px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+                      + Технадзор
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-lg font-bold text-text-base">{formatTenge(tiynToTenge(calc.commissionTiyn))}</p>
+                    <p className="text-xs text-text-faint">Комиссия</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-accent-light">{formatTenge(tiynToTenge(calc.totalFromClientTiyn))}</p>
+                    <p className="text-xs text-text-faint">Итого с вас</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-emerald-400">{formatTenge(tiynToTenge(calc.payoutToExecutorTiyn))}</p>
+                    <p className="text-xs text-text-faint">Исполнителю</p>
+                  </div>
+                </div>
+              </div>
+            )
+          } catch {
+            return null
+          }
+        })()}
 
         {errMsg && <p className="text-sm text-red-400">{errMsg}</p>}
 

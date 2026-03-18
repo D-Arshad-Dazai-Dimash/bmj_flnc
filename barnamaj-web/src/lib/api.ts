@@ -191,6 +191,8 @@ export class ApiError extends Error {
 
 // ─── Base fetch ───────────────────────────────────────────────────────────────
 
+const REQUEST_TIMEOUT = 15_000 // 15 seconds
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
@@ -203,26 +205,44 @@ async function request<T>(
     ...(options.headers as Record<string, string> | undefined),
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  })
+  // AbortController with timeout to prevent hanging requests
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`
-    try {
-      const body = await res.json()
-      message =
-        body.error ?? body.title ?? body.message ??
-        (body.errors
-          ? Object.values(body.errors as Record<string, string[]>).flat().join(' • ')
-          : message)
-    } catch { /* ignore */ }
-    throw new ApiError(message, res.status)
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+      signal: options.signal ?? controller.signal,
+    })
+
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`
+      try {
+        const body = await res.json()
+        message =
+          body.error ?? body.title ?? body.message ??
+          (body.errors
+            ? Object.values(body.errors as Record<string, string[]>).flat().join(' • ')
+            : message)
+      } catch { /* ignore */ }
+      throw new ApiError(message, res.status)
+    }
+
+    if (res.status === 204) return undefined as T
+    return res.json() as Promise<T>
+  } catch (err) {
+    if (err instanceof ApiError) throw err
+    if ((err as Error).name === 'AbortError') {
+      throw new ApiError('Request timed out', 408)
+    }
+    throw new ApiError(
+      `Network error: ${(err as Error).message ?? 'Failed to fetch'}`,
+      0
+    )
+  } finally {
+    clearTimeout(timeoutId)
   }
-
-  if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
 }
 
 // ─── API client ───────────────────────────────────────────────────────────────

@@ -1,18 +1,19 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion'
 import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import {
   Shield, Users, Briefcase, TrendingUp,
   ArrowRight, Lock, Zap, Hexagon,
-  ChevronRight,
+  ChevronRight, ChevronLeft, Megaphone,
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import { createClient } from '@/lib/supabase'
 import { useLang } from '@/context/LangContext'
+
+const Footer = lazy(() => import('@/components/Footer'))
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    ORNAMENT — Kazakh "ою" patterns as thin SVG geometrics ("Digital Steppe")
@@ -206,12 +207,101 @@ function ClanVisual({ membersLabel }: { membersLabel: string }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+   ANNOUNCEMENTS CAROUSEL
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+interface AnnouncementItem { id: string; title: string; body: string; published_at: string }
+
+function AnnouncementsCarousel({ items }: { items: AnnouncementItem[] }) {
+  const [idx, setIdx] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => setIdx(i => (i + 1) % items.length), 5000)
+  }, [items.length])
+
+  useEffect(() => {
+    resetTimer()
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [resetTimer])
+
+  const go = (dir: -1 | 1) => {
+    setIdx(i => (i + dir + items.length) % items.length)
+    resetTimer()
+  }
+
+  const item = items[idx]
+
+  return (
+    <section className="relative max-w-6xl mx-auto px-4 sm:px-6 pb-20">
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        className="flex items-center gap-4 mb-8"
+      >
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        <div className="flex items-center gap-2">
+          <Megaphone className="w-4 h-4 text-accent-light" />
+          <span className="text-xs font-mono text-text-faint tracking-widest">ОБЪЯВЛЕНИЯ</span>
+        </div>
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      </motion.div>
+
+      <div className="relative rounded-2xl border border-border bg-bg-card overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+
+        <div className="p-6 sm:p-8 min-h-[140px] flex flex-col justify-center">
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h3 className="text-lg font-bold text-text-base mb-2">{item.title}</h3>
+            <p className="text-sm text-text-muted leading-relaxed">{item.body}</p>
+            <p className="text-xs text-text-faint mt-3">
+              {new Date(item.published_at).toLocaleDateString('ru-RU')}
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between px-6 pb-4">
+          <div className="flex gap-1.5">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { setIdx(i); resetTimer() }}
+                className={`w-2 h-2 rounded-full transition-colors ${i === idx ? 'bg-accent-light' : 'bg-border'}`}
+              />
+            ))}
+          </div>
+          <div className="flex gap-1">
+            <button onClick={() => go(-1)} className="p-1.5 rounded-lg hover:bg-bg-hover transition-colors text-text-faint">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button onClick={() => go(1)} className="p-1.5 rounded-lg hover:bg-bg-hover transition-colors text-text-faint">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 export default function HomePage() {
   const { t } = useLang()
   const supabase = useMemo(() => createClient(), [])
+
+  // ── Announcements ───────────────────────────────────────────
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
 
   // ── Live stats from Supabase ──────────────────────────────
   const [stats, setStats] = useState({
@@ -223,6 +313,14 @@ export default function HomePage() {
   useEffect(() => {
     async function loadStats() {
       try {
+        // Load announcements
+        const { data: annData } = await supabase
+          .from('announcements')
+          .select('id, title, body, published_at')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true })
+        if (annData && annData.length > 0) setAnnouncements(annData)
+
         const [escrowRes, projRes, teamsRes] = await Promise.all([
           supabase.from('contracts').select('amount'),
           supabase.from('projects').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress']),
@@ -502,9 +600,92 @@ export default function HomePage() {
             </BentoTile>
           </div>
         </section>
+        {/* ═══════════════════════════════════════════════════════════
+           PRICING PACKAGES
+           ═══════════════════════════════════════════════════════════ */}
+        <section className="relative max-w-6xl mx-auto px-4 sm:px-6 pb-20">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="flex items-center gap-4 mb-8"
+          >
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="text-xs font-mono text-text-faint tracking-widest">ТАРИФЫ</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                tier: 1,
+                title: 'Стартовый',
+                range: 'до 100 000 ₸',
+                fee: '600 ₸ фиксированная',
+                color: 'border-blue-500/30 bg-blue-500/5',
+                accent: 'text-blue-400',
+                features: ['Быстрый запуск', 'Escrow-защита', 'Чат с исполнителем'],
+              },
+              {
+                tier: 2,
+                title: 'Бизнес',
+                range: '100 001–500 000 ₸',
+                fee: '1% от суммы',
+                color: 'border-accent/30 bg-accent/5',
+                accent: 'text-accent-light',
+                features: ['Всё из Стартового', 'Приоритетный поиск', 'Расширенные отклики'],
+                popular: true,
+              },
+              {
+                tier: 3,
+                title: 'Корпоративный',
+                range: 'от 500 001 ₸',
+                fee: '10% включена в сумму',
+                color: 'border-emerald-500/30 bg-emerald-500/5',
+                accent: 'text-emerald-400',
+                features: ['Всё из Бизнес', 'Технический надзор', 'Распределение 90/3/7%'],
+              },
+            ].map(pkg => (
+              <motion.div
+                key={pkg.tier}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: pkg.tier * 0.1 }}
+                className={`relative rounded-2xl border p-6 space-y-4 ${pkg.color}`}
+              >
+                {pkg.popular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs px-3 py-0.5 rounded-full bg-accent text-white font-medium">
+                    Популярный
+                  </span>
+                )}
+                <div>
+                  <p className={`text-lg font-bold ${pkg.accent}`}>Пакет {pkg.tier} — {pkg.title}</p>
+                  <p className="text-sm text-text-muted mt-1">{pkg.range}</p>
+                </div>
+                <p className="text-xl font-bold text-text-base">{pkg.fee}</p>
+                <ul className="space-y-2">
+                  {pkg.features.map(f => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-text-muted">
+                      <span className={`w-1.5 h-1.5 rounded-full ${pkg.accent.replace('text-', 'bg-')}`} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════
+           ANNOUNCEMENTS CAROUSEL
+           ═══════════════════════════════════════════════════════════ */}
+        {announcements.length > 0 && <AnnouncementsCarousel items={announcements} />}
       </main>
 
-      <Footer />
+      <Suspense fallback={<div className="h-40" />}>
+        <Footer />
+      </Suspense>
     </div>
   )
 }

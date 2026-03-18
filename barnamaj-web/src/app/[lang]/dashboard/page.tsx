@@ -5,10 +5,12 @@ import { createClient } from '@/lib/supabase'
 import { countQazaqBusinessDays } from '@/lib/calendar'
 import { motion } from 'framer-motion'
 import { memo, useEffect, useMemo, useState } from 'react'
+import Link from '@/components/ui/LocaleLink'
 import {
   LayoutDashboard, TrendingUp, Clock,
   CheckCircle2, AlertCircle, CalendarClock,
 } from 'lucide-react'
+import AttestationBlock from '@/components/dashboard/AttestationBlock'
 
 const item = {
   hidden: { opacity: 0, y: 12 },
@@ -263,6 +265,13 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
+      {/* Attestation (developers only) */}
+      {isDev && (
+        <motion.div variants={item}>
+          <AttestationBlock />
+        </motion.div>
+      )}
+
       {/* Activity placeholder */}
       <motion.div variants={item}>
         <h2 className="text-xs font-mono uppercase tracking-widest text-text-faint mb-3">Последняя активность</h2>
@@ -303,7 +312,7 @@ export default function DashboardPage() {
 // ── React.memo: QuickCard — статический контент, не нужно перерисовывать ──
 const QuickCard = memo(function QuickCard({ icon, title, desc, href }: { icon: React.ReactNode; title: string; desc: string; href: string }) {
   return (
-    <a
+    <Link
       href={href}
       className="flex items-center gap-4 p-4 rounded-xl border border-border bg-bg-card hover:border-accent/40 hover:bg-bg-hover transition-all duration-200 group"
     >
@@ -314,6 +323,6 @@ const QuickCard = memo(function QuickCard({ icon, title, desc, href }: { icon: R
         <p className="text-sm font-medium text-text-base">{title}</p>
         <p className="text-xs text-text-muted">{desc}</p>
       </div>
-    </a>
+    </Link>
   )
 })

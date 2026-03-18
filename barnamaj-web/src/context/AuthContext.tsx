@@ -221,13 +221,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (mounted) syncSessionRef.current(session)
       })
       .catch(err => {
-        console.error('[AuthProvider] getSession error:', err)
+        // Supabase may be unavailable — don't crash, just mark as unauthenticated
+        console.warn('[AuthProvider] getSession error (Supabase may be offline):', err?.message ?? err)
         if (mounted) setState(s => ({ ...s, isLoading: false }))
       })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        if (mounted) syncSessionRef.current(session)
+        if (mounted) {
+          try {
+            syncSessionRef.current(session)
+          } catch (err) {
+            console.warn('[AuthProvider] onAuthStateChange error:', err)
+          }
+        }
       }
     )
 

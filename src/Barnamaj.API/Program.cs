@@ -26,7 +26,8 @@ try
             .WriteTo.Console()
             .WriteTo.File("logs/barnamaj-.log",
                 rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 30));
+                retainedFileCountLimit: 30,
+                fileSizeLimitBytes: 50_000_000));
 
     // ── База данных ──────────────────────────────────────────
     builder.Services.AddDbContext<AppDbContext>(options =>
@@ -126,13 +127,27 @@ try
                 .WithOrigins(
                     builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
                     ?? ["http://localhost:3000"])
-                .WithHeaders("Authorization", "Content-Type", "Accept", "X-Requested-With")
+                .AllowAnyHeader()
                 .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .AllowCredentials());
+                .WithExposedHeaders("Content-Disposition", "X-Pagination")
+                .AllowCredentials()
+                .SetPreflightMaxAge(TimeSpan.FromMinutes(10)));
     });
 
     // ── Расширения сервисов ──────────────────────────────────
     builder.Services.AddApplicationServices(builder.Configuration);
+
+    // ── MiniProfiler (анализ SQL запросов) ───────────────────
+    builder.Services.AddMiniProfiler(options =>
+    {
+        options.RouteBasePath = "/profiler";
+        options.SqlFormatter = new StackExchange.Profiling.SqlFormatters.InlineFormatter();
+        options.TrackConnectionOpenClose = true;
+        options.ColorScheme = StackExchange.Profiling.ColorScheme.Auto;
+    }).AddEntityFramework();
+
+    // ── Response Caching ──────────────────────────────────────
+    builder.Services.AddResponseCaching();
 
     // ── Response Compression ─────────────────────────────────
     builder.Services.AddResponseCompression(options =>
@@ -166,7 +181,14 @@ try
         c.RoutePrefix = "swagger"; // Swagger на /swagger, корень — index.html
     });
 
+    app.UseResponseCaching();
     app.UseResponseCompression();
+
+    // MiniProfiler — только в Development
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseMiniProfiler();
+    }
 
     // Статические файлы — до аутентификации, чтобы логотип был публичным
     app.UseDefaultFiles();     // index.html по умолчанию

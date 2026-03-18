@@ -108,6 +108,7 @@ public sealed class ProjectsController : ControllerBase
     /// <response code="200">Список проектов.</response>
     [HttpGet("feed")]
     [AllowAnonymous]
+    [ResponseCache(Duration = 30, VaryByQueryKeys = new[] { "page", "pageSize" })]
     [ProducesResponseType(typeof(IReadOnlyList<ProjectSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Feed(
         [FromQuery] int page     = 1,

@@ -51,7 +51,10 @@ const clientItems: NavItem[] = [
 
 function NavLink({ item }: { item: NavItem }) {
   const pathname = usePathname()
-  const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+  // pathname includes locale prefix (e.g. /ru/dashboard), item.href doesn't
+  // Strip /{lang}/ prefix for comparison
+  const stripped = pathname.replace(/^\/(ru|en|kz)/, '') || '/'
+  const isActive = stripped === item.href || (item.href !== '/dashboard' && stripped.startsWith(item.href))
 
   return (
     <Link

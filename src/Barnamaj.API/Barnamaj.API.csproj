@@ -40,6 +40,10 @@
 
     <!-- FluentValidation -->
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+
+    <!-- MiniProfiler для анализа SQL запросов -->
+    <PackageReference Include="MiniProfiler.AspNetCore.Mvc" Version="4.3.8" />
+    <PackageReference Include="MiniProfiler.EntityFrameworkCore" Version="4.3.8" />
   </ItemGroup>
 
 </Project>

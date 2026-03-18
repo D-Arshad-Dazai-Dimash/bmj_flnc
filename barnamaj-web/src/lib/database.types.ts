@@ -16,30 +16,45 @@ export interface Database {
     Tables: {
       profiles: {
         Row: {
-          id:          string
-          full_name:   string
-          role:        UserRole
-          avatar_url:  string | null
-          bio:         string
-          created_at:  string
-          updated_at:  string
+          id:                string
+          full_name:         string
+          role:              UserRole
+          avatar_url:        string | null
+          bio:               string
+          is_admin:                    boolean
+          is_blocked:                  boolean
+          is_tech_supervisor:          boolean
+          attestation_level:           string | null
+          attestation_specialization:  string | null
+          created_at:                  string
+          updated_at:                  string
         }
         Insert: {
-          id:          string
-          full_name?:  string
-          role?:       UserRole
-          avatar_url?: string | null
-          bio?:        string
-          created_at?: string
-          updated_at?: string
+          id:                           string
+          full_name?:                   string
+          role?:                        UserRole
+          avatar_url?:                  string | null
+          bio?:                         string
+          is_admin?:                    boolean
+          is_blocked?:                  boolean
+          is_tech_supervisor?:          boolean
+          attestation_level?:           string | null
+          attestation_specialization?:  string | null
+          created_at?:                  string
+          updated_at?:                  string
         }
         Update: {
-          id?:         string
-          full_name?:  string
-          role?:       UserRole
-          avatar_url?: string | null
-          bio?:        string
-          updated_at?: string
+          id?:                          string
+          full_name?:                   string
+          role?:                        UserRole
+          avatar_url?:                  string | null
+          bio?:                         string
+          is_admin?:                    boolean
+          is_blocked?:                  boolean
+          is_tech_supervisor?:          boolean
+          attestation_level?:           string | null
+          attestation_specialization?:  string | null
+          updated_at?:        string
         }
         Relationships: [
           {
@@ -60,32 +75,53 @@ export interface Database {
           status:        ProjectStatus
           order_type:    OrderType
           client_id:     string
-          executor_id:   string | null
-          created_at:    string
-          updated_at:    string
+          executor_id:       string | null
+          package_tier:        number | null
+          commission_amount:   number | null
+          total_amount:        number | null
+          tech_supervisor_id:  string | null
+          supervision_status:  string
+          supervision_report:  string | null
+          repository_url:      string | null
+          created_at:          string
+          updated_at:          string
         }
         Insert: {
-          id?:           string
-          title:         string
-          description?:  string | null
-          budget?:       number | null
-          deadline?:     string | null
-          status?:       ProjectStatus
-          order_type?:   OrderType
-          client_id:     string
-          executor_id?:  string | null
-          created_at?:   string
-          updated_at?:   string
+          id?:                  string
+          title:                string
+          description?:         string | null
+          budget?:              number | null
+          deadline?:            string | null
+          status?:              ProjectStatus
+          order_type?:          OrderType
+          client_id:            string
+          executor_id?:         string | null
+          package_tier?:        number | null
+          commission_amount?:   number | null
+          total_amount?:        number | null
+          tech_supervisor_id?:  string | null
+          supervision_status?:  string
+          supervision_report?:  string | null
+          repository_url?:      string | null
+          created_at?:          string
+          updated_at?:          string
         }
         Update: {
-          title?:        string
-          description?:  string | null
-          budget?:       number | null
-          deadline?:     string | null
-          status?:       ProjectStatus
-          order_type?:   OrderType
-          executor_id?:  string | null
-          updated_at?:   string
+          title?:               string
+          description?:         string | null
+          budget?:              number | null
+          deadline?:            string | null
+          status?:              ProjectStatus
+          order_type?:          OrderType
+          executor_id?:         string | null
+          package_tier?:        number | null
+          commission_amount?:   number | null
+          total_amount?:        number | null
+          tech_supervisor_id?:  string | null
+          supervision_status?:  string
+          supervision_report?:  string | null
+          repository_url?:      string | null
+          updated_at?:          string
         }
         Relationships: [
           {
@@ -111,6 +147,7 @@ export interface Database {
           cover_letter:    string | null
           proposed_budget: number | null
           status:          ApplicationStatus
+          deadline_days:   number | null
         }
         Insert: {
           id?:              string
@@ -120,11 +157,13 @@ export interface Database {
           cover_letter?:    string | null
           proposed_budget?: number | null
           status?:          ApplicationStatus
+          deadline_days?:   number | null
         }
         Update: {
           cover_letter?:    string | null
           proposed_budget?: number | null
           status?:          ApplicationStatus
+          deadline_days?:   number | null
         }
         Relationships: [
           {
@@ -325,6 +364,35 @@ export interface Database {
           }
         ]
       }
+      favorites: {
+        Row: {
+          id:         string
+          user_id:    string
+          project_id: string
+          created_at: string
+        }
+        Insert: {
+          id?:         string
+          user_id:     string
+          project_id:  string
+          created_at?: string
+        }
+        Update: Record<string, never>
+        Relationships: [
+          {
+            foreignKeyName: 'favorites_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'favorites_project_id_fkey'
+            columns: ['project_id']
+            referencedRelation: 'projects'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       clan_members: {
         Row: {
           clan_id:   string
@@ -355,6 +423,223 @@ export interface Database {
             referencedColumns: ['id']
           }
         ]
+      }
+      attestations: {
+        Row: {
+          id:             string
+          user_id:        string
+          specialization: string
+          level:          string
+          score:          number
+          feedback:       string
+          completed_at:   string
+          can_retake_at:  string
+          created_at:     string
+        }
+        Insert: {
+          id?:             string
+          user_id:         string
+          specialization:  string
+          level:           string
+          score:           number
+          feedback?:       string
+          completed_at?:   string
+          can_retake_at?:  string
+          created_at?:     string
+        }
+        Update: {
+          specialization?: string
+          level?:          string
+          score?:          number
+          feedback?:       string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'attestations_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      payments: {
+        Row: {
+          id:                 string
+          order_id:           string
+          payer_id:           string
+          amount_tiyn:        number
+          commission_tiyn:    number
+          status:             string
+          gateway_payment_id: string | null
+          created_at:         string
+        }
+        Insert: {
+          id?:                 string
+          order_id:            string
+          payer_id:            string
+          amount_tiyn:         number
+          commission_tiyn?:    number
+          status?:             string
+          gateway_payment_id?: string | null
+          created_at?:         string
+        }
+        Update: {
+          status?:             string
+          gateway_payment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'payments_order_id_fkey'
+            columns: ['order_id']
+            referencedRelation: 'projects'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      payouts: {
+        Row: {
+          id:           string
+          user_id:      string
+          amount_tiyn:  number
+          status:       string
+          processed_at: string | null
+          created_at:   string
+        }
+        Insert: {
+          id?:           string
+          user_id:       string
+          amount_tiyn:   number
+          status?:       string
+          processed_at?: string | null
+          created_at?:   string
+        }
+        Update: {
+          status?:       string
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'payouts_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      supervision_applications: {
+        Row: {
+          id:         string
+          user_id:    string
+          status:     string
+          created_at: string
+        }
+        Insert: {
+          id?:         string
+          user_id:     string
+          status?:     string
+          created_at?: string
+        }
+        Update: {
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'supervision_applications_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      ai_manager_sessions: {
+        Row: {
+          id:         string
+          user_id:    string
+          title:      string | null
+          messages:   unknown
+          tz_result:  string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?:         string
+          user_id:     string
+          title?:      string | null
+          messages?:   unknown
+          tz_result?:  string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          title?:      string | null
+          messages?:   unknown
+          tz_result?:  string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'ai_manager_sessions_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      user_features: {
+        Row: {
+          id:           string
+          user_id:      string
+          feature_name: string
+          enabled:      boolean
+        }
+        Insert: {
+          id?:           string
+          user_id:       string
+          feature_name:  string
+          enabled?:      boolean
+        }
+        Update: {
+          enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'user_features_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      announcements: {
+        Row: {
+          id:           string
+          title:        string
+          body:         string
+          published_at: string
+          expires_at:   string | null
+          is_active:    boolean
+          sort_order:   number
+          created_at:   string
+        }
+        Insert: {
+          id?:           string
+          title:         string
+          body?:         string
+          published_at?: string
+          expires_at?:   string | null
+          is_active?:    boolean
+          sort_order?:   number
+          created_at?:   string
+        }
+        Update: {
+          title?:        string
+          body?:         string
+          published_at?: string
+          expires_at?:   string | null
+          is_active?:    boolean
+          sort_order?:   number
+        }
+        Relationships: []
       }
     }
     Views: Record<string, never>
@@ -434,6 +719,9 @@ export interface ContractWithDetails extends Contract {
   client_profile: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
   freelancer_profile: Pick<Profile, 'id' | 'full_name' | 'avatar_url'> | null
 }
+
+export type Favorite     = Database['public']['Tables']['favorites']['Row']
+export type Announcement = Database['public']['Tables']['announcements']['Row']
 
 // ── Sprint 3: Messages, Clans ────────────────────────────────
 export type Message       = Database['public']['Tables']['messages']['Row']
