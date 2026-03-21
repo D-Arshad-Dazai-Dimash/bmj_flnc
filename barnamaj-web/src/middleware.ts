@@ -26,6 +26,11 @@ function detectLocale(request: NextRequest): string {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // ── Skip API routes — they don't need locale prefix ────────
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
   // ── 0. Извлечение / редирект по локали ────────────────────
   const segments = pathname.split('/')
   const maybeLocale = segments[1]
