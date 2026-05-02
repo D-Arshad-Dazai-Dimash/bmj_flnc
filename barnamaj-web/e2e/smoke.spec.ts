@@ -84,7 +84,13 @@ test.describe('Smoke — Full Auth Flow', () => {
     }
 
     await page.locator('input[autocomplete="email"]').first().fill(TEST_EMAIL)
-    await page.locator('input[autocomplete="current-password"]').first().fill(TEST_PASSWORD)
+    await page.locator('input[type="password"]').first().fill(TEST_PASSWORD)
+
+    // ── Шаг 3.5: Принять GDPR-согласие (обязательно для регистрации) ──
+    const consent = page.locator('input[type="checkbox"]').first()
+    if (await consent.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await consent.check().catch(() => { /* уже отмечено */ })
+    }
 
     // ── Шаг 4: Отправить форму ──
     await page.locator('button[type="submit"]').first().click()

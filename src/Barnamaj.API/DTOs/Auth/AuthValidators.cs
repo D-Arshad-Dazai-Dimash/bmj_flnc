@@ -12,12 +12,12 @@ public sealed class RegisterDtoValidator : AbstractValidator<RegisterDto>
             .EmailAddress().WithMessage("Некорректный формат email.")
             .MaximumLength(256).WithMessage("Email не может быть длиннее 256 символов.");
 
+        // NIST SP 800-63B (2024+) — длина важнее искусственной "сложности".
+        // Не принуждаем к спецсимволам/цифрам; рекомендуем длинные парольные фразы.
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Пароль обязателен.")
-            .MinimumLength(8).WithMessage("Пароль должен содержать минимум 8 символов.")
-            .MaximumLength(128).WithMessage("Пароль не может быть длиннее 128 символов.")
-            .Matches("[A-Z]").WithMessage("Пароль должен содержать хотя бы одну заглавную букву.")
-            .Matches("[0-9]").WithMessage("Пароль должен содержать хотя бы одну цифру.");
+            .MinimumLength(8).WithMessage("Минимум 8 символов. Рекомендуем 12+ для лучшей защиты.")
+            .MaximumLength(128).WithMessage("Пароль не может быть длиннее 128 символов.");
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Имя / название обязательно.")
