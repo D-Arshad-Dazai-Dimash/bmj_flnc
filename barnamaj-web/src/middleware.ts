@@ -1,6 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import type { Database } from '@/lib/database.types'
 
 // ── Локали ──────────────────────────────────────────────────
 const LOCALES = ['ru', 'en', 'kz']
@@ -26,7 +24,7 @@ function detectLocale(request: NextRequest): string {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // ── Skip API routes — they don't need locale prefix ────────
+  // ── Skip API routes — они не нуждаются в локали ────────────
   if (pathname.startsWith('/api/')) {
     return NextResponse.next()
   }
@@ -45,96 +43,36 @@ export async function middleware(request: NextRequest) {
   }
 
   const lang = maybeLocale
-  // Путь без языкового префикса — для существующих проверок
   const pathWithoutLang = '/' + segments.slice(2).join('/')
 
-  let response = NextResponse.next({ request })
+  const response = NextResponse.next({ request })
   response.cookies.set('NEXT_LOCALE', lang, { path: '/', maxAge: 60 * 60 * 24 * 365 })
 
-  // ── Публичные маршруты — не трогаем Supabase ──────────────
+  // ── Публичные маршруты ────────────────────────────────────
   const needsAuth = pathWithoutLang.startsWith(PROTECTED_PREFIX) || pathWithoutLang.startsWith(AUTH_ROUTE)
   if (!needsAuth) {
     return response
   }
 
-  // ── Supabase-клиент для middleware (только для auth/dashboard) ─
-  let user = null
-  try {
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value)
-            )
-            response = NextResponse.next({ request })
-            response.cookies.set('NEXT_LOCALE', lang, { path: '/', maxAge: 60 * 60 * 24 * 365 })
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options)
-            )
-          },
-        },
-      }
-    )
+  // ── Проверяем наличие access_token cookie ─────────────────
+  // Токен хранится в httpOnly cookie, установленной ASP.NET Core.
+  // Middleware не читает содержимое (httpOnly), но может проверить присутствие:
+  const hasAccessToken = request.cookies.has('access_token')
 
-    // ── Получаем текущего пользователя ────────────────────────
-    const { data } = await supabase.auth.getUser()
-    user = data.user
+  // ── 1. Dashboard без токена → /auth ──────────────────────
+  if (pathWithoutLang.startsWith(PROTECTED_PREFIX) && !hasAccessToken) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/${lang}${AUTH_ROUTE}`
+    url.searchParams.set('mode', 'login')
+    url.searchParams.set('redirectTo', pathWithoutLang)
+    return NextResponse.redirect(url)
+  }
 
-    // ── 1. Dashboard без сессии → /auth ───────────────────────
-    if (pathWithoutLang.startsWith(PROTECTED_PREFIX) && !user) {
-      const url = request.nextUrl.clone()
-      url.pathname = `/${lang}${AUTH_ROUTE}`
-      url.searchParams.set('mode', 'login')
-      url.searchParams.set('redirectTo', pathWithoutLang)
-      return NextResponse.redirect(url)
-    }
-
-    // ── 2. Авторизованный на /auth → /dashboard ──────────────
-    if (pathWithoutLang.startsWith(AUTH_ROUTE) && user) {
-      const url = request.nextUrl.clone()
-      url.pathname = `/${lang}/dashboard`
-      return NextResponse.redirect(url)
-    }
-
-    // ── 3. Ролевая защита ────────────────────────────────────
-    if (user && pathWithoutLang.startsWith(PROTECTED_PREFIX)) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      if (profile) {
-        const role = profile.role
-        const isSharedRoute = SHARED_ROUTES.some(r => pathWithoutLang.startsWith(r))
-
-        if (!isSharedRoute) {
-          const isFreelancerInClientZone =
-            role === 'freelancer' &&
-            CLIENT_ROUTES.some(r => pathWithoutLang.startsWith(r))
-
-          const isClientInFreelancerZone =
-            role === 'client' &&
-            FREELANCER_ROUTES.some(r => pathWithoutLang.startsWith(r))
-
-          if (isFreelancerInClientZone || isClientInFreelancerZone) {
-            const url = request.nextUrl.clone()
-            url.pathname = `/${lang}/dashboard`
-            url.searchParams.set('notice', 'role_mismatch')
-            return NextResponse.redirect(url)
-          }
-        }
-      }
-    }
-  } catch (err) {
-    // Supabase unavailable — allow request through, client-side auth will handle it
-    console.warn('[middleware] Supabase auth check failed:', (err as Error)?.message)
+  // ── 2. Авторизованный на /auth → /dashboard ──────────────
+  if (pathWithoutLang.startsWith(AUTH_ROUTE) && hasAccessToken) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/${lang}/dashboard`
+    return NextResponse.redirect(url)
   }
 
   return response
@@ -142,6 +80,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { useAuth } from '@/context/AuthContext'
-import { createClient } from '@/lib/supabase'
 import Link from '@/components/ui/LocaleLink'
 import { Loader2, Shield, LayoutDashboard, Megaphone, Users, ClipboardList, MessageSquare, ToggleRight, Eye } from 'lucide-react'
 
@@ -20,7 +19,6 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading } = useAuth()
   const router = useLocaleRouter()
-  const supabase = useMemo(() => createClient(), [])
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -28,18 +26,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.replace('/auth?mode=login')
       return
     }
-    if (user?.id) {
-      supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          setIsAdmin(data?.is_admin === true)
-          if (!data?.is_admin) router.replace('/dashboard')
-        })
+    if (user) {
+      // Admin check: role === 'Admin' в JWT-клейме от .NET API
+      const isAdminUser = user.role === 'Admin'
+      setIsAdmin(isAdminUser)
+      if (!isAdminUser) router.replace('/dashboard')
     }
-  }, [user?.id, isLoading, isAuthenticated, router, supabase])
+  }, [user, isLoading, isAuthenticated, router])
 
   if (isLoading || isAdmin === null) {
     return (

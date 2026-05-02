@@ -32,11 +32,13 @@ public sealed record UpdateProfileDto(
 
 /// <summary>
 /// Ответ на успешную аутентификацию.
-/// Содержит JWT-токен и базовую информацию о пользователе.
+/// AccessToken и RefreshToken устанавливаются как httpOnly cookies — не возвращаются клиенту напрямую.
 /// </summary>
 public sealed record AuthResponseDto(
     string AccessToken,
     DateTime ExpiresAt,
+    string RefreshToken,
+    DateTime RefreshExpiresAt,
     UserDto User
 );
 

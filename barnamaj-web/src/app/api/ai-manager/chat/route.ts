@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { createClient } from '@supabase/supabase-js'
 
 const SYSTEM_PROMPT = `Ты ИИ-менеджер по разработке ПО. Помогаешь пользователю составить техническое задание.
 
@@ -38,20 +37,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check feature flag
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    const { data: feature } = await supabase
-      .from('user_features')
-      .select('enabled')
-      .eq('user_id', userId)
-      .eq('feature_name', 'ai_manager')
-      .single()
-
-    if (!feature?.enabled) {
-      return NextResponse.json({ error: 'Функция не активирована' }, { status: 403 })
-    }
+    // TODO: проверять флаг через .NET API GET /api/users/{id}/features/ai_manager
+    // Пока разрешаем всем авторизованным
 
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({

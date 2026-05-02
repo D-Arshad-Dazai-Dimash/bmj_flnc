@@ -16,7 +16,7 @@
 - Папка: `barnamaj-web/`
 - Запуск: `npm run dev` (Turbopack, порт 3000)
 - Сборка: `npm run build`
-- Устаревший фронтенд: `barnamaj-frontend/` (НЕ ИСПОЛЬЗОВАТЬ)
+- Устаревший фронтенд: `barnamaj-frontend/` (УДАЛЁН)
 
 ## База данных
 - Тип: PostgreSQL 16 (Docker)
@@ -45,9 +45,13 @@
 ## Тесты
 - Бекенд тест-фреймворк: НЕ НАСТРОЕН (нет тестового проекта; рекомендуется xUnit)
 - Фронтенд тест-фреймворк: Playwright 1.58.2 (E2E)
-- Команда запуска E2E: `npx playwright test` (из `barnamaj-web/`)
+- Команда запуска E2E: `npx playwright test --project=chromium-stress --workers=1` (из `barnamaj-web/`)
 - Паттерн именования тест-файлов (бекенд): `*.Tests.cs` (xUnit, при создании)
 - Паттерн именования тест-файлов (фронтенд): `*.spec.ts` (Playwright)
+- E2E спеки: `e2e/*.spec.ts` — 7 файлов, `repeatEach: 10`, 220 тестов
+- E2E bypass: `E2E_TEST=true` в env → middleware.ts пропускает Supabase Auth проверку
+- webServer в playwright.config.ts автозапускает `npm run dev` с `E2E_TEST=true`
+- Моки в тестах: `addInitScript` (localStorage: `barnamaj_token`, `barnamaj_user`) + `page.route` для API/Supabase вызовов
 
 ## Авторизация
 - Механизм (бекенд): JWT Bearer (кастомный, BCrypt хэширование паролей)
@@ -78,19 +82,22 @@
 | Метод | Путь | Авторизация | Описание |
 |-------|------|-------------|----------|
 | POST | /api/auth/register | - | Регистрация |
-| POST | /api/auth/login | - | Вход |
+| POST | /api/auth/login | - | Вход (rate limit: 5 req/15 min/IP) |
+| POST | /api/auth/logout | [Authorize] | Выйти (очистить cookies) |
+| POST | /api/auth/refresh | - | Обновить access token по refresh cookie |
 | PATCH | /api/auth/profile | [Authorize] | Обновить профиль |
 | GET | /api/auth/me | [Authorize] | Текущий пользователь |
 | GET | /api/health/live | - | Liveness probe |
 | GET | /api/health/ready | - | Readiness probe |
 | GET | /api/assessment/skills | - | Список навыков |
 | GET | /api/assessment/questions/{skillId} | - | Вопросы теста |
-| POST | /api/assessment/submit | [Authorize] | Отправить ответы |
+| POST | /api/assessment/submit | [Authorize] | Отправить ответы (rate limit: 5 req/5 min) |
 | GET | /api/assessment/badges/{profileId} | - | Бейджи профиля |
 | POST | /api/projects | [Authorize] | Создать проект |
-| GET | /api/projects/my | [Authorize] | Мои проекты |
-| GET | /api/projects/feed | - | Лента проектов |
-| POST | /api/projects/{id}/apply | [Authorize] | Подать заявку |
+| GET | /api/projects/my | [Authorize] | Мои проекты (клиент) |
+| GET | /api/projects/feed | - | Лента проектов (публичная) |
+| PATCH | /api/projects/{id}/status | [Authorize] | Изменить статус (Cancelled/Completed) |
+| POST | /api/projects/{id}/apply | [Authorize] | Подать заявку на проект |
 | GET | /api/profiles | - | Поиск профилей |
 | POST | /api/profiles/create | [Authorize] | Создать клан/компанию |
 | POST | /api/profiles/{id}/invite | [Authorize] | Пригласить в команду |
@@ -100,6 +107,10 @@
 | Метод | Путь | Описание |
 |-------|------|----------|
 | POST | /api/ai/tz | Генерация ТЗ через Anthropic SDK |
+| POST | /api/ai-manager/... | AI Manager (отдельный модуль) |
+| POST | /api/attestation/... | Аттестация (отдельный модуль) |
+| POST | /api/payments/... | Платежи (отдельный модуль) |
+| POST | /api/supervision/... | Супервизия (отдельный модуль) |
 
 ## Структура проекта
 ```
@@ -107,6 +118,7 @@ BJ/
 ├── .env.example                # Шаблон переменных окружения
 ├── BJ.sln                      # VS Solution
 ├── CLAUDE.md                   # Правила для Claude Code
+├── STACK_LOCK.md               # Этот файл — зафиксированный стек
 ├── TASKS.md                    # Задачник
 ├── README.md                   # Документация
 ├── docker-compose.yml          # Docker (PostgreSQL, pgAdmin)
@@ -116,21 +128,35 @@ BJ/
 ├── requests.http               # HTTP тесты
 ├── src/Barnamaj.API/           # Бекенд
 │   ├── Program.cs
-│   ├── Controllers/            # 5 контроллеров
-│   ├── Services/               # 4 сервиса + Extensions
-│   ├── Data/                   # DbContext + Migrations
-│   ├── Models/                 # Entity модели
+│   ├── Controllers/            # 5 контроллеров: Auth, Projects, Profiles, Assessment, Health
+│   ├── Services/               # ProjectService, AuthService, AssessmentService + Extensions
+│   ├── Data/                   # AppDbContext + Migrations
+│   ├── Entities/               # Entity модели
 │   ├── DTOs/                   # DTO + FluentValidation
 │   └── wwwroot/                # Статика
-├── barnamaj-web/               # Фронтенд (активный)
-│   ├── src/app/[lang]/         # Страницы (i18n: ru, en, kz)
-│   ├── src/components/         # Компоненты
-│   ├── src/context/            # AuthContext
-│   ├── src/lib/                # API client, Supabase, types
-│   ├── src/middleware.ts       # Auth + locale middleware
-│   ├── supabase/               # Config + 9 миграций
-│   └── public/                 # Статические файлы
-└── barnamaj-frontend/          # Устаревший (НЕ ИСПОЛЬЗОВАТЬ)
+└── barnamaj-web/               # Фронтенд (активный)
+    ├── src/app/[lang]/         # Страницы (i18n: ru, en, kz)
+    │   ├── dashboard/          # Защищённые страницы дашборда
+    │   │   ├── page.tsx        # Обзор (stats через Supabase — рефактор pending)
+    │   │   ├── create-project/ # Создать проект (→ backend API)
+    │   │   ├── projects/       # Мои проекты (→ backend API)
+    │   │   ├── orders/         # Лента заказов (→ backend API)
+    │   │   ├── contracts/      # Контракты (Supabase — рефактор pending)
+    │   │   └── clans/          # Кланы (Supabase — рефактор pending)
+    │   ├── auth/               # Страницы авторизации
+    │   ├── escrow/             # Эскроу (публичная)
+    │   ├── pricing/            # Тарифы (публичная)
+    │   ├── safety/             # Безопасность (публичная)
+    │   └── clans/              # Кланы (публичная)
+    ├── src/app/api/            # Next.js API routes
+    │   └── ai/tz/              # Генерация ТЗ через Anthropic
+    ├── src/components/         # Компоненты
+    ├── src/context/            # AuthContext (двойная auth: Supabase + Legacy JWT)
+    ├── src/lib/                # api.ts (backend client), supabase.ts, utils.ts
+    ├── src/middleware.ts       # Locale + Auth guard (E2E_TEST=true → bypass)
+    ├── e2e/                    # Playwright E2E тесты (7 файлов, 220 тестов)
+    ├── supabase/               # Config + миграции
+    └── public/                 # Статические файлы
 ```
 
 ## Ключевые зависимости (бекенд NuGet)
@@ -160,13 +186,17 @@ BJ/
 - @playwright/test 1.58.2
 
 ## Важные замечания
-1. **Двойная авторизация**: Supabase Auth (фронтенд) + Custom JWT (бекенд) — архитектурный долг
+1. **Двойная авторизация**: Supabase Auth (фронтенд) + Custom JWT (бекенд) — архитектурный долг, унификация pending
 2. **Два PostgreSQL**: Docker (порт 5432, для .NET) + Supabase local (порт 54322) — данные НЕ синхронизированы
-3. **Таблицы дублируются**: profiles, projects есть и в EF Core, и в Supabase — источник истины определяется по контексту
-4. **Токены в localStorage**: НЕ httpOnly cookies — известная уязвимость
+3. **Таблицы дублируются**: profiles, projects есть и в EF Core, и в Supabase — источник истины по контексту (write path → backend API)
+4. **Legacy токены в localStorage**: `barnamaj_token` / `barnamaj_user` — NОТ httpOnly cookies, известная уязвимость
 5. **Soft-delete без аудита**: DeletedAt есть, DeletedByUserId нет
 6. **Миграции автоприменяются**: `context.Database.Migrate()` в Program.cs при старте
 7. **i18n**: 3 локали (ru, en, kz) через динамический роутинг `[lang]`
 8. **Тёмная тема**: Поддерживается через next-themes (class-based)
 9. **CORS**: Разрешены только localhost:3000 и barnamaj.dev
-10. **Rate Limiting**: Глобально 100 req/10s, assessment-submit 5 req/5min
+10. **Rate Limiting**: Глобально 100 req/10s; auth-login 5 req/15 min/IP; assessment-submit 5 req/5 min
+11. **Swagger**: Доступен только в Development окружении (`/swagger`)
+12. **Backend-first write path**: все создание/изменение данных идут через `.NET API`, прямые Supabase write-запросы из страниц запрещены
+13. **E2E стратегия**: `E2E_TEST=true` в env → middleware.ts пропускает Supabase; браузерный слой мокируется через `addInitScript` + `page.route`
+14. **Дизайн-система**: тёмная cyber/neon эстетика, акцент `#7c3aed` (purple), cyan glow, фоны `#050508`/`#0c0c12`, шрифты Inter + JetBrains Mono, glassmorphism, rounded-xl

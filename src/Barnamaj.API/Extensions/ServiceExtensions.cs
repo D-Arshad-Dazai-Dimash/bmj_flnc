@@ -20,7 +20,7 @@ public static class ServiceExtensions
         services.AddFluentValidationAutoValidation();
         services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
-        // ── JWT Authentication ───────────────────────────────
+        // ── JWT Authentication (читает токен из httpOnly cookie) ─
         var jwtSection = configuration.GetSection("Jwt");
         var secretKey  = jwtSection["SecretKey"]
             ?? throw new InvalidOperationException(
@@ -34,9 +34,6 @@ public static class ServiceExtensions
         })
         .AddJwtBearer(options =>
         {
-            // Отключаем автоматическое преобразование имён клеймов
-            // (sub → NameIdentifier, email → ClaimTypes.Email и т.д.)
-            // чтобы клеймы сохраняли оригинальные имена из JWT-токена.
             options.MapInboundClaims = false;
 
             options.TokenValidationParameters = new TokenValidationParameters
@@ -48,15 +45,23 @@ public static class ServiceExtensions
                 ValidIssuer              = jwtSection["Issuer"],
                 ValidAudience            = jwtSection["Audience"],
                 IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-                // Минимальный drift между серверами
-                ClockSkew = TimeSpan.FromSeconds(30),
-                // Маппим claim "role" в стандартный ClaimTypes.Role
-                RoleClaimType = "role",
+                ClockSkew                = TimeSpan.FromSeconds(30),
+                RoleClaimType            = "role",
             };
 
             options.Events = new JwtBearerEvents
             {
-                // Возвращаем JSON вместо пустого тела при 401
+                // Читаем токен из httpOnly cookie "access_token"
+                // Это главное изменение — убираем зависимость от Authorization header
+                OnMessageReceived = ctx =>
+                {
+                    var token = ctx.Request.Cookies["access_token"];
+                    if (!string.IsNullOrEmpty(token))
+                        ctx.Token = token;
+                    return Task.CompletedTask;
+                },
+
+                // JSON-ответ при 401 вместо пустого тела
                 OnChallenge = async ctx =>
                 {
                     ctx.HandleResponse();
@@ -64,9 +69,10 @@ public static class ServiceExtensions
                     ctx.Response.ContentType = "application/json";
                     await ctx.Response.WriteAsJsonAsync(new
                     {
-                        error = "Unauthorized. Provide a valid Bearer token."
+                        error = "Не авторизован. Выполните вход."
                     });
                 },
+
                 OnAuthenticationFailed = ctx =>
                 {
                     if (ctx.Exception is SecurityTokenExpiredException)
@@ -79,14 +85,27 @@ public static class ServiceExtensions
         services.AddAuthorization();
 
         // ── Сервисы приложения ───────────────────────────────
-        services.AddSingleton<IJwtService,    JwtService>();
-        services.AddScoped<IAuthService,     AuthService>();
+        services.AddSingleton<IJwtService,     JwtService>();
+        services.AddScoped<IAuthService,       AuthService>();
         services.AddScoped<IProfileService,    ProfileService>();
         services.AddScoped<IProjectService,    ProjectService>();
         services.AddScoped<IAssessmentService, AssessmentService>();
 
-        // ── In-Memory кэш (заменить на Redis при масштабировании) ─
-        services.AddMemoryCache(options => { options.SizeLimit = 1024; });
+        // ── Redis кэш ────────────────────────────────────────
+        var redisConnection = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrEmpty(redisConnection))
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnection;
+                options.InstanceName  = "barnamaj:";
+            });
+        }
+        else
+        {
+            // Fallback на in-memory для локальной разработки без Redis
+            services.AddDistributedMemoryCache();
+        }
 
         return services;
     }

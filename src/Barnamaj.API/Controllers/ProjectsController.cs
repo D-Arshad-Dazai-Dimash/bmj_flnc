@@ -120,6 +120,36 @@ public sealed class ProjectsController : ControllerBase
     }
 
     // ════════════════════════════════════════════════════════════
+    // PATCH /api/projects/{id}/status
+    // ════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Изменяет статус проекта. Только Owner профиля-заказчика.
+    /// Допустимые значения: Cancelled, Completed.
+    /// </summary>
+    [HttpPatch("{id:guid}/status")]
+    [Authorize]
+    [ProducesResponseType(typeof(ProjectSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PatchStatus(
+        [FromRoute] Guid id,
+        [FromBody]  PatchProjectStatusDto dto,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await _projectService.PatchStatusAsync(id, dto.Status, CurrentUserId, ct);
+            return Ok(result);
+        }
+        catch (ProjectException ex)
+        {
+            return StatusCode(ex.StatusCode, new { error = ex.Message });
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════
     // POST /api/projects/{id}/apply
     // ════════════════════════════════════════════════════════════
 

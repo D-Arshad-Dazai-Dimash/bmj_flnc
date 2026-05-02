@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
-import { createClient } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import type { OrderType } from '@/lib/database.types'
 import { calculateCommission, tengeToTiyn, tiynToTenge, formatTenge } from '@/lib/pricing'
 import dynamic from 'next/dynamic'
@@ -175,6 +175,8 @@ const EXTRA_FIELDS: Record<OrderType, FieldDef[]> = {
     },
     { name: 'session_date', label: 'Желаемая дата',             type: 'date' },
   ],
+  fixed:  [],
+  hourly: [],
 }
 
 // ── Build description from extra fields ─────────────────────────────────────
@@ -245,7 +247,6 @@ function FieldInput({ def, value, onChange }: {
 export default function CreateProjectPage() {
   const { user }  = useAuth()
   const router    = useLocaleRouter()
-  const supabase  = useMemo(() => createClient(), [])
 
   const [selectedType, setSelectedType] = useState<OrderType | null>(null)
   const [base, setBase] = useState({ title: '', description: '', budget: '', deadline: '' })
@@ -285,33 +286,15 @@ export default function CreateProjectPage() {
 
     try {
       const fullDesc = buildDescription(base.description, selectedType, extras)
-      const budgetNum = base.budget ? Number(base.budget) : null
+      const budgetNum = base.budget ? Number(base.budget) : undefined
 
-      // Calculate pricing if budget is set
-      let packageTier: number | null = null
-      let commissionAmount: number | null = null
-      let totalAmount: number | null = null
-      if (budgetNum && budgetNum > 0) {
-        try {
-          const calc = calculateCommission(tengeToTiyn(budgetNum))
-          packageTier = calc.package
-          commissionAmount = calc.commissionTiyn
-          totalAmount = calc.totalFromClientTiyn
-        } catch { /* budget too small or invalid */ }
-      }
-
-      const { error } = await supabase.from('projects').insert({
-        title:             base.title,
-        description:       fullDesc || null,
-        client_id:         user.id,
-        budget:            budgetNum,
-        deadline:          base.deadline || null,
-        order_type:        selectedType,
-        package_tier:      packageTier,
-        commission_amount: commissionAmount,
-        total_amount:      totalAmount,
+      await api.projects.create({
+        title:           base.title,
+        description:     fullDesc || undefined,
+        clientProfileId: user.id,
+        budget:          budgetNum,
+        deadline:        base.deadline || undefined,
       })
-      if (error) throw error
       setSuccess(true)
       setTimeout(() => router.push('/dashboard/projects'), 1800)
     } catch (err: unknown) {

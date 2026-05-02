@@ -54,7 +54,7 @@ const ReplyBar = memo(function ReplyBar({
       >
         <CornerDownRight className="w-3.5 h-3.5 text-accent-light shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-accent-light font-medium truncate">{msg.sender.full_name}</p>
+          <p className="text-xs text-accent-light font-medium truncate">{msg.sender?.full_name}</p>
           <p className="text-xs text-text-faint truncate">{msg.text}</p>
         </div>
         <button
@@ -85,13 +85,13 @@ const MessageBubble = memo(function MessageBubble({
       transition={{ duration: 0.2 }}
       className={cn('flex gap-2 group', isOwn ? 'flex-row-reverse' : 'flex-row')}
     >
-      {!isOwn && <Avatar name={msg.sender.full_name} />}
+      {!isOwn && <Avatar name={msg.sender?.full_name ?? '?'} />}
 
       <div className={cn('max-w-[75%] space-y-1', isOwn && 'items-end flex flex-col')}>
         {/* Sender name + time */}
         {!isOwn && (
           <p className="text-[11px] text-text-faint px-1">
-            {msg.sender.full_name}
+            {msg.sender?.full_name}
           </p>
         )}
 
@@ -105,7 +105,7 @@ const MessageBubble = memo(function MessageBubble({
           )}>
             <div className="min-w-0">
               <p className="text-[10px] font-medium text-accent-light truncate">
-                {msg.reply_to.sender.full_name}
+                {msg.reply_to.sender?.full_name}
               </p>
               <p className="text-[10px] text-text-faint truncate max-w-[180px]">
                 {msg.reply_to.text}

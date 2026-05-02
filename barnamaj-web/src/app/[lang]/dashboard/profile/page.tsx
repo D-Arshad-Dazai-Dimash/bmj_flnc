@@ -1,49 +1,40 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { createClient } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import { User, Save, Camera, Hexagon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import type { ClanRole } from '@/lib/database.types'
 
-const ROLE_LABELS: Record<ClanRole, string> = {
+const ROLE_LABELS: Record<string, string> = {
+  owner:     'Владелец',
   leader:    'Лидер',
+  admin:     'Админ',
   architect: 'Архитектор',
   member:    'Участник',
 }
 
 export default function ProfilePage() {
-  const { user, profile, updateProfile, updateUser } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
+  const { user, updateProfile, updateUser } = useAuth()
 
-  const [fullName,  setFullName]  = useState(profile?.full_name ?? user?.profileName ?? '')
-  const [bio,       setBio]       = useState(profile?.bio ?? user?.bio ?? '')
+  const [fullName,  setFullName]  = useState(user?.profileName ?? '')
+  const [bio,       setBio]       = useState(user?.bio ?? '')
   const [saving,    setSaving]    = useState(false)
   const [saved,     setSaved]     = useState(false)
   const [errMsg,    setErrMsg]    = useState<string | null>(null)
 
-  const [clanName, setClanName] = useState<string | null>(null)
-  const [clanRole, setClanRole] = useState<ClanRole | null>(null)
+  // clan info not available via current API — placeholder
+  const clanName: string | null = null
+  const clanRole: string | null = null
 
+  // Sync fields when user loads
   useEffect(() => {
-    if (!user) return
-    async function fetchClan() {
-      const { data } = await supabase
-        .from('clan_members')
-        .select('role, clan:clans(name)')
-        .eq('user_id', user!.id)
-        .limit(1)
-        .single()
-      if (data) {
-        setClanName((data.clan as any)?.name ?? null)
-        setClanRole(data.role as ClanRole)
-      }
+    if (user) {
+      setFullName(user.profileName ?? '')
+      setBio(user.bio ?? '')
     }
-    fetchClan().catch(() => {})
-  }, [user, supabase])
+  }, [user?.id])
 
   const handleSave = async () => {
     setSaving(true)

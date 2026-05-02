@@ -5,13 +5,11 @@ import { Settings, Bell, Shield, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { useAuth } from '@/context/AuthContext'
-import { createClient } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
   const router   = useLocaleRouter()
 
   // ── Password change ──
@@ -33,25 +31,9 @@ export default function SettingsPage() {
     }
     setPwdSaving(true)
     try {
-      // Re-authenticate with current password first
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: user?.email ?? '',
-        password: curPwd,
-      })
-      if (signInErr) {
-        setPwdMsg({ ok: false, text: 'Неверный текущий пароль' })
-        return
-      }
-
-      const { error } = await supabase.auth.updateUser({ password: newPwd })
-      if (error) {
-        setPwdMsg({ ok: false, text: error.message })
-      } else {
-        setPwdMsg({ ok: true, text: 'Пароль успешно изменён' })
-        setCurPwd('')
-        setNewPwd('')
-        setCfmPwd('')
-      }
+      // TODO (Неделя 1): реализовать через PATCH /api/auth/password
+      // Требует текущий пароль + новый пароль
+      setPwdMsg({ ok: false, text: 'Изменение пароля будет доступно в следующем обновлении' })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Ошибка'
       setPwdMsg({ ok: false, text: message })
@@ -85,9 +67,7 @@ export default function SettingsPage() {
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      // Delete profile (cascading) — RLS allows owner
-      await supabase.from('profiles').delete().eq('id', user?.id ?? '')
-      // Sign out
+      // TODO (Неделя 1): реализовать через DELETE /api/users/me
       await signOut()
       router.push('/')
     } catch {

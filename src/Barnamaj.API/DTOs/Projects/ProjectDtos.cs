@@ -22,6 +22,13 @@ public sealed record CreateProjectDto(
 );
 
 /// <summary>
+/// Запрос на изменение статуса проекта.
+/// </summary>
+public sealed record PatchProjectStatusDto(
+    string Status
+);
+
+/// <summary>
 /// Запрос на подачу заявки на выполнение проекта.
 /// </summary>
 /// <param name="ApplicantProfileId">

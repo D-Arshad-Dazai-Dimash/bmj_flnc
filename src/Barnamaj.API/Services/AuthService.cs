@@ -9,6 +9,7 @@ public interface IAuthService
 {
     Task<AuthResponseDto> RegisterAsync(RegisterDto dto, CancellationToken ct = default);
     Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken ct = default);
+    Task<AuthResponseDto> RefreshAsync(string refreshToken, CancellationToken ct = default);
     Task<UserDto> UpdateProfileAsync(Guid userId, UpdateProfileDto dto, CancellationToken ct = default);
 }
 
@@ -177,14 +178,40 @@ public sealed class AuthService : IAuthService
             CreatedAt:       user.CreatedAt);
     }
 
+    // ── REFRESH TOKEN ──────────────────────────────────────────
+    public async Task<AuthResponseDto> RefreshAsync(string refreshToken, CancellationToken ct = default)
+    {
+        var principal = _jwt.ValidateRefreshToken(refreshToken)
+            ?? throw new AuthException("Токен недействителен или истёк.");
+
+        var userId = Guid.Parse(principal.FindFirst("sub")!.Value);
+
+        var user = await _db.Users
+            .Include(u => u.Profile)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new AuthException("Пользователь не найден.");
+
+        if (!user.IsActive)
+            throw new AuthException("Аккаунт заблокирован.");
+
+        var profile = user.Profile
+            ?? throw new InvalidOperationException($"User {userId} has no linked profile.");
+
+        return BuildResponse(user, profile);
+    }
+
     // ── Helpers ───────────────────────────────────────────────
     private AuthResponseDto BuildResponse(User user, Profile profile)
     {
-        var (token, expiresAt) = _jwt.GenerateToken(user, profile);
+        var (accessToken, accessExpiresAt, refreshToken, refreshExpiresAt) =
+            _jwt.GenerateTokens(user, profile);
 
         return new AuthResponseDto(
-            AccessToken: token,
-            ExpiresAt:   expiresAt,
+            AccessToken:      accessToken,
+            ExpiresAt:        accessExpiresAt,
+            RefreshToken:     refreshToken,
+            RefreshExpiresAt: refreshExpiresAt,
             User: new UserDto(
                 Id:              user.Id,
                 Email:           user.Email,

@@ -47,6 +47,17 @@ public interface IProjectService
     Task<IReadOnlyList<ProjectSummaryDto>> GetMyProjectsAsync(
         Guid currentUserId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Изменяет статус проекта (отмена или завершение).
+    /// Только Owner профиля-заказчика может менять статус.
+    /// Допустимые переходы: Open/InProgress → Cancelled; InProgress → Completed.
+    /// </summary>
+    Task<ProjectSummaryDto> PatchStatusAsync(
+        Guid projectId,
+        string newStatus,
+        Guid currentUserId,
+        CancellationToken ct = default);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -210,6 +221,66 @@ public sealed class ProjectService : IProjectService
             ApplicationCount:  x.AppCount,
             CreatedAt:         x.Project.CreatedAt
         )).ToList();
+    }
+
+    // ── PATCH STATUS ──────────────────────────────────────────
+    public async Task<ProjectSummaryDto> PatchStatusAsync(
+        Guid projectId,
+        string newStatus,
+        Guid currentUserId,
+        CancellationToken ct = default)
+    {
+        if (!Enum.TryParse<ProjectStatus>(newStatus, ignoreCase: true, out var target))
+            throw new ProjectException($"Недопустимый статус: '{newStatus}'.", 400);
+
+        var project = await _db.Projects
+            .Include(p => p.ClientProfile)
+            .FirstOrDefaultAsync(p => p.Id == projectId, ct);
+
+        if (project is null)
+            throw new ProjectException("Проект не найден.", 404);
+
+        // Проверяем право: только Owner заказчика
+        await EnsureOwnerAccessAsync(project.ClientProfileId, currentUserId,
+            project.ClientProfile.AccountType, ct);
+
+        // Допустимые переходы
+        var allowed = (project.Status, target) switch
+        {
+            (ProjectStatus.Open,       ProjectStatus.Cancelled)  => true,
+            (ProjectStatus.InProgress, ProjectStatus.Cancelled)  => true,
+            (ProjectStatus.InProgress, ProjectStatus.Completed)  => true,
+            _ => false,
+        };
+
+        if (!allowed)
+            throw new ProjectException(
+                $"Переход '{project.Status}' → '{target}' не разрешён.", 400);
+
+        project.Status    = target;
+        project.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Project {ProjectId} status changed to {Status} by user {UserId}",
+            projectId, target, currentUserId);
+
+        var appCount = await _db.ProjectApplications
+            .CountAsync(a => a.ProjectId == projectId && a.Status == ApplicationStatus.Pending, ct);
+
+        return new ProjectSummaryDto(
+            Id:                project.Id,
+            Title:             project.Title,
+            Description:       project.Description,
+            Budget:            project.Budget,
+            Deadline:          project.Deadline,
+            Status:            project.Status.ToString(),
+            ClientProfileName: project.ClientProfile.Name,
+            ClientProfileId:   project.ClientProfileId,
+            ClientProfileType: project.ClientProfile.AccountType.ToString(),
+            ApplicationCount:  appCount,
+            CreatedAt:         project.CreatedAt
+        );
     }
 
     // ── APPLY TO PROJECT ──────────────────────────────────────

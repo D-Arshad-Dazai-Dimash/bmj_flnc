@@ -6,13 +6,10 @@ import {
   useState,
   useEffect,
   useCallback,
-  useMemo,
-  useRef,
   type ReactNode,
 } from 'react'
-import { createClient } from '@/lib/supabase'
-import type { Profile, UserRole } from '@/lib/database.types'
-import type { User, Session, AuthError } from '@supabase/supabase-js'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,323 +17,182 @@ export interface AuthUser {
   id: string
   email: string
   role: string
-  profileId: string
+  profileId: string | null
   profileName: string
   accountType: 'Developer' | 'Client'
   avatarUrl?: string | null
-  bio?: string
+  bio?: string | null
 }
 
 interface AuthState {
   user: AuthUser | null
-  token: string | null
-  session: Session | null
-  profile: Profile | null
   isLoading: boolean
   isAuthenticated: boolean
 }
 
 interface AuthContextValue extends AuthState {
-  /** Legacy: сохранить JWT + user напрямую (используется api.auth.login) */
-  login: (token: string, user: AuthUser) => void
-  /** Legacy: выйти (очистить всё) */
-  logout: () => void
-  /** Legacy: частичное обновление user */
-  updateUser: (partial: Partial<AuthUser>) => void
-  /** Supabase: регистрация с ролью */
-  signUp: (
-    email: string,
-    password: string,
-    meta: { full_name: string; role: UserRole }
-  ) => Promise<{ error: AuthError | null }>
-  /** Supabase: вход по email/password */
-  signIn: (
-    email: string,
-    password: string
-  ) => Promise<{ error: AuthError | null }>
-  /** Supabase: выход */
+  login: (email: string, password: string) => Promise<void>
+  register: (data: RegisterData) => Promise<void>
+  logout: () => Promise<void>
+  /** @alias logout — для совместимости с компонентами, которые используют signOut */
   signOut: () => Promise<void>
-  /** Supabase: обновить профиль в БД */
-  updateProfile: (
-    data: Partial<Pick<Profile, 'full_name' | 'bio' | 'avatar_url'>>
-  ) => Promise<void>
+  updateUser: (partial: Partial<AuthUser>) => void
+  /** @deprecated TODO: реализовать через PATCH /api/auth/profile */
+  updateProfile: (data: { full_name?: string; bio?: string; avatar_url?: string }) => Promise<void>
+}
+
+export interface RegisterData {
+  email: string
+  password: string
+  name: string
+  accountType: number   // 1 = Developer (Individual), 2 = Client (Company)
+  bio?: string
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const TOKEN_KEY = 'barnamaj_token'
-const USER_KEY  = 'barnamaj_user'
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function roleToAccountType(role: UserRole): 'Developer' | 'Client' {
-  return role === 'freelancer' ? 'Developer' : 'Client'
+function mapAccountType(raw: string): 'Developer' | 'Client' {
+  return raw === 'Company' ? 'Client' : 'Developer'
 }
 
-function profileToAuthUser(supaUser: User, profile: Profile): AuthUser {
+function toAuthUser(dto: {
+  id: string
+  email: string
+  role: string
+  profileId: string | null
+  profileName: string
+  accountType: string
+}): AuthUser {
   return {
-    id:          supaUser.id,
-    email:       supaUser.email ?? '',
-    role:        profile.role,
-    profileId:   profile.id,
-    profileName: profile.full_name,
-    accountType: roleToAccountType(profile.role),
-    avatarUrl:   profile.avatar_url,
-    bio:         profile.bio,
+    id:          dto.id,
+    email:       dto.email,
+    role:        dto.role,
+    profileId:   dto.profileId,
+    profileName: dto.profileName,
+    accountType: mapAccountType(dto.accountType),
   }
+}
+
+async function apiFetch(path: string, options?: RequestInit) {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    credentials: 'include',  // автоматически отправляет httpOnly cookies
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options?.headers ?? {}),
+    },
+  })
+  return res
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = useMemo(() => createClient(), [])
-
   const [state, setState] = useState<AuthState>({
     user: null,
-    token: null,
-    session: null,
-    profile: null,
     isLoading: true,
     isAuthenticated: false,
   })
 
-  // ── Загрузка профиля из public.profiles ───────────────────
-  const fetchProfile = useCallback(
-    async (userId: string): Promise<Profile | null> => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()  // returns null (not error) when no row found
-
-      if (error) {
-        console.error('[AuthProvider] fetchProfile error:', error.message)
-        return null
-      }
-      return data as Profile | null
-    },
-    [supabase]
-  )
-
-  // ── Синхронизация Supabase-сессии в состояние ─────────────
-  const syncSession = useCallback(
-    async (session: Session | null) => {
-      try {
-        if (!session?.user) {
-          // Нет Supabase-сессии — проверяем legacy localStorage
-          try {
-            const token = localStorage.getItem(TOKEN_KEY)
-            const raw   = localStorage.getItem(USER_KEY)
-            if (token && raw) {
-              // Validate token is still live against Supabase
-              const { data: { user: supaUser } } = await supabase.auth.getUser(token)
-              if (supaUser) {
-                const stored: AuthUser = JSON.parse(raw)
-                // Use Supabase's authoritative ID to avoid stale-UUID bugs after db resets
-                const user: AuthUser = { ...stored, id: supaUser.id }
-                setState({
-                  user, token, session: null, profile: null,
-                  isLoading: false, isAuthenticated: true,
-                })
-                return
-              }
-              // Token is invalid — wipe stale data
-              localStorage.removeItem(TOKEN_KEY)
-              localStorage.removeItem(USER_KEY)
-            }
-          } catch { /* ignore */ }
-
-          setState({
-            user: null, token: null, session: null, profile: null,
-            isLoading: false, isAuthenticated: false,
-          })
-          return
-        }
-
-        // Supabase-сессия есть — загружаем профиль
-        let profile = await fetchProfile(session.user.id)
-
-        // Триггер мог не успеть создать профиль — retry
-        if (!profile) {
-          await new Promise(r => setTimeout(r, 1000))
-          profile = await fetchProfile(session.user.id)
-        }
-
-        if (!profile) {
-          // Профиль не найден — всё равно пускаем в дашборд с минимальными данными
-          console.warn('[AuthProvider] profile not found, creating minimal user')
-          const minimalUser: AuthUser = {
-            id:          session.user.id,
-            email:       session.user.email ?? '',
-            role:        'freelancer',
-            profileId:   session.user.id,
-            profileName: session.user.email?.split('@')[0] ?? 'User',
-            accountType: 'Developer',
-          }
-          setState({
-            user: minimalUser,
-            token: session.access_token,
-            session,
-            profile: null,
-            isLoading: false,
-            isAuthenticated: true,
-          })
-          return
-        }
-
-        const authUser = profileToAuthUser(session.user, profile)
-        // Также сохраняем в localStorage для DashboardLayout-совместимости
-        localStorage.setItem(TOKEN_KEY, session.access_token)
-        localStorage.setItem(USER_KEY, JSON.stringify(authUser))
-
-        setState({
-          user: authUser,
-          token: session.access_token,
-          session,
-          profile,
-          isLoading: false,
-          isAuthenticated: true,
-        })
-      } catch (err) {
-        // Любая ошибка в syncSession — разблокируем isLoading чтобы не зависнуть
-        console.error('[AuthProvider] syncSession error:', err)
-        setState(s => ({ ...s, isLoading: false }))
-      }
-    },
-    [fetchProfile]
-  )
-
-  // ── Init: пробуем Supabase-сессию, fallback на localStorage ──
-  // Используем ref чтобы не перепривязывать subscription при изменении syncSession
-  const syncSessionRef = useRef(syncSession)
-  useEffect(() => { syncSessionRef.current = syncSession }, [syncSession])
-
+  // При загрузке страницы — проверяем текущую сессию через /api/auth/me
+  // Если cookie есть → вернёт данные пользователя, иначе 401
   useEffect(() => {
-    let mounted = true
-
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (mounted) syncSessionRef.current(session)
-      })
-      .catch(err => {
-        // Supabase may be unavailable — don't crash, just mark as unauthenticated
-        console.warn('[AuthProvider] getSession error (Supabase may be offline):', err?.message ?? err)
-        if (mounted) setState(s => ({ ...s, isLoading: false }))
-      })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (mounted) {
-          try {
-            syncSessionRef.current(session)
-          } catch (err) {
-            console.warn('[AuthProvider] onAuthStateChange error:', err)
+    apiFetch('/api/auth/me')
+      .then(async res => {
+        if (res.ok) {
+          const dto = await res.json()
+          setState({ user: toAuthUser(dto), isLoading: false, isAuthenticated: true })
+        } else if (res.status === 401) {
+          // access_token истёк — пробуем обновить через refresh_token
+          const refresh = await apiFetch('/api/auth/refresh', { method: 'POST' })
+          if (refresh.ok) {
+            const dto = await refresh.json()
+            setState({ user: toAuthUser(dto), isLoading: false, isAuthenticated: true })
+          } else {
+            setState({ user: null, isLoading: false, isAuthenticated: false })
           }
+        } else {
+          setState({ user: null, isLoading: false, isAuthenticated: false })
         }
-      }
-    )
-
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
-  }, [supabase])
-
-  // ── Supabase signUp ───────────────────────────────────────
-  const signUp = useCallback(
-    async (
-      email: string,
-      password: string,
-      meta: { full_name: string; role: UserRole }
-    ) => {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: meta.full_name, role: meta.role } },
       })
-      return { error }
-    },
-    [supabase]
-  )
-
-  // ── Supabase signIn ───────────────────────────────────────
-  const signIn = useCallback(
-    async (email: string, password: string) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      return { error }
-    },
-    [supabase]
-  )
-
-  // ── Supabase signOut ──────────────────────────────────────
-  const signOut = useCallback(async () => {
-    await supabase.auth.signOut()
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(USER_KEY)
-    setState({
-      user: null, token: null, session: null, profile: null,
-      isLoading: false, isAuthenticated: false,
-    })
-  }, [supabase])
-
-  // ── Supabase updateProfile ────────────────────────────────
-  const updateProfile = useCallback(
-    async (data: Partial<Pick<Profile, 'full_name' | 'bio' | 'avatar_url'>>) => {
-      const userId = state.session?.user?.id ?? state.user?.id
-      if (!userId) throw new Error('Not authenticated')
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(data)
-        .eq('id', userId)
-
-      if (error) throw error
-
-      const fresh = await fetchProfile(userId)
-      if (fresh && state.session?.user) {
-        const authUser = profileToAuthUser(state.session.user, fresh)
-        localStorage.setItem(USER_KEY, JSON.stringify(authUser))
-        setState(prev => ({ ...prev, profile: fresh, user: authUser }))
-      }
-    },
-    [supabase, state.session, state.user, fetchProfile]
-  )
-
-  // ── Legacy login (для api.auth.login / api.auth.register) ──
-  const login = useCallback((token: string, user: AuthUser) => {
-    localStorage.setItem(TOKEN_KEY, token)
-    localStorage.setItem(USER_KEY, JSON.stringify(user))
-    setState({
-      user, token, session: null, profile: null,
-      isLoading: false, isAuthenticated: true,
-    })
+      .catch(() => {
+        setState({ user: null, isLoading: false, isAuthenticated: false })
+      })
   }, [])
 
-  // ── Legacy logout ─────────────────────────────────────────
-  const logout = useCallback(() => {
-    signOut()
-  }, [signOut])
-
-  // ── Legacy updateUser ─────────────────────────────────────
-  const updateUser = useCallback((partial: Partial<AuthUser>) => {
-    setState(prev => {
-      if (!prev.user) return prev
-      const updated = { ...prev.user, ...partial }
-      localStorage.setItem(USER_KEY, JSON.stringify(updated))
-      return { ...prev, user: updated }
+  // ── Login ──────────────────────────────────────────────────
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error ?? 'Ошибка входа')
+    }
+    const dto = await res.json()
+    setState({ user: toAuthUser(dto), isLoading: false, isAuthenticated: true })
+  }, [])
+
+  // ── Register ───────────────────────────────────────────────
+  const register = useCallback(async (data: RegisterData) => {
+    const res = await apiFetch('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error ?? 'Ошибка регистрации')
+    }
+    const dto = await res.json()
+    setState({ user: toAuthUser(dto), isLoading: false, isAuthenticated: true })
+  }, [])
+
+  // ── Logout ─────────────────────────────────────────────────
+  const logout = useCallback(async () => {
+    await apiFetch('/api/auth/logout', { method: 'POST' })
+    setState({ user: null, isLoading: false, isAuthenticated: false })
+  }, [])
+
+  // ── signOut (alias for logout) ─────────────────────────────
+  const signOut = logout
+
+  // ── updateProfile → PATCH /api/auth/profile ─────────────────
+  const updateProfile = useCallback(async (data: { full_name?: string; bio?: string; avatar_url?: string }) => {
+    const res = await apiFetch('/api/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ name: data.full_name, bio: data.bio }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error ?? 'Ошибка сохранения профиля')
+    }
+    // Обновляем локальное состояние
+    setState(prev => prev.user
+      ? { ...prev, user: {
+          ...prev.user,
+          profileName: data.full_name ?? prev.user.profileName,
+          bio: data.bio ?? prev.user.bio,
+          avatarUrl: data.avatar_url ?? prev.user.avatarUrl,
+        }}
+      : prev
+    )
+  }, [])
+
+  // ── Update user (локально, без запроса к API) ──────────────
+  const updateUser = useCallback((partial: Partial<AuthUser>) => {
+    setState(prev => prev.user
+      ? { ...prev, user: { ...prev.user, ...partial } }
+      : prev
+    )
   }, [])
 
   return (
-    <AuthContext.Provider
-      value={{
-        ...state,
-        login, logout, updateUser,
-        signUp, signIn, signOut, updateProfile,
-      }}
-    >
+    <AuthContext.Provider value={{ ...state, login, register, logout, signOut, updateUser, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )
@@ -349,3 +205,4 @@ export function useAuth(): AuthContextValue {
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>')
   return ctx
 }
+

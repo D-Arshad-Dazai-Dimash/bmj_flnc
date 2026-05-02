@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion'
 import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
@@ -10,7 +10,6 @@ import {
   ChevronRight, ChevronLeft, Megaphone,
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
-import { createClient } from '@/lib/supabase'
 import { useLang } from '@/context/LangContext'
 
 const Footer = lazy(() => import('@/components/Footer'))
@@ -298,12 +297,11 @@ function AnnouncementsCarousel({ items }: { items: AnnouncementItem[] }) {
 
 export default function HomePage() {
   const { t } = useLang()
-  const supabase = useMemo(() => createClient(), [])
 
   // ── Announcements ───────────────────────────────────────────
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
 
-  // ── Live stats from Supabase ──────────────────────────────
+  // ── Live stats from backend ──────────────────────────────
   const [stats, setStats] = useState({
     escrowTotal: 0,
     activeProjects: 0,
@@ -311,38 +309,24 @@ export default function HomePage() {
   })
 
   useEffect(() => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
     async function loadStats() {
       try {
-        // Load announcements
-        const { data: annData } = await supabase
-          .from('announcements')
-          .select('id, title, body, published_at')
-          .eq('is_active', true)
-          .order('sort_order', { ascending: true })
-        if (annData && annData.length > 0) setAnnouncements(annData)
-
-        const [escrowRes, projRes, teamsRes] = await Promise.all([
-          supabase.from('contracts').select('amount'),
-          supabase.from('projects').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress']),
-          supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'client'),
-        ])
-
-        const escrowTotal = (escrowRes.data ?? []).reduce(
-          (sum: number, c: { amount: number }) => sum + (c.amount ?? 0),
-          0
-        )
-
-        setStats({
-          escrowTotal,
-          activeProjects: projRes.count ?? 0,
-          verifiedTeams: teamsRes.count ?? 0,
-        })
+        const res = await fetch(`${API_URL}/api/stats`, { credentials: 'include' })
+        if (res.ok) {
+          const data = await res.json()
+          setStats({
+            escrowTotal: 0,  // эскроу-данные появятся когда будет реализован модуль платежей
+            activeProjects: (data.activeOrders ?? 0),
+            verifiedTeams: (data.clans ?? 0) + (data.companies ?? 0),
+          })
+        }
       } catch {
-        // Supabase недоступен — показываем нули, страница не ломается
+        // backend недоступен — показываем нули, страница не ломается
       }
     }
     loadStats()
-  }, [supabase])
+  }, [])
 
   return (
     <div className="min-h-screen bg-bg-base relative">

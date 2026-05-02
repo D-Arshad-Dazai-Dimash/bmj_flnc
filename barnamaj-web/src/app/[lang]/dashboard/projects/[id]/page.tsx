@@ -190,7 +190,7 @@ export default function ProjectDetailPage() {
         // ③ ROLLBACK
         setApps(prevApps)
         setProject(prevProject)
-        setError(rpcError.message)
+        setError((rpcError as { message: string }).message)
         return
       }
 
@@ -198,7 +198,7 @@ export default function ProjectDetailPage() {
       const { data: cData } = await supabase
         .from('contracts')
         .select('*')
-        .eq('id', data as string)
+        .eq('id', data as unknown as string)
         .single()
 
       if (cData) setContract(cData as Contract)
@@ -223,7 +223,7 @@ export default function ProjectDetailPage() {
         p_description: description || undefined,
       } as { p_contract_id: string; p_url: string; p_description?: string })
 
-      if (rpcErr) { setError(rpcErr.message); return }
+      if (rpcErr) { setError((rpcErr as { message: string }).message); return }
 
       setContract({
         ...contract,
@@ -257,7 +257,7 @@ export default function ProjectDetailPage() {
       if (rpcErr) {
         setContract(prevContract)
         setProject(prevProject)
-        setError(rpcErr.message)
+        setError((rpcErr as { message: string }).message)
       } else {
         // 🎉 Конфетти!
         fireConfetti()
@@ -355,7 +355,7 @@ export default function ProjectDetailPage() {
             </div>
             <div>
               <p className="text-text-faint">Комиссия</p>
-              <p className="font-medium text-text-base">{contract.platform_fee.toLocaleString('ru-RU')} ₸</p>
+              <p className="font-medium text-text-base">{(contract.platform_fee ?? 0).toLocaleString('ru-RU')} ₸</p>
             </div>
             <div>
               <p className="text-text-faint">Эскроу</p>
@@ -364,7 +364,7 @@ export default function ProjectDetailPage() {
             <div>
               <p className="text-text-faint">Заморожен</p>
               <p className="font-medium text-text-base">
-                {new Date(contract.frozen_at).toLocaleDateString('ru-RU')}
+                {new Date(contract.frozen_at ?? '').toLocaleDateString('ru-RU')}
               </p>
             </div>
           </div>

@@ -8,6 +8,8 @@ import type { OrderType, ProjectWithClient } from '@/lib/database.types'
 
 // ── Order type display map ───────────────────────────────────────────────────
 const ORDER_TYPE_MAP: Record<OrderType, { label: string; cls: string }> = {
+  fixed:        { label: 'Fixed',        cls: 'border-border text-text-faint' },
+  hourly:       { label: 'Hourly',       cls: 'border-border text-text-faint' },
   PROJECT:      { label: 'Проект',       cls: 'border-violet-500/40 text-violet-400 bg-violet-500/10' },
   OUTSTAFF:     { label: 'Аутстафф',     cls: 'border-blue-500/40 text-blue-400 bg-blue-500/10' },
   AUDIT:        { label: 'Аудит',        cls: 'border-amber-500/40 text-amber-400 bg-amber-500/10' },
@@ -249,8 +251,8 @@ export default function OrdersPage() {
             supabase.from('favorites').select('project_id').eq('user_id', user.id),
             supabase.from('project_applications').select('project_id').eq('freelancer_id', user.id),
           ])
-          if (favRes.data) setFavoriteIds(new Set(favRes.data.map(f => f.project_id)))
-          if (appRes.data) setProposalIds(new Set(appRes.data.map(a => a.project_id)))
+          if (favRes.data) setFavoriteIds(new Set(favRes.data.map((f: { project_id: string }) => f.project_id)))
+          if (appRes.data) setProposalIds(new Set(appRes.data.map((a: { project_id: string }) => a.project_id)))
         }
       } catch (e: unknown) {
         setErrMsg(e instanceof Error ? e.message : 'Ошибка загрузки')

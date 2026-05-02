@@ -9,20 +9,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { api, ApiError, mapAccountType, toBackendAccountType } from '@/lib/api'
+import { api, ApiError, toBackendAccountType } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
-import type { UserRole } from '@/lib/database.types'
 
 type Mode = 'login' | 'register'
 type Acct = 'Developer' | 'Client'
-
-/** true = используем Supabase Auth, false = legacy ASP.NET API */
-const USE_SUPABASE = !!process.env.NEXT_PUBLIC_SUPABASE_URL
-
-function acctToRole(acct: Acct): UserRole {
-  return acct === 'Developer' ? 'freelancer' : 'client'
-}
 
 // ── Password input with show/hide ─────────────────────────────────────────────
 function PasswordInput({
@@ -104,7 +96,7 @@ interface AuthFormProps {
 
 function AuthForm({ mode, acct, onModeChange, onAcctChange }: AuthFormProps) {
   const router  = useLocaleRouter()
-  const { login, signIn, signUp } = useAuth()
+  const { login, register } = useAuth()
 
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -144,38 +136,14 @@ function AuthForm({ mode, acct, onModeChange, onAcctChange }: AuthFormProps) {
     setErrMsg(null)
 
     try {
-      if (USE_SUPABASE) {
-        // ── Supabase Auth ──────────────────────────────────────
-        if (mode === 'login') {
-          const { error } = await signIn(email, password)
-          if (error) throw error
-        } else {
-          const { error } = await signUp(email, password, {
-            full_name: name.trim() || email.split('@')[0],
-            role: acctToRole(acct),
-          })
-          if (error) throw error
-        }
+      if (mode === 'login') {
+        await login(email, password)
       } else {
-        // ── Legacy ASP.NET API ────────────────────────────────
-        let data
-        if (mode === 'login') {
-          data = await api.auth.login({ email, password })
-        } else {
-          data = await api.auth.register({
-            email,
-            password,
-            name: name.trim() || email.split('@')[0],
-            accountType: toBackendAccountType(acct),
-          })
-        }
-        login(data.accessToken, {
-          id:          data.user.id,
-          email:       data.user.email,
-          role:        data.user.role,
-          profileId:   data.user.profileId ?? '',
-          profileName: data.user.profileName,
-          accountType: mapAccountType(data.user.accountType),
+        await register({
+          email,
+          password,
+          name: name.trim() || email.split('@')[0],
+          accountType: toBackendAccountType(acct),
         })
       }
       setSuccess(true)

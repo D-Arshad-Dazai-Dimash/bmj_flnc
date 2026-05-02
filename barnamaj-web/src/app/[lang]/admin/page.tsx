@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { createClient } from '@/lib/supabase'
 import { LayoutDashboard, Users, ClipboardList, CreditCard, TrendingUp } from 'lucide-react'
 
 interface AdminStats {
@@ -13,26 +12,24 @@ interface AdminStats {
 }
 
 export default function AdminOverviewPage() {
-  const supabase = useMemo(() => createClient(), [])
   const [stats, setStats] = useState<AdminStats | null>(null)
 
   useEffect(() => {
-    async function load() {
-      const [usersRes, ordersRes, activeRes, paymentsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('projects').select('id', { count: 'exact', head: true }),
-        supabase.from('projects').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress']),
-        supabase.from('payments').select('id', { count: 'exact', head: true }),
-      ])
-      setStats({
-        totalUsers: usersRes.count ?? 0,
-        totalOrders: ordersRes.count ?? 0,
-        activeOrders: activeRes.count ?? 0,
-        totalPayments: paymentsRes.count ?? 0,
+    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
+    fetch(`${API_URL}/api/stats`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setStats({
+            totalUsers:    data.users ?? 0,
+            totalOrders:   (data.activeOrders ?? 0) + (data.completedOrders ?? 0),
+            activeOrders:  data.activeOrders ?? 0,
+            totalPayments: 0,  // платёжный модуль в разработке
+          })
+        }
       })
-    }
-    load()
-  }, [supabase])
+      .catch(() => {})
+  }, [])
 
   const widgets = stats ? [
     { icon: Users, label: 'Пользователи', value: stats.totalUsers, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },

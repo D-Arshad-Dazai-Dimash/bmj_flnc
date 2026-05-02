@@ -1,33 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { useAuth } from '@/context/AuthContext'
-import { createClient } from '@/lib/supabase'
 import Sidebar from '@/components/dashboard/Sidebar'
-import AiManagerWidget from '@/components/AiManagerWidget'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   const router = useLocaleRouter()
-  const supabase = useMemo(() => createClient(), [])
   const [timedOut, setTimedOut] = useState(false)
-  const [aiEnabled, setAiEnabled] = useState(false)
-
-  // Check ai_manager feature flag
-  useEffect(() => {
-    if (!user?.id) return
-    supabase
-      .from('user_features')
-      .select('enabled')
-      .eq('user_id', user.id)
-      .eq('feature_name', 'ai_manager')
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.enabled) setAiEnabled(true)
-      })
-  }, [user?.id, supabase])
 
   // Если isLoading > 8 секунд — что-то пошло не так
   useEffect(() => {
@@ -74,7 +56,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
-      {aiEnabled && user && <AiManagerWidget userId={user.id} />}
     </div>
   )
 }

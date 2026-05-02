@@ -12,7 +12,9 @@ out/
 *.suo
 .vs/
 *.DotSettings.user
-
+*CLAUDE.md
+STACK_LOCK.md
+*.pdf
 # Logs
 logs/
 *.log

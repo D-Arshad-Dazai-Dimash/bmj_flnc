@@ -1,10 +1,10 @@
 'use client'
 
 import { useAuth } from '@/context/AuthContext'
-import { createClient } from '@/lib/supabase'
 import { countQazaqBusinessDays } from '@/lib/calendar'
+import { api } from '@/lib/api'
 import { motion } from 'framer-motion'
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import Link from '@/components/ui/LocaleLink'
 import {
   LayoutDashboard, TrendingUp, Clock,
@@ -60,7 +60,6 @@ const StatCard = memo(function StatCard({ label, value, sub, color = 'accent' }:
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const supabase = useMemo(() => createClient(), [])
   const isDev = user?.accountType === 'Developer'
 
   const [stats,    setStats]    = useState<DashboardStats | null>(null)
@@ -69,97 +68,38 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return
-    const uid = user.id
-
-    function buildTimeline(rows: { id: string; title: string; deadline: string | null; created_at: string }[]) {
-      const now = new Date()
-      const items: TimelineProject[] = rows
-        .filter(p => !!p.deadline)
-        .map(p => {
-          const start    = new Date(p.created_at)
-          const end      = new Date(p.deadline!)
-          const totalDays = countQazaqBusinessDays(start, end)
-          const daysLeft  = Math.max(0, countQazaqBusinessDays(now, end))
-          const pct       = totalDays > 0 ? Math.min(100, Math.round((daysLeft / totalDays) * 100)) : 0
-          return { id: p.id, title: p.title, deadline: p.deadline!, daysLeft, totalDays, pct }
-        })
-      setTimeline(items)
-    }
 
     async function load() {
       try {
-        if (isDev) {
-          // Freelancer: parallel queries
-          const [activeRes, doneRes] = await Promise.all([
-            supabase
-              .from('projects')
-              .select('*', { count: 'exact', head: true })
-              .eq('executor_id', uid)
-              .eq('status', 'in_progress'),
-            supabase
-              .from('projects')
-              .select('*', { count: 'exact', head: true })
-              .eq('executor_id', uid)
-              .eq('status', 'completed'),
-          ])
+        const projects = await api.projects.list()
+        const now = new Date()
 
-          setStats({
-            active:    activeRes.count ?? 0,
-            completed: doneRes.count ?? 0,
-            extra1:    '—',
-            extra2:    '—',
+        const active    = projects.filter(p => p.status === 'Open' || p.status === 'InProgress').length
+        const completed = projects.filter(p => p.status === 'Completed').length
+        const totalBudget = projects
+          .filter(p => p.status === 'Completed')
+          .reduce((sum, p) => sum + (p.budget ?? 0), 0)
+
+        setStats({
+          active,
+          completed,
+          extra1: isDev ? '—' : totalBudget > 0 ? `₸${totalBudget.toLocaleString('ru-RU')}` : '₸0',
+          extra2: '—',
+        })
+
+        // Timeline from InProgress projects with deadline
+        const tlItems: TimelineProject[] = projects
+          .filter(p => p.status === 'InProgress' && p.deadline)
+          .slice(0, 3)
+          .map(p => {
+            const start    = new Date(p.createdAt)
+            const end      = new Date(p.deadline!)
+            const totalDays = countQazaqBusinessDays(start, end)
+            const daysLeft  = Math.max(0, countQazaqBusinessDays(now, end))
+            const pct       = totalDays > 0 ? Math.min(100, Math.round((daysLeft / totalDays) * 100)) : 0
+            return { id: p.id, title: p.title, deadline: p.deadline!, daysLeft, totalDays, pct }
           })
-
-          // Timeline: active freelancer projects with deadlines
-          const tlRes = await supabase
-            .from('projects')
-            .select('id, title, deadline, created_at')
-            .eq('executor_id', uid)
-            .eq('status', 'in_progress')
-            .not('deadline', 'is', null)
-            .limit(3)
-          buildTimeline(tlRes.data ?? [])
-        } else {
-          // Client: parallel queries (3 at once instead of sequential)
-          const [activeRes, doneRes, budgetRes] = await Promise.all([
-            supabase
-              .from('projects')
-              .select('*', { count: 'exact', head: true })
-              .eq('client_id', uid)
-              .in('status', ['open', 'in_progress']),
-            supabase
-              .from('projects')
-              .select('*', { count: 'exact', head: true })
-              .eq('client_id', uid)
-              .eq('status', 'completed'),
-            supabase
-              .from('projects')
-              .select('budget')
-              .eq('client_id', uid)
-              .eq('status', 'completed'),
-          ])
-
-          const totalBudget = (budgetRes.data ?? []).reduce(
-            (sum, p) => sum + (p.budget ?? 0), 0
-          )
-
-          setStats({
-            active:    activeRes.count ?? 0,
-            completed: doneRes.count ?? 0,
-            extra1:    totalBudget > 0 ? `₸${totalBudget.toLocaleString('ru-RU')}` : '₸0',
-            extra2:    '0',
-          })
-
-          // Timeline: active client projects with deadlines
-          const tlRes = await supabase
-            .from('projects')
-            .select('id, title, deadline, created_at')
-            .eq('client_id', uid)
-            .eq('status', 'in_progress')
-            .not('deadline', 'is', null)
-            .limit(3)
-          buildTimeline(tlRes.data ?? [])
-        }
+        setTimeline(tlItems)
       } catch (err) {
         console.error('[Dashboard] stats load error:', err)
       } finally {
@@ -168,7 +108,7 @@ export default function DashboardPage() {
     }
 
     load()
-  }, [user, isDev, supabase])
+  }, [user, isDev])
 
   return (
     <motion.div

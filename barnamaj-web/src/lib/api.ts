@@ -197,11 +197,8 @@ async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('barnamaj_token') : null
-
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers as Record<string, string> | undefined),
   }
 
@@ -212,6 +209,7 @@ async function request<T>(
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
       ...options,
+      credentials: 'include',  // httpOnly cookie-аутентификация
       headers,
       signal: options.signal ?? controller.signal,
     })
@@ -302,6 +300,13 @@ export const api = {
     /** Создать проект (clientProfileId — профиль-заказчик) */
     create: (data: CreateProjectRequest) =>
       request<ProjectDetailDto>('/api/projects', { method: 'POST', body: JSON.stringify(data) }),
+
+    /** Изменить статус проекта (cancel / complete) */
+    patchStatus: (projectId: string, status: string) =>
+      request<ProjectSummaryDto>(
+        `/api/projects/${projectId}/status`,
+        { method: 'PATCH', body: JSON.stringify({ status }) }
+      ),
 
     /** Подать заявку на проект */
     apply: (projectId: string, data: { applicantProfileId: string; coverLetter?: string; proposedBudget?: number }) =>

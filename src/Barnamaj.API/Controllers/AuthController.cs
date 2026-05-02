@@ -1,11 +1,13 @@
 using Barnamaj.API.DTOs.Auth;
 using Barnamaj.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Barnamaj.API.Controllers;
 
 /// <summary>
 /// Аутентификация и регистрация пользователей Barnamaj.
+/// Токены хранятся в httpOnly cookies (защита от XSS).
 /// </summary>
 [ApiController]
 [Route("api/auth")]
@@ -15,33 +17,62 @@ public sealed class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    // Имена cookie — едины для контроллера и middleware
+    internal const string AccessTokenCookie  = "access_token";
+    internal const string RefreshTokenCookie = "refresh_token";
+
+    private readonly IConfiguration _config;
+
+    public AuthController(IAuthService authService, ILogger<AuthController> logger, IConfiguration config)
     {
         _authService = authService;
         _logger      = logger;
+        _config      = config;
     }
+
+    // ── Вспомогательный метод: установить httpOnly cookies ──────────────
+    private void SetAuthCookies(AuthResponseDto response)
+    {
+        // В dev (appsettings.Development.json: "Cookie": { "Secure": false }) — HTTP-совместимо
+        var secureCookie = _config.GetValue("Cookie:Secure", true);
+
+        var accessOptions = new CookieOptions
+        {
+            HttpOnly  = true,
+            Secure    = secureCookie,
+            SameSite  = secureCookie ? SameSiteMode.Strict : SameSiteMode.Lax,
+            Expires   = response.ExpiresAt,
+            Path      = "/"
+        };
+
+        var refreshOptions = new CookieOptions
+        {
+            HttpOnly  = true,
+            Secure    = secureCookie,
+            SameSite  = secureCookie ? SameSiteMode.Strict : SameSiteMode.Lax,
+            Expires   = response.RefreshExpiresAt,
+            Path      = "/api/auth/refresh"  // только для эндпоинта обновления
+        };
+
+        Response.Cookies.Append(AccessTokenCookie,  response.AccessToken,  accessOptions);
+        Response.Cookies.Append(RefreshTokenCookie, response.RefreshToken, refreshOptions);
+    }
+
+    private void ClearAuthCookies()
+    {
+        Response.Cookies.Delete(AccessTokenCookie,  new CookieOptions { Path = "/" });
+        Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions { Path = "/api/auth/refresh" });
+    }
+
+    // ── Регистрация ─────────────────────────────────────────────────────
 
     /// <summary>
     /// Регистрация нового пользователя.
-    /// Создаёт аккаунт User + публичный Profile в одной транзакции.
+    /// Создаёт аккаунт User + публичный Profile. Устанавливает httpOnly cookies.
     /// </summary>
-    /// <remarks>
-    /// accountType допустимые значения: **1** (Individual) или **2** (Company).
-    ///
-    ///     POST /api/auth/register
-    ///     {
-    ///        "email":       "john@example.com",
-    ///        "password":    "Secret123",
-    ///        "name":        "John Doe",
-    ///        "accountType": 1,
-    ///        "bio":         "Full-stack developer"
-    ///     }
-    /// </remarks>
-    /// <response code="201">Пользователь создан, возвращает JWT-токен.</response>
-    /// <response code="400">Ошибка валидации или email уже занят.</response>
     [HttpPost("register")]
-    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register(
         [FromBody] RegisterDto dto,
         CancellationToken ct)
@@ -49,7 +80,8 @@ public sealed class AuthController : ControllerBase
         try
         {
             var response = await _authService.RegisterAsync(dto, ct);
-            return StatusCode(StatusCodes.Status201Created, response);
+            SetAuthCookies(response);
+            return StatusCode(StatusCodes.Status201Created, response.User);
         }
         catch (AuthException ex)
         {
@@ -57,23 +89,15 @@ public sealed class AuthController : ControllerBase
         }
     }
 
+    // ── Вход ────────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Вход в систему.
-    /// Возвращает JWT Bearer токен при верных учётных данных.
+    /// Вход в систему. Устанавливает httpOnly cookies с access и refresh токенами.
     /// </summary>
-    /// <remarks>
-    ///     POST /api/auth/login
-    ///     {
-    ///        "email":    "john@example.com",
-    ///        "password": "Secret123"
-    ///     }
-    /// </remarks>
-    /// <response code="200">Успешный вход, возвращает JWT-токен.</response>
-    /// <response code="400">Неверный email или пароль.</response>
-    /// <response code="401">Аккаунт заблокирован.</response>
     [HttpPost("login")]
-    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(
         [FromBody] LoginDto dto,
         CancellationToken ct)
@@ -81,7 +105,8 @@ public sealed class AuthController : ControllerBase
         try
         {
             var response = await _authService.LoginAsync(dto, ct);
-            return Ok(response);
+            SetAuthCookies(response);
+            return Ok(response.User);
         }
         catch (AuthException ex)
         {
@@ -89,14 +114,78 @@ public sealed class AuthController : ControllerBase
         }
     }
 
+    // ── Выход ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Выход из системы. Удаляет httpOnly cookies.
+    /// </summary>
+    [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public IActionResult Logout()
+    {
+        ClearAuthCookies();
+        return NoContent();
+    }
+
+    // ── Обновление токена ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Обновить access_token по refresh_token (из cookie).
+    /// </summary>
+    [HttpPost("refresh")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Refresh(CancellationToken ct)
+    {
+        var refreshToken = Request.Cookies[RefreshTokenCookie];
+        if (string.IsNullOrEmpty(refreshToken))
+            return Unauthorized(new { error = "Refresh token отсутствует." });
+
+        try
+        {
+            var response = await _authService.RefreshAsync(refreshToken, ct);
+            SetAuthCookies(response);
+            return Ok(response.User);
+        }
+        catch (AuthException ex)
+        {
+            ClearAuthCookies();
+            return Unauthorized(new { error = ex.Message });
+        }
+    }
+
+    // ── Текущий пользователь ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Информация о текущем авторизованном пользователе.
+    /// </summary>
+    [HttpGet("me")]
+    [Authorize]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public IActionResult Me()
+    {
+        return Ok(new UserDto(
+            Id:              Guid.Parse(User.FindFirst("sub")!.Value),
+            Email:           User.FindFirst("email")!.Value,
+            Role:            User.FindFirst("role")!.Value,
+            ProfileId:       Guid.TryParse(User.FindFirst("profile_id")?.Value, out var pid) ? pid : null,
+            ProfileName:     User.FindFirst("profile_name")?.Value ?? string.Empty,
+            AccountType:     User.FindFirst("account_type")?.Value ?? string.Empty,
+            IsEmailVerified: false,
+            CreatedAt:       DateTime.UtcNow
+        ));
+    }
+
+    // ── Обновление профиля ───────────────────────────────────────────────
+
     /// <summary>
     /// Обновить имя / bio своего профиля.
     /// </summary>
-    /// <response code="200">Обновлённый UserDto.</response>
-    /// <response code="401">Не авторизован.</response>
     [HttpPatch("profile")]
-    [Microsoft.AspNetCore.Authorization.Authorize]
+    [Authorize]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> UpdateProfile(
         [FromBody] UpdateProfileDto dto,
         CancellationToken ct)
@@ -112,28 +201,5 @@ public sealed class AuthController : ControllerBase
         {
             return BadRequest(new { error = ex.Message });
         }
-    }
-
-    /// <summary>
-    /// Проверить, авторизован ли текущий пользователь.
-    /// Требует валидный Bearer токен в заголовке Authorization.
-    /// </summary>
-    /// <response code="200">Токен валиден.</response>
-    /// <response code="401">Токен отсутствует или истёк.</response>
-    [HttpGet("me")]
-    [Microsoft.AspNetCore.Authorization.Authorize]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IActionResult Me()
-    {
-        var claims = User.Claims.Select(c => new { c.Type, c.Value });
-        return Ok(new
-        {
-            userId      = User.FindFirst("sub")?.Value,
-            email       = User.FindFirst("email")?.Value,
-            role        = User.FindFirst("role")?.Value,
-            accountType = User.FindFirst("account_type")?.Value,
-            profileName = User.FindFirst("profile_name")?.Value,
-        });
     }
 }
