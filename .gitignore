@@ -59,3 +59,6 @@ results.json
 
 # Windows artifacts
 nul
+
+# Temporary commit message files
+.commit_msg.tmp

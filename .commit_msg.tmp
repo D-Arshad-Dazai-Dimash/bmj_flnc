@@ -1,6 +1,0 @@
-chore: update paths after backend/ + frontend/ split
-
-- docker-compose.yml: api build context и wwwroot bind-mount
-- BJ.sln: путь к Barnamaj.API.csproj
-- .gitignore: appsettings.Production.json
-- README.md / HOW_TO_RUN.md / STACK_LOCK.md: обновлены команды и пути
