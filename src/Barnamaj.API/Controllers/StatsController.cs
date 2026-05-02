@@ -37,24 +37,23 @@ public sealed class StatsController : ControllerBase
         if (_cache.TryGetValue(CacheKey, out PlatformStatsDto? cached) && cached is not null)
             return Ok(cached);
 
-        var usersTask = _db.Users.AsNoTracking().CountAsync(ct);
-        var activeOrdersTask = _db.Projects.AsNoTracking()
+        // EF Core DbContext не поддерживает параллельные операции на одном экземпляре.
+        var users = await _db.Users.AsNoTracking().CountAsync(ct);
+        var activeOrders = await _db.Projects.AsNoTracking()
             .CountAsync(p => p.Status == ProjectStatus.Open || p.Status == ProjectStatus.InProgress, ct);
-        var completedOrdersTask = _db.Projects.AsNoTracking()
+        var completedOrders = await _db.Projects.AsNoTracking()
             .CountAsync(p => p.Status == ProjectStatus.Completed, ct);
-        var clansTask = _db.Profiles.AsNoTracking()
+        var clans = await _db.Profiles.AsNoTracking()
             .CountAsync(p => p.AccountType == AccountType.Clan, ct);
-        var companiesTask = _db.Profiles.AsNoTracking()
+        var companies = await _db.Profiles.AsNoTracking()
             .CountAsync(p => p.AccountType == AccountType.Company, ct);
 
-        await Task.WhenAll(usersTask, activeOrdersTask, completedOrdersTask, clansTask, companiesTask);
-
         var stats = new PlatformStatsDto(
-            Users:           await usersTask,
-            ActiveOrders:    await activeOrdersTask,
-            CompletedOrders: await completedOrdersTask,
-            Clans:           await clansTask,
-            Companies:       await companiesTask
+            Users:           users,
+            ActiveOrders:    activeOrders,
+            CompletedOrders: completedOrders,
+            Clans:           clans,
+            Companies:       companies
         );
 
         _cache.Set(CacheKey, stats, TimeSpan.FromSeconds(60));

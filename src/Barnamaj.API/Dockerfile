@@ -12,6 +12,9 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 WORKDIR /app
 
+# ICU нужен для корректной globalization при DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+RUN apk add --no-cache icu-libs
+
 # Минимальный пользователь (не root) для безопасности
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
@@ -24,23 +27,19 @@ WORKDIR /src
 
 # Сначала копируем только .csproj для кэширования слоёв зависимостей
 COPY ["Barnamaj.API.csproj", "./"]
-RUN dotnet restore "Barnamaj.API.csproj" \
-    --runtime linux-musl-x64 \
-    --no-cache
+RUN dotnet restore "Barnamaj.API.csproj"
 
 # Копируем остальной код (включая wwwroot/) и собираем
 COPY . .
 RUN dotnet build "Barnamaj.API.csproj" \
     -c Release \
-    --no-restore \
-    -o /app/build
+    --no-restore
 
 # ── Этап 3: Publish ──────────────────────────────────────────
 FROM build AS publish
 RUN dotnet publish "Barnamaj.API.csproj" \
     -c Release \
     --no-build \
-    --runtime linux-musl-x64 \
     --self-contained false \
     -o /app/publish \
     /p:UseAppHost=false
