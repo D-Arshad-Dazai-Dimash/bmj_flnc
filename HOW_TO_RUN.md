@@ -49,7 +49,7 @@ Health check: `http://localhost:5000/health`
 ## 3. Запуск Frontend (Next.js 15)
 
 ```bash
-cd frontend/barnamaj-web
+cd frontend
 npm install        # только при первом запуске или после изменений package.json
 npm run dev
 ```
@@ -58,7 +58,7 @@ npm run dev
 
 ### Переменные окружения
 
-Создайте `frontend/barnamaj-web/.env.local` (если не существует):
+Создайте `frontend/.env.local` (если не существует):
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000
@@ -71,7 +71,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 1. docker compose up -d         # инфраструктура
 2. dotnet run (backend/Barnamaj.API) # backend
-3. npm run dev (frontend/barnamaj-web)    # frontend
+3. npm run dev (frontend)    # frontend
 ```
 
 ---
@@ -81,7 +81,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 ### E2E тесты (Playwright)
 
 ```bash
-cd frontend/barnamaj-web
+cd frontend
 
 # Установить браузеры (только один раз)
 npx playwright install chromium
@@ -112,7 +112,7 @@ dotnet build
 ### Frontend
 
 ```bash
-cd frontend/barnamaj-web
+cd frontend
 npm run build
 npm run typecheck   # проверка TypeScript
 ```
@@ -140,7 +140,7 @@ docker compose down -v       # остановить + удалить volumes (Д
 
 ### `NEXT_PUBLIC_API_URL` не задан
 - Frontend по умолчанию использует `http://localhost:5000`
-- Можно переопределить через `frontend/barnamaj-web/.env.local`
+- Можно переопределить через `frontend/.env.local`
 
 ### Frontend не видит backend (CORS)
 - CORS настроен в `backend/Barnamaj.API/Extensions/` для `http://localhost:3000`

@@ -13,7 +13,7 @@
 ## Фронтенд
 - Фреймворк и версия: Next.js 15.1.7 + React 19.0.0
 - Язык: TypeScript 5
-- Папка: `frontend/barnamaj-web/`
+- Папка: `frontend/`
 - Запуск: `npm run dev` (Turbopack, порт 3000)
 - Сборка: `npm run build`
 - Устаревший фронтенд: `barnamaj-frontend/` (УДАЛЁН)
@@ -24,7 +24,7 @@
 - ORM (фронтенд): Supabase PostgREST (Row-Level Security)
 - Как создать миграцию (EF Core): `dotnet ef migrations add <Name> --project backend/Barnamaj.API`
 - Как применить миграцию (EF Core): `dotnet ef database update --project backend/Barnamaj.API`
-- Как создать миграцию (Supabase): создать файл в `frontend/barnamaj-web/supabase/migrations/` и `supabase db push`
+- Как создать миграцию (Supabase): создать файл в `frontend/supabase/migrations/` и `supabase db push`
 - Docker: `docker-compose up -d db` (порт 5432)
 - Supabase Local: `supabase start` (порт 54321/54322)
 
@@ -32,7 +32,7 @@
 - Механизм (бекенд): `appsettings.json` + `appsettings.Development.json`
 - Механизм (фронтенд): `.env.local` (Next.js)
 - Файл для разработки (бекенд): `backend/Barnamaj.API/appsettings.Development.json`
-- Файл для разработки (фронтенд): `frontend/barnamaj-web/.env.local`
+- Файл для разработки (фронтенд): `frontend/.env.local`
 - Шаблон: `.env.example` (корень)
 - Как добавить новый ключ (бекенд):
   1. Добавить в `appsettings.json` (с placeholder)
@@ -45,7 +45,7 @@
 ## Тесты
 - Бекенд тест-фреймворк: НЕ НАСТРОЕН (нет тестового проекта; рекомендуется xUnit)
 - Фронтенд тест-фреймворк: Playwright 1.58.2 (E2E)
-- Команда запуска E2E: `npx playwright test --project=chromium-stress --workers=1` (из `frontend/barnamaj-web/`)
+- Команда запуска E2E: `npx playwright test --project=chromium-stress --workers=1` (из `frontend/`)
 - Паттерн именования тест-файлов (бекенд): `*.Tests.cs` (xUnit, при создании)
 - Паттерн именования тест-файлов (фронтенд): `*.spec.ts` (Playwright)
 - E2E спеки: `e2e/*.spec.ts` — 7 файлов, `repeatEach: 10`, 220 тестов
@@ -134,7 +134,7 @@ BJ/
 │   ├── Entities/               # Entity модели
 │   ├── DTOs/                   # DTO + FluentValidation
 │   └── wwwroot/                # Статика
-└── frontend/barnamaj-web/               # Фронтенд (активный)
+└── frontend/               # Фронтенд (активный)
     ├── src/app/[lang]/         # Страницы (i18n: ru, en, kz)
     │   ├── dashboard/          # Защищённые страницы дашборда
     │   │   ├── page.tsx        # Обзор (stats через Supabase — рефактор pending)
