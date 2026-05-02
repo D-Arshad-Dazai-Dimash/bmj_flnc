@@ -5,15 +5,15 @@
 ## Бекенд
 - Язык и версия: C# / .NET 8.0
 - Фреймворк: ASP.NET Core 8
-- Папка: `src/Barnamaj.API/`
+- Папка: `backend/Barnamaj.API/`
 - Точка входа: `Program.cs`
-- Запуск: `dotnet run --project src/Barnamaj.API`
+- Запуск: `dotnet run --project backend/Barnamaj.API`
 - Решение: `BJ.sln`
 
 ## Фронтенд
 - Фреймворк и версия: Next.js 15.1.7 + React 19.0.0
 - Язык: TypeScript 5
-- Папка: `barnamaj-web/`
+- Папка: `frontend/barnamaj-web/`
 - Запуск: `npm run dev` (Turbopack, порт 3000)
 - Сборка: `npm run build`
 - Устаревший фронтенд: `barnamaj-frontend/` (УДАЛЁН)
@@ -22,17 +22,17 @@
 - Тип: PostgreSQL 16 (Docker)
 - ORM (бекенд): Entity Framework Core 8.0.0 (Code-first, snake_case naming)
 - ORM (фронтенд): Supabase PostgREST (Row-Level Security)
-- Как создать миграцию (EF Core): `dotnet ef migrations add <Name> --project src/Barnamaj.API`
-- Как применить миграцию (EF Core): `dotnet ef database update --project src/Barnamaj.API`
-- Как создать миграцию (Supabase): создать файл в `barnamaj-web/supabase/migrations/` и `supabase db push`
+- Как создать миграцию (EF Core): `dotnet ef migrations add <Name> --project backend/Barnamaj.API`
+- Как применить миграцию (EF Core): `dotnet ef database update --project backend/Barnamaj.API`
+- Как создать миграцию (Supabase): создать файл в `frontend/barnamaj-web/supabase/migrations/` и `supabase db push`
 - Docker: `docker-compose up -d db` (порт 5432)
 - Supabase Local: `supabase start` (порт 54321/54322)
 
 ## Конфигурация и секреты
 - Механизм (бекенд): `appsettings.json` + `appsettings.Development.json`
 - Механизм (фронтенд): `.env.local` (Next.js)
-- Файл для разработки (бекенд): `src/Barnamaj.API/appsettings.Development.json`
-- Файл для разработки (фронтенд): `barnamaj-web/.env.local`
+- Файл для разработки (бекенд): `backend/Barnamaj.API/appsettings.Development.json`
+- Файл для разработки (фронтенд): `frontend/barnamaj-web/.env.local`
 - Шаблон: `.env.example` (корень)
 - Как добавить новый ключ (бекенд):
   1. Добавить в `appsettings.json` (с placeholder)
@@ -45,7 +45,7 @@
 ## Тесты
 - Бекенд тест-фреймворк: НЕ НАСТРОЕН (нет тестового проекта; рекомендуется xUnit)
 - Фронтенд тест-фреймворк: Playwright 1.58.2 (E2E)
-- Команда запуска E2E: `npx playwright test --project=chromium-stress --workers=1` (из `barnamaj-web/`)
+- Команда запуска E2E: `npx playwright test --project=chromium-stress --workers=1` (из `frontend/barnamaj-web/`)
 - Паттерн именования тест-файлов (бекенд): `*.Tests.cs` (xUnit, при создании)
 - Паттерн именования тест-файлов (фронтенд): `*.spec.ts` (Playwright)
 - E2E спеки: `e2e/*.spec.ts` — 7 файлов, `repeatEach: 10`, 220 тестов
@@ -73,7 +73,7 @@
 - Базовый префикс: `/api/v1/[controller]` (версионирование через URL)
 - Формат успешного ответа: прямой объект / массив (без обёртки)
 - Формат ошибки: `{ "error": "сообщение", "timestamp": "ISO 8601" }`
-- Пример существующего контроллера: `src/Barnamaj.API/Controllers/AuthController.cs`
+- Пример существующего контроллера: `backend/Barnamaj.API/Controllers/AuthController.cs`
 - Базовый контроллер: `BaseApiController` (все наследуют)
 
 ## Все существующие маршруты API
@@ -126,7 +126,7 @@ BJ/
 ├── seed_skills.sql             # Seed навыков
 ├── verify.sql                  # Верификация SQL
 ├── requests.http               # HTTP тесты
-├── src/Barnamaj.API/           # Бекенд
+├── backend/Barnamaj.API/           # Бекенд
 │   ├── Program.cs
 │   ├── Controllers/            # 5 контроллеров: Auth, Projects, Profiles, Assessment, Health
 │   ├── Services/               # ProjectService, AuthService, AssessmentService + Extensions
@@ -134,7 +134,7 @@ BJ/
 │   ├── Entities/               # Entity модели
 │   ├── DTOs/                   # DTO + FluentValidation
 │   └── wwwroot/                # Статика
-└── barnamaj-web/               # Фронтенд (активный)
+└── frontend/barnamaj-web/               # Фронтенд (активный)
     ├── src/app/[lang]/         # Страницы (i18n: ru, en, kz)
     │   ├── dashboard/          # Защищённые страницы дашборда
     │   │   ├── page.tsx        # Обзор (stats через Supabase — рефактор pending)

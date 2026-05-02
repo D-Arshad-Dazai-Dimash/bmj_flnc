@@ -103,7 +103,7 @@ services:
   # ──────────────────────────────────────────
   api:
     build:
-      context: ./src/Barnamaj.API
+      context: ./backend/Barnamaj.API
       dockerfile: Dockerfile
     image: barnamaj-api:latest
     container_name: barnamaj-api
@@ -122,7 +122,7 @@ services:
       # Папка логов на хосте
       - ./logs:/app/logs
       # Статические файлы: монтируем wwwroot из C# проекта (логотип, index.html)
-      - ./src/Barnamaj.API/wwwroot:/app/wwwroot:ro
+      - ./backend/Barnamaj.API/wwwroot:/app/wwwroot:ro
     depends_on:
       db:
         condition: service_healthy

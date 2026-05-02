@@ -76,7 +76,7 @@ docker compose logs -f postgres
 ## Шаг 2 — Запустить .NET API локально (для разработки)
 
 ```bash
-cd src/Barnamaj.API
+cd backend/Barnamaj.API
 
 # Восстановить пакеты NuGet
 dotnet restore
