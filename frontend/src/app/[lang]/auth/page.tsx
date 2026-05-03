@@ -183,7 +183,10 @@ function AuthForm({ mode, acct, onAcctChange }: AuthFormProps) {
         })
       }
       setSuccess(true)
-      setTimeout(() => router.push('/dashboard'), 900)
+      // После регистрации сразу ведём пользователя на верификацию (KYC),
+      // после логина — на основной дашборд.
+      const target = mode === 'register' ? '/dashboard/profile?kyc=open' : '/dashboard'
+      setTimeout(() => router.push(target), 900)
     } catch (err) {
       // Универсальное сообщение для login (по NIST/OWASP не раскрываем детали).
       // Backend уже отдаёт "Неверный email или пароль" — пробрасываем как есть.

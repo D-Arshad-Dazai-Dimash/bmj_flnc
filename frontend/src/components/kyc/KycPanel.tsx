@@ -46,6 +46,20 @@ export function KycPanel() {
 
   useEffect(() => { refresh() }, [])
 
+  // Авто-открытие визарда после регистрации: /dashboard/profile?kyc=open
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('kyc') === 'open') {
+      setWizardOpen(true)
+      // Чистим query, чтобы повторные открытия страницы не поднимали модалку.
+      params.delete('kyc')
+      const qs = params.toString()
+      const url = window.location.pathname + (qs ? `?${qs}` : '')
+      window.history.replaceState({}, '', url)
+    }
+  }, [])
+
   if (loading) {
     return (
       <div className="rounded-xl border border-border bg-bg-card p-6 animate-pulse">
