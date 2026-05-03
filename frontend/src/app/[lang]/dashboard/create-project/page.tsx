@@ -9,7 +9,7 @@ import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
-import type { OrderType } from '@/lib/database.types'
+import type { OrderType } from '@/lib/order-types'
 import { calculateCommission, tengeToTiyn, tiynToTenge, formatTenge } from '@/lib/pricing'
 import dynamic from 'next/dynamic'
 

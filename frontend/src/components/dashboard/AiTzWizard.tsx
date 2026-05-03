@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react'
-import type { OrderType } from '@/lib/database.types'
+import type { OrderType } from '@/lib/order-types'
 
 interface TzResult {
   ready: boolean
