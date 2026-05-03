@@ -116,6 +116,22 @@ services:
       - Jwt__SecretKey=${JWT_SECRET_KEY}
       - Jwt__Issuer=barnamaj-api
       - Jwt__Audience=barnamaj-clients
+      # ── Redis ─────────────────────────────────────────
+      - ConnectionStrings__Redis=redis:6379,password=${REDIS_PASSWORD},abortConnect=false
+      # ── KYC (рынок РК) ────────────────────────────────
+      - Kyc__IinHmacKey=${KYC_IIN_HMAC_KEY}
+      - Kyc__IinEncryptionKey=${KYC_IIN_ENCRYPTION_KEY}
+      - Kyc__DocumentsBucket=kyc-documents
+      - Kyc__Otp__HmacKey=${KYC_OTP_HMAC_KEY}
+      - Kyc__Otp__CodeLifetimeSec=300
+      - Kyc__Otp__SendCooldownSec=60
+      - Kyc__Otp__LockoutMinutes=15
+      - Kyc__Otp__MaxAttempts=5
+      # ── MinIO ─────────────────────────────────────────
+      - Minio__Endpoint=minio:9000
+      - Minio__AccessKey=${MINIO_ROOT_USER}
+      - Minio__SecretKey=${MINIO_ROOT_PASSWORD}
+      - Minio__Secure=false
     ports:
       - "8080:8080"
     volumes:

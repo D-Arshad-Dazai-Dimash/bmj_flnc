@@ -226,6 +226,18 @@ try
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
         Log.Information("Database migrations applied successfully");
+
+        // ── KYC: создать private bucket в MinIO (идемпотентно) ──
+        try
+        {
+            var storage = scope.ServiceProvider.GetRequiredService<Barnamaj.API.Services.IDocumentStorage>();
+            if (storage is Barnamaj.API.Services.MinioDocumentStorage mds)
+                await mds.EnsureBucketAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "MinIO bucket initialization skipped (storage unreachable in this environment).");
+        }
     }
 
     Log.Information("Barnamaj API started on {Env}", app.Environment.EnvironmentName);

@@ -3,6 +3,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Minio;
 using System.Text;
 
 namespace Barnamaj.API.Extensions;
@@ -90,6 +91,33 @@ public static class ServiceExtensions
         services.AddScoped<IProfileService,    ProfileService>();
         services.AddScoped<IProjectService,    ProjectService>();
         services.AddScoped<IAssessmentService, AssessmentService>();
+
+        // ── KYC (рынок РК) ───────────────────────────────────
+        services.AddSingleton<IIinProtector,         IinProtector>();
+        services.AddScoped<IOtpService,              OtpService>();
+        services.AddSingleton<IFileValidator,        FileValidator>();
+        services.AddScoped<IKycService,              KycService>();
+        services.AddScoped<IKycModerationService,    KycModerationService>();
+        // SMS / Email — dev-стабы. В prod заменить через DI override.
+        services.AddSingleton<ISmsProvider,          ConsoleSmsProvider>();
+        services.AddSingleton<IEmailProvider,        ConsoleEmailProvider>();
+
+        // ── MinIO (S3-клиент) ────────────────────────────────
+        var minioCfg = configuration.GetSection("Minio");
+        services.AddSingleton<IMinioClient>(_ =>
+        {
+            var endpoint = minioCfg["Endpoint"]   ?? "localhost:9000";
+            var access   = minioCfg["AccessKey"]  ?? "minioadmin";
+            var secret   = minioCfg["SecretKey"]  ?? "minioadmin";
+            var secure   = minioCfg.GetValue("Secure", false);
+
+            var client = new MinioClient()
+                .WithEndpoint(endpoint)
+                .WithCredentials(access, secret);
+            if (secure) client = client.WithSSL();
+            return client.Build();
+        });
+        services.AddScoped<IDocumentStorage, MinioDocumentStorage>();
 
         // ── Redis кэш ────────────────────────────────────────
         var redisConnection = configuration.GetConnectionString("Redis");
