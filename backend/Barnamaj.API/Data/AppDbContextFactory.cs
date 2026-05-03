@@ -16,7 +16,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 
         // При design-time используем Development строку (localhost, БД внутри Docker)
         const string connectionString =
-            "Host=localhost;Port=5432;Database=barnamaj_db;" +
+            "Host=localhost;Port=5433;Database=barnamaj_db;" +
             "Username=barnamaj_user;Password=barnamaj_pass_2025;" +
             "Include Error Detail=true;";
 

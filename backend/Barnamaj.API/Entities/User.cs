@@ -30,6 +30,28 @@ public class User
     public bool IsActive { get; set; } = true;
     public bool IsEmailVerified { get; set; } = false;
 
+    // ── KYC (рынок РК) ───────────────────────────────────────
+    /// <summary>Текущий уровень подтверждения личности.</summary>
+    public KycStatus KycStatus { get; set; } = KycStatus.None;
+
+    /// <summary>Когда достигнут уровень Full (после одобрения документа).</summary>
+    public DateTime? KycVerifiedAt { get; set; }
+
+    /// <summary>Казахстанский номер в формате +7XXXXXXXXXX. Хранится в открытом виде
+    /// (сам по себе не относится к чувствительным ПДн без привязки к ИИН).</summary>
+    public string? Phone { get; set; }
+
+    public bool IsPhoneVerified { get; set; } = false;
+
+    /// <summary>HMAC-SHA256(ИИН) с секретом IinHmacKey — для уникального индекса
+    /// без хранения plaintext ИИН в БД. Длина: 64 hex-символа.</summary>
+    public string? IinHmac { get; set; }
+
+    /// <summary>AES-GCM зашифрованный ИИН с тегом и nonce (Base64).
+    /// Расшифровывается только в коде через IIinProtector для отображения
+    /// модератору/самому пользователю. В лог никогда не пишется.</summary>
+    public string? IinEncrypted { get; set; }
+
     // ── Временные метки (UTC) ────────────────────────────────
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -46,4 +68,8 @@ public class User
     // ── Участие в кланах/компаниях ───────────────────────────
     /// <summary>Все членства пользователя в кланах и компаниях</summary>
     public ICollection<Membership> Memberships { get; set; } = new List<Membership>();
+
+    // ── KYC связи ────────────────────────────────────────────
+    public ICollection<UserDocument> Documents { get; set; } = new List<UserDocument>();
+    public ICollection<KycEvent>     KycEvents { get; set; } = new List<KycEvent>();
 }

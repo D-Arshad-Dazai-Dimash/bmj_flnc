@@ -48,6 +48,38 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsEmailVerified)
             .HasDefaultValue(false);
 
+        // ── KYC ──────────────────────────────────────────────
+        builder.Property(u => u.KycStatus)
+            .HasConversion<byte>()
+            .HasDefaultValue(KycStatus.None);
+
+        builder.HasIndex(u => u.KycStatus)
+            .HasDatabaseName("ix_users_kyc_status");
+
+        builder.Property(u => u.Phone)
+            .HasMaxLength(16);
+
+        builder.Property(u => u.IsPhoneVerified)
+            .HasDefaultValue(false);
+
+        // Уникальность телефона среди верифицированных
+        builder.HasIndex(u => u.Phone)
+            .IsUnique()
+            .HasDatabaseName("ux_users_phone_verified")
+            .HasFilter("is_phone_verified = true AND deleted_at IS NULL");
+
+        builder.Property(u => u.IinHmac)
+            .HasMaxLength(64);
+
+        // Уникальность ИИН по HMAC (без хранения plaintext)
+        builder.HasIndex(u => u.IinHmac)
+            .IsUnique()
+            .HasDatabaseName("ux_users_iin_hmac")
+            .HasFilter("iin_hmac IS NOT NULL AND deleted_at IS NULL");
+
+        builder.Property(u => u.IinEncrypted)
+            .HasMaxLength(256);
+
         // ── Временные метки ──────────────────────────────────
         builder.Property(u => u.CreatedAt)
             .HasDefaultValueSql("NOW()")

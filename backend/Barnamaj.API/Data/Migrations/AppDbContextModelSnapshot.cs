@@ -81,6 +81,66 @@ namespace Barnamaj.API.Data.Migrations
                     b.ToTable("assessment_attempts", (string)null);
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.KycEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("event_type");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload_json");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("provider_ref");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("user_agent");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_kyc_events");
+
+                    b.HasIndex("EventType")
+                        .HasDatabaseName("ix_kyc_events_type");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_kyc_events_user_created");
+
+                    b.ToTable("kyc_events", (string)null);
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -487,6 +547,16 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("email");
 
+                    b.Property<string>("IinEncrypted")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("iin_encrypted");
+
+                    b.Property<string>("IinHmac")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("iin_hmac");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -499,6 +569,22 @@ namespace Barnamaj.API.Data.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_email_verified");
 
+                    b.Property<bool>("IsPhoneVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_phone_verified");
+
+                    b.Property<byte>("KycStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint")
+                        .HasDefaultValue((byte)0)
+                        .HasColumnName("kyc_status");
+
+                    b.Property<DateTime?>("KycVerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("kyc_verified_at");
+
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at");
@@ -508,6 +594,11 @@ namespace Barnamaj.API.Data.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)")
                         .HasColumnName("password_hash");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("phone");
 
                     b.Property<Guid?>("ProfileId")
                         .HasColumnType("uuid")
@@ -530,6 +621,19 @@ namespace Barnamaj.API.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_users_email");
 
+                    b.HasIndex("IinHmac")
+                        .IsUnique()
+                        .HasDatabaseName("ux_users_iin_hmac")
+                        .HasFilter("iin_hmac IS NOT NULL AND deleted_at IS NULL");
+
+                    b.HasIndex("KycStatus")
+                        .HasDatabaseName("ix_users_kyc_status");
+
+                    b.HasIndex("Phone")
+                        .IsUnique()
+                        .HasDatabaseName("ux_users_phone_verified")
+                        .HasFilter("is_phone_verified = true AND deleted_at IS NULL");
+
                     b.HasIndex("ProfileId")
                         .IsUnique()
                         .HasDatabaseName("ix_users_profile_id");
@@ -542,6 +646,88 @@ namespace Barnamaj.API.Data.Migrations
                         .HasFilter("deleted_at IS NULL AND is_active = true");
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.UserDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("BackObjectKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("back_object_key");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<byte>("DocumentType")
+                        .HasColumnType("smallint")
+                        .HasColumnName("document_type");
+
+                    b.Property<string>("FrontObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("front_object_key");
+
+                    b.Property<string>("FrontSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("front_sha256");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<string>("SelfieObjectKey")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("selfie_object_key");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_documents");
+
+                    b.HasIndex("FrontSha256")
+                        .HasDatabaseName("ix_user_documents_front_sha");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_user_documents_user_active")
+                        .HasFilter("status <> 3");
+
+                    b.ToTable("user_documents", (string)null);
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.AssessmentAttempt", b =>
@@ -563,6 +749,18 @@ namespace Barnamaj.API.Data.Migrations
                     b.Navigation("Profile");
 
                     b.Navigation("Skill");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.KycEvent", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithMany("KycEvents")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_kyc_events_user_user_id");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.Membership", b =>
@@ -671,6 +869,18 @@ namespace Barnamaj.API.Data.Migrations
                     b.Navigation("Profile");
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.UserDocument", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithMany("Documents")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_documents_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.Profile", b =>
                 {
                     b.Navigation("Memberships");
@@ -694,6 +904,10 @@ namespace Barnamaj.API.Data.Migrations
 
             modelBuilder.Entity("Barnamaj.API.Entities.User", b =>
                 {
+                    b.Navigation("Documents");
+
+                    b.Navigation("KycEvents");
+
                     b.Navigation("Memberships");
                 });
 #pragma warning restore 612, 618

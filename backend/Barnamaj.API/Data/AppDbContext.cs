@@ -34,6 +34,10 @@ public class AppDbContext : DbContext
     public DbSet<AssessmentAttempt>  AssessmentAttempts  => Set<AssessmentAttempt>();
     public DbSet<ProfileSkillBadge>  ProfileSkillBadges  => Set<ProfileSkillBadge>();
 
+    // ── KYC ─────────────────────────────────────────────────
+    public DbSet<UserDocument>       UserDocuments       => Set<UserDocument>();
+    public DbSet<KycEvent>           KycEvents           => Set<KycEvent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
