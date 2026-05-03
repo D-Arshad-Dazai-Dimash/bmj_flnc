@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { User, Save, Camera, Hexagon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { KycPanel } from '@/components/kyc/KycPanel'
 
 const ROLE_LABELS: Record<string, string> = {
   owner:     'Владелец',
@@ -157,6 +158,9 @@ export default function ProfilePage() {
           </Button>
         </div>
       </div>
+
+      {/* KYC панель — верификация личности (рынок РК) */}
+      <KycPanel />
     </motion.div>
   )
 }

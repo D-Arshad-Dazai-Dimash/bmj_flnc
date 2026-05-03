@@ -5,6 +5,7 @@ import { locales, toHtmlLang } from '@/lib/i18n'
 import { notFound } from 'next/navigation'
 import type { Locale } from '@/lib/i18n'
 import { ToasterThemeWrapper } from '@/components/ToasterThemeWrapper'
+import { KycGate } from '@/components/kyc/KycGate'
 
 export function generateStaticParams() {
   return locales.map(lang => ({ lang }))
@@ -27,6 +28,7 @@ export default async function LangLayout({
     <LangProvider lang={lang}>
       <AuthProvider>
         {children}
+        <KycGate />
         <ToasterThemeWrapper />
       </AuthProvider>
     </LangProvider>
