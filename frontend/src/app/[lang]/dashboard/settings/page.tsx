@@ -2,9 +2,10 @@
 
 import { motion } from 'framer-motion'
 import { Settings, Bell, Shield, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { useAuth } from '@/context/AuthContext'
+import { api, ApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -31,11 +32,13 @@ export default function SettingsPage() {
     }
     setPwdSaving(true)
     try {
-      // TODO (Неделя 1): реализовать через PATCH /api/auth/password
-      // Требует текущий пароль + новый пароль
-      setPwdMsg({ ok: false, text: 'Изменение пароля будет доступно в следующем обновлении' })
+      await api.auth.changePassword({ currentPassword: curPwd, newPassword: newPwd })
+      setPwdMsg({ ok: true, text: 'Пароль обновлён' })
+      setCurPwd(''); setNewPwd(''); setCfmPwd('')
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Ошибка'
+      const message = err instanceof ApiError ? err.message
+                     : err instanceof Error   ? err.message
+                     : 'Ошибка'
       setPwdMsg({ ok: false, text: message })
     } finally {
       setPwdSaving(false)
@@ -67,11 +70,14 @@ export default function SettingsPage() {
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      // TODO (Неделя 1): реализовать через DELETE /api/users/me
+      await api.users.deleteMe()
       await signOut()
       router.push('/')
-    } catch {
-      alert('Не удалось удалить аккаунт. Попробуйте позже.')
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message
+                     : err instanceof Error   ? err.message
+                     : 'Не удалось удалить аккаунт. Попробуйте позже.'
+      alert(message)
     } finally {
       setDeleting(false)
     }

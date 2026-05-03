@@ -46,3 +46,19 @@ public sealed class LoginDtoValidator : AbstractValidator<LoginDto>
             .NotEmpty().WithMessage("Пароль обязателен.");
     }
 }
+
+public sealed class ChangePasswordDtoValidator : AbstractValidator<ChangePasswordDto>
+{
+    public ChangePasswordDtoValidator()
+    {
+        RuleFor(x => x.CurrentPassword)
+            .NotEmpty().WithMessage("Текущий пароль обязателен.");
+
+        RuleFor(x => x.NewPassword)
+            .NotEmpty().WithMessage("Новый пароль обязателен.")
+            .MinimumLength(8).WithMessage("Минимум 8 символов. Рекомендуем 12+ для лучшей защиты.")
+            .MaximumLength(128).WithMessage("Пароль не может быть длиннее 128 символов.")
+            .NotEqual(x => x.CurrentPassword)
+                .WithMessage("Новый пароль не должен совпадать с текущим.");
+    }
+}

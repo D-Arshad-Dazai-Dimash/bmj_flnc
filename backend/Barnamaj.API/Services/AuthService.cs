@@ -11,6 +11,8 @@ public interface IAuthService
     Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken ct = default);
     Task<AuthResponseDto> RefreshAsync(string refreshToken, CancellationToken ct = default);
     Task<UserDto> UpdateProfileAsync(Guid userId, UpdateProfileDto dto, CancellationToken ct = default);
+    Task ChangePasswordAsync(Guid userId, ChangePasswordDto dto, CancellationToken ct = default);
+    Task SoftDeleteAccountAsync(Guid userId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -176,6 +178,41 @@ public sealed class AuthService : IAuthService
             AccountType:     profile.AccountType.ToString(),
             IsEmailVerified: user.IsEmailVerified,
             CreatedAt:       user.CreatedAt);
+    }
+
+    // ── CHANGE PASSWORD ──────────────────────────────────────
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordDto dto, CancellationToken ct = default)
+    {
+        var user = await _db.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new AuthException("Пользователь не найден.");
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+        {
+            _logger.LogWarning("Failed password change attempt for {UserId}", userId);
+            throw new AuthException("Текущий пароль неверен.");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword, workFactor: 12);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Password changed for {UserId}", userId);
+    }
+
+    // ── SOFT DELETE ──────────────────────────────────────────
+    public async Task SoftDeleteAccountAsync(Guid userId, CancellationToken ct = default)
+    {
+        var rows = await _db.Users
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(u => u.IsActive,  false)
+                .SetProperty(u => u.DeletedAt, DateTime.UtcNow), ct);
+
+        if (rows == 0)
+            throw new AuthException("Пользователь не найден.");
+
+        _logger.LogInformation("Account soft-deleted: {UserId}", userId);
     }
 
     // ── REFRESH TOKEN ──────────────────────────────────────────

@@ -64,6 +64,13 @@ public sealed class AuthController : ControllerBase
         Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions { Path = "/api/auth/refresh" });
     }
 
+    /// <summary>Внутренний хелпер: используется UsersController.DeleteMe для очистки cookies.</summary>
+    internal static void ClearAuthCookies(HttpResponse response)
+    {
+        response.Cookies.Delete(AccessTokenCookie,  new CookieOptions { Path = "/" });
+        response.Cookies.Delete(RefreshTokenCookie, new CookieOptions { Path = "/api/auth/refresh" });
+    }
+
     // ── Регистрация ─────────────────────────────────────────────────────
 
     /// <summary>
@@ -196,6 +203,34 @@ public sealed class AuthController : ControllerBase
         {
             var result = await _authService.UpdateProfileAsync(userId, dto, ct);
             return Ok(result);
+        }
+        catch (AuthException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // ── Смена пароля ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Сменить пароль авторизованного пользователя.
+    /// Требует подтверждения текущего пароля.
+    /// </summary>
+    [HttpPatch("password")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordDto dto,
+        CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirst("sub")?.Value
+            ?? throw new InvalidOperationException("JWT: claim 'sub' missing."));
+        try
+        {
+            await _authService.ChangePasswordAsync(userId, dto, ct);
+            return NoContent();
         }
         catch (AuthException ex)
         {

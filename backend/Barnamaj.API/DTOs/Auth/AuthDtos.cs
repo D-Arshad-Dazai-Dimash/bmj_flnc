@@ -31,6 +31,14 @@ public sealed record UpdateProfileDto(
 );
 
 /// <summary>
+/// Смена пароля авторизованным пользователем.
+/// </summary>
+public sealed record ChangePasswordDto(
+    string CurrentPassword,
+    string NewPassword
+);
+
+/// <summary>
 /// Ответ на успешную аутентификацию.
 /// AccessToken и RefreshToken устанавливаются как httpOnly cookies — не возвращаются клиенту напрямую.
 /// </summary>

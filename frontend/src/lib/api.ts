@@ -263,6 +263,17 @@ export const api = {
     /** Обновить имя и/или bio своего профиля */
     updateProfile: (data: { name?: string; bio?: string }) =>
       request<BackendUser>('/api/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+
+    /** Сменить пароль (требует подтверждения текущего) */
+    changePassword: (data: { currentPassword: string; newPassword: string }) =>
+      request<void>('/api/auth/password', { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+
+  // ── Users (управление аккаунтом) ───────────────────────────────────────────
+  users: {
+    /** Soft-delete текущего аккаунта; cookies очищаются на сервере */
+    deleteMe: () =>
+      request<void>('/api/users/me', { method: 'DELETE' }),
   },
 
   // ── Profiles (Clan / Company) ──────────────────────────────────────────────
