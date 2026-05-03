@@ -91,6 +91,15 @@ public static class ServiceExtensions
         services.AddScoped<IProjectService,    ProjectService>();
         services.AddScoped<IAssessmentService, AssessmentService>();
 
+        // ── KYC + SMS + OTP ───────────────────────────────────
+        services.AddScoped<IKycService, KycService>();
+        services.AddScoped<IOtpService, OtpService>();
+        // SMS: Mobizon если есть ключ, иначе Console (dev)
+        if (!string.IsNullOrEmpty(configuration["Sms:Mobizon:ApiKey"]))
+            services.AddScoped<ISmsProvider, MobizonSmsProvider>();
+        else
+            services.AddScoped<ISmsProvider, ConsoleSmsProvider>();
+
         // ── Redis кэш ────────────────────────────────────────
         var redisConnection = configuration.GetConnectionString("Redis");
         if (!string.IsNullOrEmpty(redisConnection))

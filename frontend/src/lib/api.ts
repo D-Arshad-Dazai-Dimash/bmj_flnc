@@ -174,6 +174,17 @@ export interface ProfileBadgeDto {
   bestScore: number
 }
 
+// ─── KYC Types ────────────────────────────────────────────────────────────────
+
+export interface KycStatus {
+  /** None | Lite | Full | Rejected */
+  status: string
+  phoneVerified: boolean
+  phone: string | null
+  hasIin: boolean
+  verifiedAt: string | null
+}
+
 // ─── Error ────────────────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
@@ -274,6 +285,25 @@ export const api = {
     /** Soft-delete текущего аккаунта; cookies очищаются на сервере */
     deleteMe: () =>
       request<void>('/api/users/me', { method: 'DELETE' }),
+  },
+
+  // ── KYC (телефон + ИИН + Sumsub) ───────────────────────────────────────────
+  kyc: {
+    /** Текущий статус KYC */
+    status: () =>
+      request<KycStatus>('/api/kyc/status'),
+
+    /** Запросить SMS-код на телефон */
+    sendPhoneCode: (phone: string) =>
+      request<void>('/api/kyc/phone/send-code', { method: 'POST', body: JSON.stringify({ phone }) }),
+
+    /** Подтвердить телефон 6-значным кодом из SMS */
+    verifyPhone: (phone: string, code: string) =>
+      request<KycStatus>('/api/kyc/phone/verify', { method: 'POST', body: JSON.stringify({ phone, code }) }),
+
+    /** Установить ИИН (с локальной валидацией) и согласие на обработку ПД */
+    setIin: (iin: string, consentGiven: boolean) =>
+      request<KycStatus>('/api/kyc/iin', { method: 'POST', body: JSON.stringify({ iin, consentGiven }) }),
   },
 
   // ── Profiles (Clan / Company) ──────────────────────────────────────────────
