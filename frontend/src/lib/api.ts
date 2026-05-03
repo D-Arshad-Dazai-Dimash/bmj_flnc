@@ -304,6 +304,10 @@ export const api = {
     /** Установить ИИН (с локальной валидацией) и согласие на обработку ПД */
     setIin: (iin: string, consentGiven: boolean) =>
       request<KycStatus>('/api/kyc/iin', { method: 'POST', body: JSON.stringify({ iin, consentGiven }) }),
+
+    /** Инициировать Sumsub-проверку (KYC Full); возвращает applicantId + accessToken для виджета */
+    startFull: () =>
+      request<{ applicantId: string; accessToken: string }>('/api/kyc/sumsub/init', { method: 'POST' }),
   },
 
   // ── Profiles (Clan / Company) ──────────────────────────────────────────────

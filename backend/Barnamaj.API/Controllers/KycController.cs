@@ -5,6 +5,8 @@ using Barnamaj.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Barnamaj.API.Controllers;
 
@@ -28,13 +30,14 @@ public sealed class KycController : ControllerBase
     private readonly IKycService   _kyc;
     private readonly IOtpService   _otp;
     private readonly ISmsProvider  _sms;
+    private readonly IConfiguration _config;
     private readonly ILogger<KycController> _logger;
 
     public KycController(
         AppDbContext db, IKycService kyc, IOtpService otp,
-        ISmsProvider sms, ILogger<KycController> logger)
+        ISmsProvider sms, IConfiguration config, ILogger<KycController> logger)
     {
-        _db = db; _kyc = kyc; _otp = otp; _sms = sms; _logger = logger;
+        _db = db; _kyc = kyc; _otp = otp; _sms = sms; _config = config; _logger = logger;
     }
 
     private Guid CurrentUserId() =>
@@ -130,6 +133,109 @@ public sealed class KycController : ControllerBase
     public async Task<IActionResult> GetStatus(CancellationToken ct)
         => Ok(await BuildStatusAsync(CurrentUserId(), ct));
 
+    // ── Sumsub (заглушка; реальная интеграция — Неделя 4) ────────────────
+
+    /// <summary>
+    /// Инициировать KYC Full через Sumsub.
+    /// Возвращает applicantId и accessToken для встраивания виджета.
+    /// </summary>
+    [HttpPost("sumsub/init")]
+    [Authorize]
+    [ProducesResponseType(typeof(SumsubInitResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SumsubInit(CancellationToken ct)
+    {
+        var userId      = CurrentUserId();
+        var applicantId = $"stub-{userId:N}";
+        var accessToken = $"stub-token-{Guid.NewGuid():N}";
+
+        await _kyc.LogAsync(userId, "sumsub_init", provider: "sumsub",
+                            providerRef: applicantId, ct: ct);
+
+        // TODO (Неделя 4): реальный вызов Sumsub SDK для получения applicantId/accessToken.
+        return Ok(new SumsubInitResponse(applicantId, accessToken));
+    }
+
+    /// <summary>
+    /// Webhook от Sumsub. Валидируется HMAC-подписью (header x-payload-digest).
+    /// applicantId должен начинаться с "stub-{userIdHex}" (или быть привязан к User.KycProviderRef).
+    /// Поддерживаются типы: applicantReviewed (reviewResult.reviewAnswer = GREEN | RED).
+    /// </summary>
+    [HttpPost("sumsub/webhook")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> SumsubWebhook(CancellationToken ct)
+    {
+        // Читаем тело как строку (для подписи)
+        Request.EnableBuffering();
+        using var reader = new StreamReader(Request.Body, leaveOpen: true);
+        var body = await reader.ReadToEndAsync(ct);
+        Request.Body.Position = 0;
+
+        var secret = _config["Sumsub:WebhookSecret"];
+        if (!string.IsNullOrEmpty(secret))
+        {
+            var providedSig = Request.Headers["x-payload-digest"].FirstOrDefault();
+            using var hmac  = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+            var expected   = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
+            if (providedSig is null ||
+                !CryptographicOperations.FixedTimeEquals(
+                    Encoding.ASCII.GetBytes(providedSig.ToLowerInvariant()),
+                    Encoding.ASCII.GetBytes(expected)))
+            {
+                _logger.LogWarning("Sumsub webhook: HMAC mismatch");
+                return Unauthorized();
+            }
+        }
+
+        SumsubWebhookPayload? payload;
+        try { payload = System.Text.Json.JsonSerializer.Deserialize<SumsubWebhookPayload>(body,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }); }
+        catch { return BadRequest(); }
+        if (payload is null) return BadRequest();
+
+        // Восстанавливаем userId из applicantId "stub-{hex}" или ищем по KycProviderRef.
+        Guid userId = Guid.Empty;
+        if (payload.ApplicantId.StartsWith("stub-"))
+            Guid.TryParseExact(payload.ApplicantId[5..], "N", out userId);
+
+        if (userId == Guid.Empty)
+        {
+            var match = await _db.Users
+                .Where(u => u.KycProviderRef == payload.ApplicantId)
+                .Select(u => (Guid?)u.Id)
+                .FirstOrDefaultAsync(ct);
+            if (match is null)
+            {
+                _logger.LogWarning("Sumsub webhook: unknown applicantId {ApplicantId}", payload.ApplicantId);
+                return Ok(); // не светим 4xx наружу
+            }
+            userId = match.Value;
+        }
+
+        var answer = payload.ReviewResult?.ReviewAnswer ?? "";
+        if (string.Equals(answer, "GREEN", StringComparison.OrdinalIgnoreCase))
+        {
+            await _kyc.SetStatusAsync(userId, KycStatus.Full, payload.ApplicantId, ct);
+            await _kyc.LogAsync(userId, "sumsub_approved", provider: "sumsub",
+                                providerRef: payload.ApplicantId, ct: ct);
+        }
+        else if (string.Equals(answer, "RED", StringComparison.OrdinalIgnoreCase))
+        {
+            await _kyc.SetStatusAsync(userId, KycStatus.Rejected, payload.ApplicantId, ct);
+            await _kyc.LogAsync(userId, "sumsub_rejected", provider: "sumsub",
+                                providerRef: payload.ApplicantId,
+                                payload: new { payload.ReviewResult?.RejectLabels }, ct: ct);
+        }
+        else
+        {
+            await _kyc.LogAsync(userId, "sumsub_event", provider: "sumsub",
+                                providerRef: payload.ApplicantId, payload: payload, ct: ct);
+        }
+
+        return Ok();
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────
 
     private async Task TryPromoteToLite(Guid userId, CancellationToken ct)
@@ -165,3 +271,18 @@ public sealed record KycStatusDto(
     bool      HasIin,
     DateTime? VerifiedAt
 );
+
+public sealed record SumsubInitResponse(string ApplicantId, string AccessToken);
+
+public sealed class SumsubWebhookPayload
+{
+    public string ApplicantId { get; set; } = string.Empty;
+    public string Type        { get; set; } = string.Empty;
+    public SumsubReviewResult? ReviewResult { get; set; }
+}
+
+public sealed class SumsubReviewResult
+{
+    public string?   ReviewAnswer { get; set; }
+    public string[]? RejectLabels { get; set; }
+}
