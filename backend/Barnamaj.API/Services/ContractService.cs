@@ -20,9 +20,14 @@ public interface IContractService
 
 public class ContractService : IContractService
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext         _db;
+    private readonly INotificationService _notify;
 
-    public ContractService(AppDbContext db) => _db = db;
+    public ContractService(AppDbContext db, INotificationService notify)
+    {
+        _db     = db;
+        _notify = notify;
+    }
 
     public async Task<ContractDetailDto> CreateAsync(
         Guid initiatorProfileId, CreateContractDto dto, CancellationToken ct)
@@ -109,6 +114,20 @@ public class ContractService : IContractService
 
         c.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);
+
+        // Уведомление другой стороне
+        var otherProfileId = signerProfileId == c.ClientProfileId ? c.ExecutorProfileId : c.ClientProfileId;
+        var otherUserId    = await ResolveUserIdAsync(otherProfileId, ct);
+        if (otherUserId is { } uid)
+        {
+            await _notify.PushAsync(uid,
+                type:    c.Status == ContractStatus.Signed ? "contract_signed" : "contract_signature_partial",
+                title:   c.Status == ContractStatus.Signed
+                    ? "Контракт подписан обеими сторонами"
+                    : "Контрагент подписал контракт",
+                payload: new { contractId = c.Id }, ct: ct);
+        }
+
         return await GetDetailRequiredAsync(contractId, ct);
     }
 
@@ -137,7 +156,36 @@ public class ContractService : IContractService
         c.UpdatedAt  = now;
 
         await _db.SaveChangesAsync(ct);
+
+        // Уведомляем исполнителя о разблокировке средств
+        var execUserId = await ResolveUserIdAsync(c.ExecutorProfileId, ct);
+        if (execUserId is { } uid)
+        {
+            await _notify.PushAsync(uid,
+                type:    "work_released",
+                title:   $"Средства разблокированы: {c.Amount:0.##} {c.Currency}",
+                payload: new { contractId = c.Id, amount = c.Amount }, ct: ct);
+        }
+
         return await GetDetailRequiredAsync(contractId, ct);
+    }
+
+    /// <summary>Находит User.Id по Profile.Id (через User.ProfileId или Memberships).</summary>
+    private async Task<Guid?> ResolveUserIdAsync(Guid profileId, CancellationToken ct)
+    {
+        // Вариант 1: индивидуальный профиль (User.ProfileId == profileId)
+        var owner = await _db.Users
+            .Where(u => u.ProfileId == profileId)
+            .Select(u => (Guid?)u.Id)
+            .FirstOrDefaultAsync(ct);
+        if (owner is { } u && u != Guid.Empty) return u;
+
+        // Вариант 2: для клана/компании — берём первого активного участника
+        return await _db.Memberships
+            .Where(m => m.ProfileId == profileId && m.Status == MembershipStatus.Active)
+            .OrderBy(m => m.JoinedAt)
+            .Select(m => (Guid?)m.UserId)
+            .FirstOrDefaultAsync(ct);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────

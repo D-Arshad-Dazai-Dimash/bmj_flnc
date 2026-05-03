@@ -58,6 +58,15 @@ public static class ServiceExtensions
                     var token = ctx.Request.Cookies["access_token"];
                     if (!string.IsNullOrEmpty(token))
                         ctx.Token = token;
+
+                    // SignalR: разрешаем передавать токен через ?access_token=
+                    // на путях /hubs/* (websocket-handshake может не отправлять cookie).
+                    var path = ctx.HttpContext.Request.Path;
+                    if (string.IsNullOrEmpty(ctx.Token) && path.StartsWithSegments("/hubs"))
+                    {
+                        var qs = ctx.Request.Query["access_token"].ToString();
+                        if (!string.IsNullOrEmpty(qs)) ctx.Token = qs;
+                    }
                     return Task.CompletedTask;
                 },
 
@@ -94,6 +103,9 @@ public static class ServiceExtensions
         // ── Контракты + Эскроу ───────────────────────────────
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<IPaymentService,  PaymentService>();
+
+        // ── Realtime (SignalR notifications + chat) ───────────
+        services.AddScoped<INotificationService, NotificationService>();
 
         // ── KYC + SMS + OTP ───────────────────────────────────
         services.AddScoped<IKycService, KycService>();

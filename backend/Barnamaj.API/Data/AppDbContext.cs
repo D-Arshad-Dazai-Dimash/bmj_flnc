@@ -41,6 +41,10 @@ public class AppDbContext : DbContext
     public DbSet<Contract>           Contracts           => Set<Contract>();
     public DbSet<Payment>            Payments            => Set<Payment>();
 
+    // ── Realtime ────────────────────────────────────────────
+    public DbSet<Notification>       Notifications       => Set<Notification>();
+    public DbSet<ChatMessage>        ChatMessages        => Set<ChatMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

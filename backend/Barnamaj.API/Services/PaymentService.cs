@@ -18,9 +18,14 @@ public interface IPaymentService
 
 public class PaymentService : IPaymentService
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext         _db;
+    private readonly INotificationService _notify;
 
-    public PaymentService(AppDbContext db) => _db = db;
+    public PaymentService(AppDbContext db, INotificationService notify)
+    {
+        _db     = db;
+        _notify = notify;
+    }
 
     public async Task<InitiatePaymentResponse> InitiateAsync(
         Guid clientProfileId, Guid contractId, CancellationToken ct)
@@ -57,6 +62,19 @@ public class PaymentService : IPaymentService
         contract.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
+
+        // Уведомление исполнителю: эскроу пополнен
+        var execUserId = await _db.Users
+            .Where(u => u.ProfileId == contract.ExecutorProfileId)
+            .Select(u => (Guid?)u.Id)
+            .FirstOrDefaultAsync(ct);
+        if (execUserId is { } uid)
+        {
+            await _notify.PushAsync(uid,
+                type:    "payment_funded",
+                title:   $"Заказчик пополнил эскроу: {contract.Amount:0.##} {contract.Currency}",
+                payload: new { contractId = contract.Id }, ct: ct);
+        }
 
         return new InitiatePaymentResponse(
             payment.Id, payment.Provider, providerRef, payment.Status.ToString());

@@ -222,6 +222,8 @@ try
     });
 
     app.MapControllers();
+    app.MapHub<Barnamaj.API.Hubs.ChatHub>("/hubs/chat");
+    app.MapHub<Barnamaj.API.Hubs.NotificationsHub>("/hubs/notifications");
 
     // ── Применить миграции при запуске ───────────────────────
     using (var scope = app.Services.CreateScope())

@@ -7,6 +7,7 @@ import { api, ApiError, type ContractDetailDto } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { KycGate } from '@/components/KycGate'
 import { useAuth } from '@/context/AuthContext'
+import ChatBox from '@/components/dashboard/ChatBox'
 
 export default function ContractDetailPage() {
   const params = useParams<{ id: string }>()
@@ -123,6 +124,10 @@ export default function ContractDetailPage() {
 
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-400">{error}</div>
+      )}
+
+      {(isClient || isExecutor) && contract.status !== 'Draft' && (
+        <ChatBox contractId={contract.id} />
       )}
     </div>
   )
