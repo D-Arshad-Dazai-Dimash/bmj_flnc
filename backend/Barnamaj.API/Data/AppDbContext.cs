@@ -37,6 +37,10 @@ public class AppDbContext : DbContext
     // ── KYC ─────────────────────────────────────────────────
     public DbSet<KycEvent>           KycEvents           => Set<KycEvent>();
 
+    // ── Контракты и эскроу ──────────────────────────────────
+    public DbSet<Contract>           Contracts           => Set<Contract>();
+    public DbSet<Payment>            Payments            => Set<Payment>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

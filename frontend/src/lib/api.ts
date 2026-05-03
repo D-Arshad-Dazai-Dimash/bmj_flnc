@@ -185,17 +185,87 @@ export interface KycStatus {
   verifiedAt: string | null
 }
 
+// ─── Contracts & Payments ─────────────────────────────────────────────────────
+
+/** Жизненный цикл контракта (соответствует ContractStatus на бэке) */
+export type ContractStatusName =
+  | 'Draft' | 'Signed' | 'Funded' | 'InProgress'
+  | 'Released' | 'Disputed' | 'Cancelled'
+
+export interface ContractSummaryDto {
+  id: string
+  projectId: string
+  projectTitle: string
+  status: ContractStatusName
+  amount: number
+  currency: string
+  clientProfileName: string
+  executorProfileName: string
+  createdAt: string
+}
+
+export interface PaymentSummaryDto {
+  id: string
+  amount: number
+  currency: string
+  provider: string
+  providerRef: string | null
+  /** Pending | Held | Released | Refunded | Failed */
+  status: string
+  createdAt: string
+}
+
+export interface ContractDetailDto {
+  id: string
+  projectId: string
+  projectTitle: string
+  status: ContractStatusName
+  amount: number
+  currency: string
+  clientProfileId: string
+  clientProfileName: string
+  executorProfileId: string
+  executorProfileName: string
+  clientSignedAt: string | null
+  executorSignedAt: string | null
+  fundedAt: string | null
+  releasedAt: string | null
+  createdAt: string
+  payment: PaymentSummaryDto | null
+}
+
+export interface CreateContractRequest {
+  projectId: string
+  executorProfileId: string
+  amount: number
+}
+
+export interface InitiatePaymentResponse {
+  paymentId: string
+  provider: string
+  providerRef: string
+  status: string
+}
+
 // ─── Error ────────────────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
   statusCode: number
   fieldErrors?: Record<string, string[]>
+  /** Сырое тело ответа (для нестандартных кодов вроде kyc_required) */
+  body?: Record<string, unknown>
 
-  constructor(message: string, statusCode: number, fieldErrors?: Record<string, string[]>) {
+  constructor(
+    message: string,
+    statusCode: number,
+    fieldErrors?: Record<string, string[]>,
+    body?: Record<string, unknown>,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.statusCode = statusCode
     this.fieldErrors = fieldErrors
+    this.body = body
     Object.setPrototypeOf(this, ApiError.prototype)
   }
 }
@@ -227,15 +297,17 @@ async function request<T>(
 
     if (!res.ok) {
       let message = `HTTP ${res.status}`
+      let body: Record<string, unknown> | undefined
       try {
-        const body = await res.json()
+        body = await res.json() as Record<string, unknown>
+        const b = body as { error?: string; title?: string; message?: string; errors?: Record<string, string[]> }
         message =
-          body.error ?? body.title ?? body.message ??
-          (body.errors
-            ? Object.values(body.errors as Record<string, string[]>).flat().join(' • ')
+          b.error ?? b.title ?? b.message ??
+          (b.errors
+            ? Object.values(b.errors).flat().join(' • ')
             : message)
       } catch { /* ignore */ }
-      throw new ApiError(message, res.status)
+      throw new ApiError(message, res.status, undefined, body)
     }
 
     if (res.status === 204) return undefined as T
@@ -308,6 +380,39 @@ export const api = {
     /** Инициировать Sumsub-проверку (KYC Full); возвращает applicantId + accessToken для виджета */
     startFull: () =>
       request<{ applicantId: string; accessToken: string }>('/api/kyc/sumsub/init', { method: 'POST' }),
+  },
+
+  // ── Contracts (соглашения исполнитель ↔ заказчик) ──────────────────────────
+  contracts: {
+    /** Мои контракты */
+    list: () =>
+      request<ContractSummaryDto[]>('/api/contracts'),
+
+    /** Подробности контракта */
+    get: (id: string) =>
+      request<ContractDetailDto>(`/api/contracts/${id}`),
+
+    /** Создать контракт (требует KYC Lite) */
+    create: (data: CreateContractRequest) =>
+      request<ContractDetailDto>('/api/contracts', { method: 'POST', body: JSON.stringify(data) }),
+
+    /** Подписать контракт (любая из сторон) */
+    sign: (id: string) =>
+      request<ContractDetailDto>(`/api/contracts/${id}/sign`, { method: 'POST' }),
+
+    /** Подтвердить приёмку: разблокировать средства исполнителю (только заказчик) */
+    release: (id: string) =>
+      request<ContractDetailDto>(`/api/contracts/${id}/release`, { method: 'POST' }),
+  },
+
+  // ── Payments (эскроу) ──────────────────────────────────────────────────────
+  payments: {
+    /** Инициировать эскроу-платёж по подписанному контракту (требует KYC Full) */
+    initiate: (contractId: string) =>
+      request<InitiatePaymentResponse>('/api/payments/initiate', {
+        method: 'POST',
+        body: JSON.stringify({ contractId }),
+      }),
   },
 
   // ── Profiles (Clan / Company) ──────────────────────────────────────────────

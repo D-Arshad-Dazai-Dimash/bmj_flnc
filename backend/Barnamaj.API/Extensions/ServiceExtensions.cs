@@ -91,10 +91,13 @@ public static class ServiceExtensions
         services.AddScoped<IProjectService,    ProjectService>();
         services.AddScoped<IAssessmentService, AssessmentService>();
 
+        // ── Контракты + Эскроу ───────────────────────────────
+        services.AddScoped<IContractService, ContractService>();
+        services.AddScoped<IPaymentService,  PaymentService>();
+
         // ── KYC + SMS + OTP ───────────────────────────────────
         services.AddScoped<IKycService, KycService>();
-        services.AddScoped<IOtpService, OtpService>();
-        // SMS: Mobizon если есть ключ, иначе Console (dev)
+        services.AddScoped<IOtpService, OtpService>();        // SMS: Mobizon если есть ключ, иначе Console (dev)
         if (!string.IsNullOrEmpty(configuration["Sms:Mobizon:ApiKey"]))
             services.AddScoped<ISmsProvider, MobizonSmsProvider>();
         else
