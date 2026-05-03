@@ -81,6 +81,53 @@ namespace Barnamaj.API.Data.Migrations
                     b.ToTable("assessment_attempts", (string)null);
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.KycEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("event_type");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload_json");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("provider_ref");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_kyc_events");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_kyc_events_user_created");
+
+                    b.ToTable("kyc_events", (string)null);
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -487,6 +534,11 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("email");
 
+                    b.Property<string>("Iin")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("iin");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -499,6 +551,27 @@ namespace Barnamaj.API.Data.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_email_verified");
 
+                    b.Property<bool>("IsPhoneVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_phone_verified");
+
+                    b.Property<string>("KycProviderRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("kyc_provider_ref");
+
+                    b.Property<byte>("KycStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint")
+                        .HasDefaultValue((byte)0)
+                        .HasColumnName("kyc_status");
+
+                    b.Property<DateTime?>("KycVerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("kyc_verified_at");
+
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at");
@@ -508,6 +581,11 @@ namespace Barnamaj.API.Data.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)")
                         .HasColumnName("password_hash");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("phone");
 
                     b.Property<Guid?>("ProfileId")
                         .HasColumnType("uuid")
@@ -529,6 +607,16 @@ namespace Barnamaj.API.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasDatabaseName("ix_users_email");
+
+                    b.HasIndex("Iin")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_iin")
+                        .HasFilter("iin IS NOT NULL");
+
+                    b.HasIndex("Phone")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_phone")
+                        .HasFilter("phone IS NOT NULL");
 
                     b.HasIndex("ProfileId")
                         .IsUnique()
@@ -563,6 +651,18 @@ namespace Barnamaj.API.Data.Migrations
                     b.Navigation("Profile");
 
                     b.Navigation("Skill");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.KycEvent", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_kyc_events_user_user_id");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.Membership", b =>

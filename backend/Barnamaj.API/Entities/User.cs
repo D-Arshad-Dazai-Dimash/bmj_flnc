@@ -30,6 +30,22 @@ public class User
     public bool IsActive { get; set; } = true;
     public bool IsEmailVerified { get; set; } = false;
 
+    // ── Телефон (auth-фактор и канал OTP) ────────────────────
+    /// <summary>Телефон в международном формате, например +77011234567. NULL пока не задан.</summary>
+    public string? Phone { get; set; }
+    public bool    IsPhoneVerified { get; set; } = false;
+
+    // ── KYC (подтверждение личности) ─────────────────────────
+    /// <summary>Индивидуальный идентификационный номер (12 цифр). NULL пока не задан.</summary>
+    public string? Iin { get; set; }
+
+    /// <summary>None | Lite | Full | Rejected</summary>
+    public KycStatus KycStatus { get; set; } = KycStatus.None;
+
+    /// <summary>Идентификатор у KYC-провайдера (например, applicantId Sumsub).</summary>
+    public string?  KycProviderRef { get; set; }
+    public DateTime? KycVerifiedAt { get; set; }
+
     // ── Временные метки (UTC) ────────────────────────────────
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

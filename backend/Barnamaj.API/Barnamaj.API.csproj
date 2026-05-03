@@ -35,6 +35,9 @@
     <!-- JWT Auth -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
 
+    <!-- SignalR (realtime: chat + notifications) -->
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="8.0.0" />
+
     <!-- Хеширование паролей — BCrypt (work factor по умолчанию 12) -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 

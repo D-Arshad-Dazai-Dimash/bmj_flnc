@@ -48,6 +48,34 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsEmailVerified)
             .HasDefaultValue(false);
 
+        // ── Телефон ──────────────────────────────────────────
+        builder.Property(u => u.Phone)
+            .HasMaxLength(32);
+
+        builder.HasIndex(u => u.Phone)
+            .IsUnique()
+            .HasFilter("phone IS NOT NULL")
+            .HasDatabaseName("ix_users_phone");
+
+        builder.Property(u => u.IsPhoneVerified)
+            .HasDefaultValue(false);
+
+        // ── KYC ──────────────────────────────────────────────
+        builder.Property(u => u.Iin)
+            .HasMaxLength(12);
+
+        builder.HasIndex(u => u.Iin)
+            .IsUnique()
+            .HasFilter("iin IS NOT NULL")
+            .HasDatabaseName("ix_users_iin");
+
+        builder.Property(u => u.KycStatus)
+            .HasConversion<byte>()
+            .HasDefaultValue(KycStatus.None);
+
+        builder.Property(u => u.KycProviderRef)
+            .HasMaxLength(128);
+
         // ── Временные метки ──────────────────────────────────
         builder.Property(u => u.CreatedAt)
             .HasDefaultValueSql("NOW()")

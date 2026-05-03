@@ -49,6 +49,9 @@ try
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
 
+    // ── SignalR (realtime: chat + notifications) ─────────────
+    builder.Services.AddSignalR();
+
     // ── Swagger ──────────────────────────────────────────────
     builder.Services.AddSwaggerGen(c =>
     {
