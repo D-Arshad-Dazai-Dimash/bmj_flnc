@@ -108,7 +108,9 @@ public sealed class ProjectService : IProjectService
             Title            = dto.Title.Trim(),
             Description      = dto.Description?.Trim(),
             Budget           = dto.Budget,
-            Deadline         = dto.Deadline,
+            Deadline         = dto.Deadline.HasValue
+                ? DateTime.SpecifyKind(dto.Deadline.Value, DateTimeKind.Utc)
+                : null,
             Status           = ProjectStatus.Open,
             ClientProfileId  = dto.ClientProfileId,
             ExecutorProfileId = null,
@@ -390,30 +392,32 @@ public sealed class ProjectService : IProjectService
         AccountType profileType,
         CancellationToken ct)
     {
+        // Универсальный fast-path: профиль привязан к пользователю напрямую
+        // (создан вместе с регистрацией). Покрывает Individual + случаи,
+        // когда Company/Clan-профиль зарегистрирован одним пользователем.
+        var isPrimaryOwner = await _db.Users
+            .AsNoTracking()
+            .AnyAsync(u => u.Id == userId && u.ProfileId == profileId, ct);
+
+        if (isPrimaryOwner) return;
+
         if (profileType == AccountType.Individual)
         {
-            var isOwner = await _db.Users
-                .AsNoTracking()
-                .AnyAsync(u => u.Id == userId && u.ProfileId == profileId, ct);
-
-            if (!isOwner)
-                throw new ProjectException(
-                    "Вы можете создавать проекты только от своего профиля.", 403);
+            throw new ProjectException(
+                "Вы можете создавать проекты только от своего профиля.", 403);
         }
-        else
-        {
-            var membership = await _db.Memberships
-                .AsNoTracking()
-                .FirstOrDefaultAsync(m =>
-                    m.ProfileId   == profileId &&
-                    m.UserId      == userId    &&
-                    m.Status      == MembershipStatus.Active &&
-                    m.RoleInGroup == MembershipRole.Owner, ct);
 
-            if (membership is null)
-                throw new ProjectException(
-                    "Только владелец (Owner) профиля может создавать проекты.", 403);
-        }
+        var membership = await _db.Memberships
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m =>
+                m.ProfileId   == profileId &&
+                m.UserId      == userId    &&
+                m.Status      == MembershipStatus.Active &&
+                m.RoleInGroup == MembershipRole.Owner, ct);
+
+        if (membership is null)
+            throw new ProjectException(
+                "Только владелец (Owner) профиля может создавать проекты.", 403);
     }
 
     /// <summary>

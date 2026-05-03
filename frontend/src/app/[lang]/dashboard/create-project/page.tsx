@@ -275,7 +275,7 @@ export default function CreateProjectPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user?.id) {
+    if (!user?.profileId) {
       setErrMsg('Не удалось определить ваш профиль. Выйдите и войдите снова.')
       return
     }
@@ -291,7 +291,7 @@ export default function CreateProjectPage() {
       await api.projects.create({
         title:           base.title,
         description:     fullDesc || undefined,
-        clientProfileId: user.id,
+        clientProfileId: user.profileId,
         budget:          budgetNum,
         deadline:        base.deadline || undefined,
       })

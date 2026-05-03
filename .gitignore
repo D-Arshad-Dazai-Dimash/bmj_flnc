@@ -62,3 +62,6 @@ nul
 
 # Temporary commit message files
 .commit_msg.tmp
+
+# Project documents
+*.docx
