@@ -102,6 +102,14 @@
 | POST | /api/profiles/create | [Authorize] | Создать клан/компанию |
 | POST | /api/profiles/{id}/invite | [Authorize] | Пригласить в команду |
 | GET | /api/profiles/my-teams | [Authorize] | Мои команды |
+| POST | /api/kyc/phone/send-code | [Authorize] | KYC: отправить SMS-код (rate-limit через Redis) |
+| POST | /api/kyc/phone/verify | [Authorize] | KYC: подтвердить телефон 6-значным кодом |
+| POST | /api/kyc/iin | [Authorize] | KYC: сохранить ИИН (AES-GCM шифрование, HMAC-индекс) |
+| POST | /api/kyc/document | [Authorize] | KYC: загрузить документ (multipart, magic-byte валидация, MinIO) |
+| GET | /api/kyc/status | [Authorize] | KYC: текущий статус (None/Lite/DocPending/Full/Rejected) |
+| GET | /api/kyc/moderation/pending | [Authorize Roles=Moderator,Admin] | Список документов на проверке (presigned URL 5 мин) |
+| POST | /api/kyc/moderation/{id}/approve | [Authorize Roles=Moderator,Admin] | Одобрить документ → KycStatus=Full |
+| POST | /api/kyc/moderation/{id}/reject | [Authorize Roles=Moderator,Admin] | Отклонить с причиной (5-500 симв) |
 
 ### Фронтенд API routes (Next.js)
 | Метод | Путь | Описание |
