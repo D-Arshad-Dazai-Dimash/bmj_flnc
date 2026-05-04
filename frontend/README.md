@@ -48,3 +48,9 @@ src/
 | POST | `/api/auth/register` | Регистрация |
 | POST | `/api/auth/login` | Авторизация |
 | GET  | `/api/auth/me` | Профиль (Bearer) |
+
+## Production Auth (Vercel + Fly)
+
+- В production фронтенд и backend находятся на разных доменах.
+- `access_token` / `refresh_token` выставляются backend-доменом и недоступны в Next middleware на frontend-домене.
+- Поэтому проверка сессии выполняется на клиенте через `GET /api/auth/me` в `AuthContext`, а не через middleware cookie-check.

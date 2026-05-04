@@ -120,18 +120,55 @@ try
     });
 
     // ── CORS ─────────────────────────────────────────────────
+    // В Development разрешаем любой origin вида http(s)://<host>:<port> из локальной
+    // сети (localhost, 127.0.0.1, 10.x, 172.16-31.x, 192.168.x). Для production
+    // используем строгий список из конфигурации AllowedOrigins.
+    var allowedOrigins = builder.Configuration
+        .GetSection("AllowedOrigins").Get<string[]>()
+        ?? ["http://localhost:3000"];
+    var isDev = builder.Environment.IsDevelopment();
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowFrontend", policy =>
+        {
             policy
-                .WithOrigins(
-                    builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-                    ?? ["http://localhost:3000"])
                 .AllowAnyHeader()
                 .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .WithExposedHeaders("Content-Disposition", "X-Pagination")
                 .AllowCredentials()
-                .SetPreflightMaxAge(TimeSpan.FromMinutes(10)));
+                .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+
+            if (isDev)
+            {
+                // Разрешаем все origins из локальной сети (LAN) для удобной
+                // отладки с других устройств. AllowCredentials требует
+                // конкретного origin в ответе — поэтому используем предикат.
+                policy.SetIsOriginAllowed(origin =>
+                {
+                    if (string.IsNullOrEmpty(origin)) return false;
+                    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+                    var host = uri.Host;
+                    if (host is "localhost" or "127.0.0.1") return true;
+                    if (System.Net.IPAddress.TryParse(host, out var ip))
+                    {
+                        var b = ip.GetAddressBytes();
+                        if (ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) return false;
+                        // 10.0.0.0/8
+                        if (b[0] == 10) return true;
+                        // 172.16.0.0/12
+                        if (b[0] == 172 && b[1] >= 16 && b[1] <= 31) return true;
+                        // 192.168.0.0/16
+                        if (b[0] == 192 && b[1] == 168) return true;
+                    }
+                    return allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
+                });
+            }
+            else
+            {
+                policy.WithOrigins(allowedOrigins);
+            }
+        });
     });
 
     // ── Расширения сервисов ──────────────────────────────────

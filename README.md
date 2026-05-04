@@ -2,6 +2,12 @@
 
 Backend на **ASP.NET Core 8** + **PostgreSQL** + **Docker**.
 
+### Продакшн заметка (Vercel + Fly)
+
+- При раздельном домене frontend/backend auth cookies (`access_token`, `refresh_token`) принадлежат backend-домену.
+- Из-за этого Next middleware на frontend-домене не должен использовать cookie-presence как источник истины для auth.
+- Проверка сессии выполняется клиентским запросом `GET /api/auth/me` (с `credentials: include`).
+
 ---
 
 ## Структура проекта

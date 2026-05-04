@@ -1,0 +1,37 @@
+# ============================================================
+# Fly.io configuration for Barnamaj API
+# Деплой: cd backend/Barnamaj.API && fly deploy
+# ============================================================
+
+app = "barnamaj-api"
+primary_region = "fra"   # Frankfurt — ближе всего к KZ из бесплатных регионов
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_URLS = "http://+:8080"
+  DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "false"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # suspend быстрее cold-start чем stop; min_machines_running = 1 чтобы первая
+  # машина всегда была горячей (одна — в пределах free tier shared-cpu-1x).
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health/live"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"   # 256 для .NET может быть мало; 512 ещё в пределах free
+  cpus = 1
