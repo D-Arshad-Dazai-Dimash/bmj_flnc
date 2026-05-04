@@ -11,9 +11,6 @@ namespace Barnamaj.API.Controllers;
 [Produces("application/json")]
 public abstract class BaseApiController : ControllerBase
 {
-    /// <summary>
-    /// Формирует стандартный ответ с ошибкой
-    /// </summary>
     protected IActionResult Problem(string detail, int statusCode = 400)
         => StatusCode(statusCode, new { error = detail, timestamp = DateTime.UtcNow });
 }

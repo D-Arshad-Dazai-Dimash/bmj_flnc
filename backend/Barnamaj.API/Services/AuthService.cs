@@ -83,6 +83,23 @@ public sealed class AuthService : IAuthService
                 };
                 _db.Users.Add(user);
 
+                // Для Company/Clan создаём Membership с ролью Owner,
+                // чтобы зарегистрированный пользователь сразу мог
+                // управлять профилем (создавать проекты, приглашать и т.д.).
+                // Individual-профили не используют Membership-связи.
+                if (dto.AccountType != AccountType.Individual)
+                {
+                    _db.Memberships.Add(new Membership
+                    {
+                        User            = user,
+                        Profile         = profile,
+                        RoleInGroup     = MembershipRole.Owner,
+                        Status          = MembershipStatus.Active,
+                        JoinedAt        = DateTime.UtcNow,
+                        InvitedByUserId = null,
+                    });
+                }
+
                 await _db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
 

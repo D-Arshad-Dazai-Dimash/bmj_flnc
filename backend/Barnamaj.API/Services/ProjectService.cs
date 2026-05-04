@@ -103,12 +103,18 @@ public sealed class ProjectService : IProjectService
         await EnsureOwnerAccessAsync(dto.ClientProfileId, currentUserId, clientProfile.AccountType, ct);
 
         // 3. Создаём проект
+        // Deadline нормализуем к UTC: PostgreSQL `timestamptz` через Npgsql
+        // принимает только DateTime с Kind=Utc.
+        DateTime? deadlineUtc = dto.Deadline.HasValue
+            ? DateTime.SpecifyKind(dto.Deadline.Value, DateTimeKind.Utc)
+            : null;
+
         var project = new Project
         {
             Title            = dto.Title.Trim(),
             Description      = dto.Description?.Trim(),
             Budget           = dto.Budget,
-            Deadline         = dto.Deadline,
+            Deadline         = deadlineUtc,
             Status           = ProjectStatus.Open,
             ClientProfileId  = dto.ClientProfileId,
             ExecutorProfileId = null,
