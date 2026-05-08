@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -16,6 +17,8 @@ import { cn } from '@/lib/utils'
 import NotificationBell from './NotificationBell'
 import ThemeToggle from '@/components/ThemeToggle'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+
+const LOGO_SRC = '/logo.png'
 
 // ─── Nav item types ────────────────────────────────────────────────────────────
 
@@ -60,21 +63,21 @@ function NavLink({ item }: { item: NavItem }) {
     <Link
       href={item.href}
       className={cn(
-        'relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group',
+        'relative flex items-center gap-2.5 px-3 py-2 rounded-[6px] text-[13px] transition-all duration-200 group tracking-caption',
         isActive
-          ? 'text-text-base bg-accent/15 font-medium'
-          : 'text-text-muted hover:text-text-base hover:bg-bg-hover'
+          ? 'text-text-base bg-bg-active font-[510] border border-border'
+          : 'text-text-muted hover:text-text-base hover:bg-bg-hover font-[400]'
       )}
     >
       {isActive && (
         <motion.div
           layoutId="sidebar-indicator"
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4/5 bg-accent rounded-full"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4/5 bg-[#7170ff] rounded-full"
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
           layout="position"
         />
       )}
-      <span className={cn(isActive ? 'text-accent-light' : 'text-text-faint group-hover:text-text-muted transition-colors')}>
+      <span className={cn(isActive ? 'text-[#a8a6ff]' : 'text-text-faint group-hover:text-text-muted transition-colors')}>
         {item.icon}
       </span>
       {item.label}
@@ -87,6 +90,7 @@ function NavLink({ item }: { item: NavItem }) {
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const router = useLocaleRouter()
+  const logoSrc = LOGO_SRC
 
   const roleItems = user?.accountType === 'Developer' ? developerItems : clientItems
   const roleLabel = user?.accountType === 'Developer' ? '👨‍💻 Разработчик' : '💼 Заказчик'
@@ -97,30 +101,33 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 shrink-0 min-h-screen bg-bg-surface border-r border-border flex flex-col">
+    <aside className="w-60 shrink-0 min-h-screen bg-bg-panel border-r border-border flex flex-col">
 
       {/* ── Logo ── */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-border">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="relative w-7 h-7">
-            <Image src="/logo.png" alt="Barnamaj" fill className="object-contain" />
+        <Link href="/" className="flex items-center group">
+          <div className="relative h-7 w-32">
+            <Image
+              src={logoSrc}
+              alt="Barnamaj"
+              fill
+              unoptimized
+              className="object-contain object-left drop-shadow-[0_0_6px_rgba(113,112,255,0.45)]"
+            />
           </div>
-          <span className="text-sm font-semibold text-text-base group-hover:text-accent-light transition-colors">
-            Barnamaj
-          </span>
         </Link>
         <NotificationBell />
       </div>
 
       {/* ── User card ── */}
       <div className="px-3 py-4 border-b border-border">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <div className="w-9 h-9 rounded-xl bg-accent/20 flex items-center justify-center text-sm font-bold text-accent-light shrink-0 select-none">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-[8px] bg-bg-card border border-border">
+          <div className="w-8 h-8 rounded-[6px] bg-accent/15 border border-border flex items-center justify-center text-sm font-[510] text-[#a8a6ff] shrink-0 select-none">
             {user?.profileName?.[0]?.toUpperCase() ?? '?'}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-text-base truncate">{user?.profileName}</p>
-            <p className="text-xs text-text-muted truncate">{roleLabel}</p>
+            <p className="text-[13px] font-[510] text-text-base truncate tracking-caption">{user?.profileName}</p>
+            <p className="text-[11px] text-text-faint truncate">{roleLabel}</p>
           </div>
         </div>
       </div>

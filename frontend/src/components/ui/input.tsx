@@ -17,7 +17,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-medium tracking-wide text-text-muted"
+            className="text-[11px] font-[510] tracking-caption text-text-secondary"
           >
             {label}
           </label>
@@ -28,14 +28,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             ref={ref}
             className={cn(
-              'w-full px-4 py-3 text-sm rounded-lg',
-              'bg-bg-surface border text-text-base',
+              'w-full px-4 py-3 text-sm rounded-[8px]',
+              'bg-bg-card border text-text-base shadow-[0_1px_0_rgba(255,255,255,0.03)]',
               'placeholder:text-text-faint',
-              'transition-all duration-150',
+              'transition-all duration-200',
               'focus:outline-none focus:ring-1',
               error
                 ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
-                : 'border-border hover:border-border-bright focus:border-accent/60 focus:ring-accent/20 focus:shadow-glow-sm',
+                : 'border-border hover:bg-bg-elevated hover:border-border-bright focus:bg-bg-elevated focus:border-border-focus focus:ring-[rgba(113,112,255,0.18)]',
               suffix ? 'pr-11' : '',
               className
             )}

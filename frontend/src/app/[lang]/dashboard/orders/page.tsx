@@ -30,24 +30,24 @@ function ProposalModal({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-bg-card border border-border rounded-2xl w-full max-w-lg p-6 space-y-4"
+        className="w-full max-w-lg space-y-4 rounded-[18px] border border-border bg-[linear-gradient(180deg,rgba(6,9,30,0.96),rgba(7,9,45,0.92))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-text-base">Подать предложение</h3>
+          <h3 className="text-lg font-semibold tracking-h3 text-text-base">Подать предложение</h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-bg-hover transition-colors"
+            className="rounded-[8px] border border-transparent p-1.5 transition-colors hover:border-border hover:bg-bg-hover"
             aria-label="Закрыть"
           >
             <X className="w-5 h-5 text-text-faint" />
           </button>
         </div>
-        <p className="text-sm text-text-muted truncate">{project.title}</p>
+        <p className="text-sm text-text-secondary truncate">{project.title}</p>
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-text-faint block mb-1">
+            <label className="mb-1 block text-[11px] font-[510] tracking-caption text-text-secondary">
               Сопроводительное письмо
             </label>
             <textarea
@@ -55,18 +55,18 @@ function ProposalModal({
               onChange={e => setCoverLetter(e.target.value.slice(0, 500))}
               placeholder="Расскажите почему вы подходите..."
               rows={4}
-              className="w-full px-3 py-2 rounded-lg bg-bg-base border border-border text-sm text-text-base placeholder:text-text-faint resize-none focus:outline-none focus:border-accent transition-colors"
+              className="w-full resize-none rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
             />
             <span className="text-xs text-text-faint">{coverLetter.length}/500</span>
           </div>
           <div>
-            <label className="text-xs font-medium text-text-faint block mb-1">Ваша цена (₸)</label>
+            <label className="mb-1 block text-[11px] font-[510] tracking-caption text-text-secondary">Ваша цена (₸)</label>
             <input
               type="number"
               value={budget}
               onChange={e => setBudget(e.target.value)}
               placeholder={project.budget ? String(project.budget) : '—'}
-              className="w-full px-3 py-2 rounded-lg bg-bg-base border border-border text-sm text-text-base placeholder:text-text-faint focus:outline-none focus:border-accent transition-colors"
+              className="w-full rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
             />
           </div>
         </div>
@@ -74,7 +74,7 @@ function ProposalModal({
         <div className="flex justify-end gap-2 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg border border-border text-text-muted hover:bg-bg-hover transition-colors"
+            className="rounded-[8px] border border-border bg-bg-card px-4 py-2 text-sm font-[510] tracking-caption text-text-secondary transition-colors hover:bg-bg-elevated"
           >
             Отмена
           </button>
@@ -86,7 +86,7 @@ function ProposalModal({
               })
             }
             disabled={sending}
-            className="px-4 py-2 text-sm font-medium rounded-lg border border-accent/40 text-accent-light bg-accent/10 hover:bg-accent/20 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="flex items-center gap-2 rounded-[8px] border border-[rgba(73,71,171,0.28)] bg-[linear-gradient(135deg,rgba(55,111,177,0.22),rgba(73,71,171,0.26),rgba(122,88,172,0.22))] px-4 py-2 text-sm font-[510] tracking-caption text-[#dcdcff] transition-all duration-200 hover:brightness-110 disabled:opacity-50"
           >
             <Send className="w-3.5 h-3.5" />
             {sending ? 'Отправляем...' : 'Отправить'}
@@ -108,13 +108,13 @@ const OrderCard = memo(function OrderCard({
   hasProposal: boolean
 }) {
   return (
-    <div data-testid="order-card" className="rounded-xl border border-border bg-bg-card p-5 space-y-3">
+    <div data-testid="order-card" className="rounded-[14px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-5 shadow-[0_1px_0_rgba(255,255,255,0.03)] transition-all duration-200 hover:border-border-bright hover:bg-bg-elevated hover:shadow-[0_20px_48px_rgba(5,8,48,0.28)]">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <h3 className="font-semibold text-text-base truncate">{p.title}</h3>
-          {p.description && <p className="text-sm text-text-muted line-clamp-2">{p.description}</p>}
+          <h3 className="truncate text-[17px] font-semibold tracking-h3 text-text-base">{p.title}</h3>
+          {p.description && <p className="line-clamp-2 text-sm leading-6 text-text-secondary">{p.description}</p>}
         </div>
-        <span className="shrink-0 text-xs px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+        <span className="chip shrink-0 border-[rgba(72,152,188,0.26)] bg-[rgba(72,152,188,0.08)] text-[#9fdcec]">
           Открыт
         </span>
       </div>
@@ -142,14 +142,14 @@ const OrderCard = memo(function OrderCard({
       </div>
       <div className="pt-1">
         {hasProposal ? (
-          <span className="px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-500/40 text-amber-400 bg-amber-500/10 inline-flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(201,143,177,0.28)] bg-[rgba(201,143,177,0.08)] px-3 py-1.5 text-xs font-[510] tracking-caption text-[#efc7d9]">
             <Clock className="w-3 h-3" /> Предложение отправлено
           </span>
         ) : (
           <button
             data-testid="apply-btn"
             onClick={() => onPropose(p)}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-accent/40 text-accent-light bg-accent/10 hover:bg-accent/20 transition-colors"
+            className="rounded-[8px] border border-[rgba(73,71,171,0.25)] bg-[linear-gradient(135deg,rgba(55,111,177,0.18),rgba(73,71,171,0.22),rgba(122,88,172,0.18))] px-3 py-1.5 text-xs font-[510] tracking-caption text-[#dcdcff] transition-all duration-200 hover:brightness-110"
           >
             Подать предложение
           </button>
@@ -228,12 +228,12 @@ export default function OrdersPage() {
     >
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-cyan-500/15">
-          <ClipboardList className="w-5 h-5 text-cyan-400" />
+        <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[rgba(72,152,188,0.18)] bg-[linear-gradient(180deg,rgba(72,152,188,0.16),rgba(73,71,171,0.08))]">
+          <ClipboardList className="w-5 h-5 text-[#8fd7ed]" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-text-base">Лента заказов</h1>
-          <p className="text-sm text-text-muted">Актуальные открытые проекты от заказчиков</p>
+          <h1 className="text-[28px] font-semibold tracking-h2 text-text-base">Лента заказов</h1>
+          <p className="text-[15px] text-text-secondary">Актуальные открытые проекты от заказчиков</p>
         </div>
       </div>
 
@@ -242,13 +242,13 @@ export default function OrdersPage() {
           <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       ) : errMsg ? (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-400">
+        <div className="rounded-[14px] border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-300">
           {errMsg}
         </div>
       ) : visibleProjects.length === 0 ? (
-        <div className="rounded-xl border border-border bg-bg-card p-12 flex flex-col items-center gap-3 text-center">
+        <div className="rounded-[14px] border border-border bg-bg-card p-12 text-center shadow-[0_1px_0_rgba(255,255,255,0.03)] flex flex-col items-center gap-3">
           <ClipboardList className="w-10 h-10 text-text-faint" />
-          <p className="text-text-muted">Открытых заказов пока нет</p>
+          <p className="text-text-secondary">Открытых заказов пока нет</p>
           <p className="text-xs text-text-faint max-w-xs">
             Возвращайтесь позже — здесь появятся актуальные проекты от клиентов.
           </p>

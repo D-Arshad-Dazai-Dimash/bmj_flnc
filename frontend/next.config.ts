@@ -5,6 +5,30 @@ const withAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL
+let apiRemotePattern:
+  | {
+      protocol: 'http' | 'https'
+      hostname: string
+      port: string
+      pathname: string
+    }
+  | null = null
+
+if (apiUrl) {
+  try {
+    const parsed = new URL(apiUrl)
+    apiRemotePattern = {
+      protocol: parsed.protocol.replace(':', '') as 'http' | 'https',
+      hostname: parsed.hostname,
+      port: parsed.port,
+      pathname: '/**',
+    }
+  } catch {
+    apiRemotePattern = null
+  }
+}
+
 const nextConfig: NextConfig = {
   // ── Faster builds & smaller bundles ─────────────────────────
   reactStrictMode: true,
@@ -25,6 +49,13 @@ const nextConfig: NextConfig = {
         port: '54321',
         pathname: '/**',
       },
+      {
+        protocol: 'http',
+        hostname: '172.20.10.2',
+        port: '5000',
+        pathname: '/**',
+      },
+      ...(apiRemotePattern ? [apiRemotePattern] : []),
     ],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 31536000,

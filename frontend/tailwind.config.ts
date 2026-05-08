@@ -12,21 +12,27 @@ const config: Config = {
       colors: {
         bg: {
           base:    'var(--bg-base)',
+          panel:   'var(--bg-panel)',
           surface: 'var(--bg-surface)',
           card:    'var(--bg-card)',
+          elevated:'var(--bg-elevated)',
           hover:   'var(--bg-hover)',
+          active:  'var(--bg-active)',
         },
         border: {
           DEFAULT: 'var(--border)',
           subtle:  'var(--border-subtle)',
           bright:  'var(--border-bright)',
+          focus:   'var(--border-focus)',
         },
         accent: {
           DEFAULT: 'var(--accent)',
           dim:     'var(--accent-dim)',
           glow:    'var(--accent-glow)',
-          light:   'var(--accent-light)',
           bright:  'var(--accent-bright)',
+          hover:   'var(--accent-hover)',
+          light:   'var(--accent-light)',
+          vivid:   'var(--accent-vivid)',
         },
         neon: {
           purple: '#7a58ac',
@@ -45,10 +51,11 @@ const config: Config = {
           rose:   '#a46c84',
         },
         text: {
-          base:    'var(--text-base)',
-          muted:   'var(--text-muted)',
-          faint:   'var(--text-faint)',
-          accent:  'var(--text-accent)',
+          base:      'var(--text-base)',
+          secondary: 'var(--text-secondary)',
+          muted:     'var(--text-muted)',
+          faint:     'var(--text-faint)',
+          accent:    'var(--text-accent)',
         },
       },
       fontFamily: {
@@ -56,14 +63,20 @@ const config: Config = {
         mono: ['var(--font-mono)', 'monospace'],
       },
       boxShadow: {
+        /* Glow effects (Barnamaj brand) */
         'glow-sm':     '0 0 12px rgba(73, 71, 171, 0.25)',
         'glow-md':     '0 0 30px rgba(73, 71, 171, 0.35)',
         'glow-lg':     '0 0 60px rgba(73, 71, 171, 0.4)',
         'glow-cyan':   '0 0 30px rgba(72, 152, 188, 0.3)',
         'glow-pink':   '0 0 30px rgba(201, 143, 177, 0.25)',
         'inner-glow':  'inset 0 0 30px rgba(73, 71, 171, 0.1)',
-        'card':        '0 1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.5)',
-        'card-hover':  '0 0 0 1px rgba(73,71,171,0.4), 0 12px 48px rgba(73,71,171,0.15)',
+        /* Linear-grade surface shadows */
+        'card':        '0 1px 0 rgba(255,255,255,0.04) inset, 0 0 0 1px rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.45)',
+        'card-hover':  '0 0 0 1px rgba(113,112,255,0.35), 0 0 0 1px rgba(255,255,255,0.06), 0 12px 48px rgba(73,71,171,0.18)',
+        'elevated':    'rgba(0,0,0,0.5) 0px 8px 32px, rgba(0,0,0,0.2) 0px 0px 0px 1px',
+        'dialog':      '0 8px 2px rgba(0,0,0,0), 0 5px 2px rgba(0,0,0,0.01), 0 3px 2px rgba(0,0,0,0.04), 0 1px 1px rgba(0,0,0,0.07), 0 0 1px rgba(0,0,0,0.08)',
+        'ring':        '0 0 0 1px rgba(255,255,255,0.08)',
+        'focus':       '0 0 0 3px rgba(113,112,255,0.12), 0 0 0 1px rgba(113,112,255,0.30)',
       },
       backgroundImage: {
         'gradient-radial':   'radial-gradient(var(--tw-gradient-stops))',
@@ -101,6 +114,19 @@ const config: Config = {
       },
       backgroundSize: {
         'grid': '40px 40px',
+      },
+      letterSpacing: {
+        'display': '-0.066em',
+        'h1':      '-0.022em',
+        'h2':      '-0.018em',
+        'h3':      '-0.012em',
+        'body':    '-0.005em',
+        'caption': '-0.008em',
+        'tight':   '-0.01em',
+        'tighter': '-0.02em',
+      },
+      fontWeight: {
+        'signature': '510',  /* Linear's between-weight */
       },
     },
   },

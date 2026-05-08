@@ -40,20 +40,27 @@ const StatCard = memo(function StatCard({ label, value, sub, color = 'accent' }:
   sub?: string
   color?: 'accent' | 'cyan' | 'green' | 'yellow'
 }) {
-  const colors = {
-    accent: 'text-accent-light bg-accent/10 border-accent/20',
-    cyan:   'text-cyan-400 bg-cyan-400/10 border-cyan-400/20',
-    green:  'text-green-400 bg-green-400/10 border-green-400/20',
-    yellow: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
+  const valueColors = {
+    accent: 'text-[#a8a6ff]',
+    cyan:   'text-cyan-400',
+    green:  'text-emerald-400',
+    yellow: 'text-amber-400',
+  }
+  const ringColors = {
+    accent: 'hover:border-[rgba(113,112,255,0.35)]',
+    cyan:   'hover:border-[rgba(103,232,249,0.30)]',
+    green:  'hover:border-[rgba(52,211,153,0.30)]',
+    yellow: 'hover:border-[rgba(251,191,36,0.30)]',
   }
   return (
     <motion.div
       variants={item}
-      className={`rounded-xl border p-5 flex flex-col gap-1 ${colors[color]}`}
+      className={`rounded-[10px] border border-border p-5 flex flex-col gap-1 bg-bg-card
+        hover:bg-bg-elevated transition-all duration-200 ${ringColors[color]}`}
     >
-      <span className="text-xs font-medium opacity-70">{label}</span>
-      <span className="text-2xl font-bold">{value}</span>
-      {sub && <span className="text-xs opacity-60">{sub}</span>}
+      <span className="text-[11px] font-[510] text-text-faint tracking-caption uppercase">{label}</span>
+      <span className={`text-2xl font-bold tracking-h3 tabular-nums ${valueColors[color]}`}>{value}</span>
+      {sub && <span className="text-xs text-text-faint">{sub}</span>}
     </motion.div>
   )
 })

@@ -97,7 +97,7 @@ export default function AdminAuditPage() {
           placeholder="Фильтр по действию (wallet.adjust, specialty...)"
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1) }}
-          className="w-full pl-9 pr-4 py-2 text-sm bg-surface-card border border-border-subtle rounded-xl text-text-base placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-sky-500"
+          className="w-full pl-9 pr-4 py-2 text-sm bg-bg-card border border-border rounded-xl text-text-base placeholder:text-text-faint focus:outline-none focus:border-accent transition-colors"
         />
       </div>
 
@@ -114,21 +114,21 @@ export default function AdminAuditPage() {
       ) : logs.length === 0 ? (
         <div className="text-center py-12 text-text-muted text-sm">Событий не найдено</div>
       ) : (
-        <div className="rounded-xl border border-border-subtle bg-surface-card overflow-hidden">
+        <div className="rounded-[10px] border border-border bg-bg-card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border-subtle bg-surface-hover">
-                <th className="text-left px-4 py-3 text-text-muted font-medium">Время</th>
-                <th className="text-left px-4 py-3 text-text-muted font-medium">Действие</th>
-                <th className="text-left px-4 py-3 text-text-muted font-medium">Администратор</th>
-                <th className="text-left px-4 py-3 text-text-muted font-medium">Цель</th>
-                <th className="text-left px-4 py-3 text-text-muted font-medium">IP</th>
-                <th className="text-left px-4 py-3 text-text-muted font-medium">Данные</th>
+              <tr className="border-b border-border bg-bg-elevated">
+                <th className="text-left px-4 py-3 text-[11px] font-[510] tracking-[0.06em] uppercase text-text-faint">Время</th>
+                <th className="text-left px-4 py-3 text-[11px] font-[510] tracking-[0.06em] uppercase text-text-faint">Действие</th>
+                <th className="text-left px-4 py-3 text-[11px] font-[510] tracking-[0.06em] uppercase text-text-faint">Администратор</th>
+                <th className="text-left px-4 py-3 text-[11px] font-[510] tracking-[0.06em] uppercase text-text-faint">Цель</th>
+                <th className="text-left px-4 py-3 text-[11px] font-[510] tracking-[0.06em] uppercase text-text-faint">IP</th>
+                <th className="text-left px-4 py-3 text-[11px] font-[510] tracking-[0.06em] uppercase text-text-faint">Данные</th>
               </tr>
             </thead>
             <tbody>
               {logs.map(log => (
-                <tr key={log.id} className="border-b border-border-subtle last:border-0 hover:bg-surface-hover/50 transition-colors">
+                <tr key={log.id} className="border-b border-border last:border-0 hover:bg-bg-hover/60 transition-colors">
                   <td className="px-4 py-3 text-text-muted whitespace-nowrap">{formatDt(log.createdAt)}</td>
                   <td className="px-4 py-3"><ActionBadge action={log.action} /></td>
                   <td className="px-4 py-3 text-text-base">{log.adminEmail}</td>
@@ -156,14 +156,14 @@ export default function AdminAuditPage() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1 || loading}
-              className="p-1.5 rounded-lg border border-border-subtle hover:text-text-base disabled:opacity-40 transition-colors"
+              className="p-1.5 rounded-lg border border-border hover:text-text-base hover:bg-bg-elevated disabled:opacity-40 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages || loading}
-              className="p-1.5 rounded-lg border border-border-subtle hover:text-text-base disabled:opacity-40 transition-colors"
+              className="p-1.5 rounded-lg border border-border hover:text-text-base hover:bg-bg-elevated disabled:opacity-40 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

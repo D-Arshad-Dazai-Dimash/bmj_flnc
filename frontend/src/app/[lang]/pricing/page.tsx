@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { CheckCircle2, ArrowRight, Zap, Building2, Users } from 'lucide-react'
+import { CheckCircle2, ArrowRight, Zap, Building2, Users, Sparkles } from 'lucide-react'
 import Link from '@/components/ui/LocaleLink'
 import { Button } from '@/components/ui/button'
 
@@ -12,9 +12,9 @@ const plans = [
     name: 'Старт',
     price: 'Бесплатно',
     sub: 'Всегда',
-    color: '#a78bfa',
-    bg: 'rgba(124,58,237,0.08)',
-    border: 'rgba(124,58,237,0.2)',
+    accentClass: 'text-[#a46c84]',
+    borderClass: 'border-[rgba(164,108,132,0.25)]',
+    bgClass: 'bg-[rgba(164,108,132,0.06)]',
     features: [
       'До 3 откликов в месяц',
       'Базовый профиль разработчика',
@@ -31,9 +31,9 @@ const plans = [
     name: 'Про',
     price: '4 990 ₸',
     sub: 'в месяц',
-    color: '#22d3ee',
-    bg: 'rgba(0,212,255,0.08)',
-    border: 'rgba(0,212,255,0.35)',
+    accentClass: 'text-[#4898bc]',
+    borderClass: 'border-[rgba(72,152,188,0.4)]',
+    bgClass: 'bg-[rgba(72,152,188,0.08)]',
     features: [
       'Безлимитные отклики',
       'Верифицированный бейдж',
@@ -51,9 +51,9 @@ const plans = [
     name: 'Бизнес',
     price: 'По запросу',
     sub: 'индивидуально',
-    color: '#4ade80',
-    bg: 'rgba(74,222,128,0.08)',
-    border: 'rgba(74,222,128,0.2)',
+    accentClass: 'text-[#7a58ac]',
+    borderClass: 'border-[rgba(122,88,172,0.25)]',
+    bgClass: 'bg-[rgba(122,88,172,0.06)]',
     features: [
       'Команда клиентских менеджеров',
       'SLA и гарантированный дедлайн',
@@ -79,14 +79,19 @@ export default function PricingPage() {
           initial="hidden"
           animate="visible"
           variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
-          className="text-center space-y-4"
+          className="text-center space-y-5"
         >
-          <motion.p variants={item} className="label-terminal">Тарифы</motion.p>
-          <motion.h1 variants={item} className="text-4xl md:text-5xl font-bold">
-            <span className="text-text-base">Простые и </span>
-            <span className="text-gradient">прозрачные цены</span>
+          <motion.div variants={item} className="flex justify-center">
+            <span className="chip chip-accent">
+              <Sparkles className="w-3 h-3 mr-1.5" />
+              Тарифы
+            </span>
+          </motion.div>
+          <motion.h1 variants={item} className="text-4xl md:text-5xl font-bold tracking-h1">
+            <span className="text-text-base">Прозрачное </span>
+            <span className="text-gradient">ценообразование</span>
           </motion.h1>
-          <motion.p variants={item} className="text-text-muted max-w-xl mx-auto text-lg">
+          <motion.p variants={item} className="text-text-muted max-w-xl mx-auto text-lg leading-relaxed">
             Начните бесплатно — масштабируйтесь когда будете готовы. Никаких скрытых платежей.
           </motion.p>
         </motion.div>
@@ -97,7 +102,7 @@ export default function PricingPage() {
           whileInView="visible"
           viewport={{ once: true }}
           variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          className="grid grid-cols-1 md:grid-cols-3 gap-5"
         >
           {plans.map((p) => {
             const Icon = p.icon
@@ -105,34 +110,28 @@ export default function PricingPage() {
               <motion.div
                 key={p.id}
                 variants={item}
-                className="rounded-2xl border bg-bg-card p-6 flex flex-col gap-5 relative"
-                style={{ borderColor: p.border }}
+                className={`rounded-[12px] border ${p.borderClass} ${p.highlight ? p.bgClass : 'bg-bg-card'} p-6 flex flex-col gap-5 relative transition-shadow hover:shadow-card-hover`}
               >
                 {p.highlight && (
-                  <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: p.bg, color: p.color, border: `1px solid ${p.border}` }}
-                  >
-                    Популярный
+                  <div className="absolute -top-px left-0 right-0 h-px rounded-t-[12px] bg-gradient-to-r from-transparent via-[rgba(72,152,188,0.6)] to-transparent" />
+                )}
+                {p.highlight && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="chip chip-accent text-[10px] py-0.5 px-2.5">Популярный</span>
                   </div>
                 )}
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: p.bg }}
-                >
-                  <Icon className="w-5 h-5" style={{ color: p.color }} />
+                <div className={`w-9 h-9 rounded-[8px] flex items-center justify-center ${p.bgClass}`}>
+                  <Icon className={`w-4.5 h-4.5 ${p.accentClass}`} size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-mono uppercase tracking-widest mb-1" style={{ color: p.color }}>
-                    {p.name}
-                  </p>
-                  <p className="text-3xl font-bold text-text-base">{p.price}</p>
+                  <p className={`text-[11px] font-[510] tracking-[0.06em] uppercase mb-1.5 ${p.accentClass}`}>{p.name}</p>
+                  <p className="text-3xl font-bold tracking-tight text-text-base">{p.price}</p>
                   <p className="text-xs text-text-faint mt-0.5">{p.sub}</p>
                 </div>
-                <ul className="flex flex-col gap-2 flex-1">
+                <ul className="flex flex-col gap-2.5 flex-1">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm text-text-muted">
-                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: p.color }} />
+                      <CheckCircle2 className={`w-3.5 h-3.5 flex-shrink-0 ${p.accentClass}`} />
                       {f}
                     </li>
                   ))}
@@ -151,24 +150,27 @@ export default function PricingPage() {
           })}
         </motion.div>
 
-        {/* FAQ brief */}
+        {/* Escrow facts */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="rounded-2xl border border-border bg-bg-card p-8 grid sm:grid-cols-3 gap-6 text-center"
+          transition={{ duration: 0.4 }}
+          className="rounded-[10px] border border-border bg-bg-card p-8"
         >
-          {[
-            { q: 'Комиссия эскроу', a: '3% от суммы сделки' },
-            { q: 'Вывод средств', a: 'Мгновенно на карту или счёт' },
-            { q: 'Возврат', a: '100% при провале сдачи работ' },
-          ].map((f) => (
-            <div key={f.q}>
-              <p className="text-xs text-text-faint uppercase tracking-widest mb-1">{f.q}</p>
-              <p className="font-semibold text-text-base">{f.a}</p>
-            </div>
-          ))}
+          <p className="text-[11px] font-[510] tracking-[0.06em] uppercase text-text-faint mb-6 text-center">Комиссии и условия</p>
+          <div className="grid sm:grid-cols-3 gap-8 text-center">
+            {[
+              { q: 'Комиссия эскроу', a: '3% от суммы сделки' },
+              { q: 'Вывод средств', a: 'Мгновенно на карту' },
+              { q: 'Возврат', a: '100% при провале' },
+            ].map((f) => (
+              <div key={f.q}>
+                <p className="text-[11px] font-[510] tracking-[0.06em] uppercase text-text-faint mb-1.5">{f.q}</p>
+                <p className="font-semibold text-text-base text-lg">{f.a}</p>
+              </div>
+            ))}
+          </div>
         </motion.div>
 
       </div>

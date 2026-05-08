@@ -2,7 +2,7 @@
 
 > Профессиональный кодинг. Без лишних слов.
 
-Premium Dark Tech лендинг для платформы Barnamaj.
+Premium dark SaaS-интерфейс для платформы Barnamaj в визуальном языке Vercel / Linear с brand-палитрой из логотипа.
 
 ## Запуск
 
@@ -12,13 +12,27 @@ npm run dev
 
 Открой [http://localhost:3000](http://localhost:3000)
 
+Для локальной интеграции с backend:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
 ## Стек
 
 - **Next.js 15** — App Router + Turbopack
-- **Tailwind CSS 3** — кастомная тёмная тема
-- **Framer Motion** — анимации появления и hover-эффекты
+- **Tailwind CSS 3** — кастомные design tokens и translucent surfaces
+- **Framer Motion** — мягкие переходы и motion для product-grade UI
 - **Lucide React** — иконки
 - **TypeScript** — строгая типизация
+
+## Дизайн-система
+
+- Палитра бренда: `#638ad4`, `#050830`, `#376fb1`, `#4898bc`, `#c98fb1`, `#1c286d`, `#4947ab`, `#4c3f96`, `#7a58ac`, `#a46c84`
+- Базовые поверхности: `bg-base`, `bg-panel`, `bg-card`, `bg-elevated`
+- Бордеры: полупрозрачные белые вместо тяжёлых solid outlines
+- Типографика: Inter Variable + отрицательный tracking для display / headings
+- Ключевые паттерны: glass header, premium auth, elevated cards, dense dashboard controls, enterprise hero, control-panel admin shell
 
 ## Структура
 

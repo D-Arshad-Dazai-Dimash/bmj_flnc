@@ -14,6 +14,8 @@ import { useLang } from '@/context/LangContext'
 
 const Footer = lazy(() => import('@/components/Footer'))
 
+const LOGO_SRC = '/logo.png'
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    ORNAMENT — Kazakh "ою" patterns as thin SVG geometrics ("Digital Steppe")
    ═══════════════════════════════════════════════════════════════════════════════ */
@@ -122,10 +124,10 @@ function BentoTile({
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay }}
       whileHover={{ y: -4, transition: { duration: 0.3 } }}
       className={`
-        relative overflow-hidden rounded-2xl border border-border
+        relative overflow-hidden rounded-[12px] border border-border
         bg-bg-card p-6 group
-        hover:border-accent/30 hover:shadow-card-hover
-        transition-shadow duration-500
+        hover:border-border-bright hover:bg-bg-elevated hover:shadow-card-hover
+        transition-all duration-300
         ${colSpan} ${rowSpan} ${className}
       `}
     >
@@ -308,6 +310,8 @@ export default function HomePage() {
     verifiedTeams: 0,
   })
 
+  const heroLogoSrc = LOGO_SRC
+
   useEffect(() => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
     async function loadStats() {
@@ -360,69 +364,131 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="max-w-4xl mx-auto text-center space-y-8"
+            className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]"
           >
-            {/* Mono chip */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent/30 bg-accent/5 text-xs font-mono text-accent-light"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {t.hero.chip}
-            </motion.div>
+            <div className="space-y-8 text-left">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="inline-flex items-center gap-2 rounded-full border border-[rgba(99,138,212,0.22)] bg-[rgba(99,138,212,0.08)] px-4 py-1.5 text-xs font-[510] tracking-[0.08em] text-[#bfd1ff]"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {t.hero.chip}
+              </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
-              <span className="text-text-base">{t.hero.title1}</span>
-              <br />
-              <span className="text-gradient">
-                {t.hero.title2}
-              </span>
-              <br />
-              <span className="text-text-muted text-2xl sm:text-3xl lg:text-4xl font-medium">
-                {t.hero.title3}
-              </span>
-            </h1>
+              <div className="max-w-[220px] sm:max-w-[320px] lg:max-w-[420px]">
+                <Image
+                  src={heroLogoSrc}
+                  alt="Barnamaj"
+                  width={1000}
+                  height={320}
+                  unoptimized
+                  priority
+                  className="h-auto w-full object-contain drop-shadow-[0_0_26px_rgba(73,71,171,0.32)]"
+                />
+              </div>
 
-            <p className="max-w-2xl mx-auto text-text-muted text-base sm:text-lg leading-relaxed">
-              {t.hero.description}
-            </p>
+              <div className="space-y-5">
+                <h1 className="max-w-[12ch] text-4xl font-semibold leading-[0.96] tracking-h1 sm:text-5xl lg:text-7xl lg:tracking-display">
+                  <span className="text-gradient">
+                    {t.hero.title2}
+                  </span>
+                  <span className="mt-3 block text-text-secondary text-xl sm:text-2xl lg:text-[30px] font-[400] tracking-h3">
+                    {t.hero.title3}
+                  </span>
+                </h1>
 
-            {/* CTA */}
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
-            >
-              <Link href="/auth?mode=register&type=Developer">
-                <button className="btn-primary flex items-center gap-2 px-8 py-4 text-base">
-                  <Briefcase className="w-5 h-5" />
-                  {t.hero.findProject}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </Link>
-              <Link href="/auth?mode=register&type=Client">
-                <button className="btn-ghost flex items-center gap-2 px-8 py-4 text-base">
-                  <Users className="w-5 h-5" />
-                  {t.hero.hireTeam}
-                </button>
-              </Link>
-            </motion.div>
+                <p className="max-w-2xl text-text-secondary text-[15px] sm:text-base leading-8 tracking-body">
+                  {t.hero.description}
+                </p>
+              </div>
 
-            {/* Decorative ornament line */}
-            <motion.div
-              initial={{ scaleX: 0, opacity: 0 }}
-              animate={{ scaleX: 1, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 1 }}
-              className="mx-auto w-48"
-            >
-              <svg viewBox="0 0 200 12" className="text-accent/20 w-full">
-                <path d="M0 6 L20 1 L40 6 L60 1 L80 6 L100 1 L120 6 L140 1 L160 6 L180 1 L200 6" stroke="currentColor" strokeWidth="0.8" fill="none" />
-                <circle cx="100" cy="6" r="3" fill="currentColor" opacity="0.3" />
-              </svg>
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.6 }}
+                className="flex flex-col sm:flex-row items-start gap-4"
+              >
+                <Link href="/auth?mode=register&type=Developer">
+                  <button className="btn-primary flex items-center gap-2 px-8 py-4 text-base">
+                    <Briefcase className="w-5 h-5" />
+                    {t.hero.findProject}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+                <Link href="/auth?mode=register&type=Client">
+                  <button className="btn-ghost flex items-center gap-2 px-8 py-4 text-base">
+                    <Users className="w-5 h-5" />
+                    {t.hero.hireTeam}
+                  </button>
+                </Link>
+              </motion.div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { icon: Shield, title: t.safeDeal.title, text: t.safeDeal.badge },
+                  { icon: Users, title: t.clans.title, text: t.clans.members },
+                  { icon: TrendingUp, title: t.stats.live, text: t.business.title },
+                ].map(item => (
+                  <div key={item.title} className="rounded-[14px] border border-border bg-bg-card p-4 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
+                    <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-bg-panel">
+                      <item.icon className="h-4 w-4 text-[#bfd1ff]" />
+                    </div>
+                    <p className="text-[13px] font-[510] tracking-caption text-text-base">{item.title}</p>
+                    <p className="mt-1 text-xs leading-6 text-text-secondary">{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="rounded-[22px] border border-border bg-[linear-gradient(180deg,rgba(6,9,30,0.94),rgba(7,9,45,0.88))] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.45)]">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-faint">Barnamaj Control Layer</p>
+                    <p className="mt-1 text-lg font-semibold tracking-h3 text-text-base">{t.stats.live}</p>
+                  </div>
+                  <div className="chip chip-accent">Live</div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[14px] border border-[rgba(99,138,212,0.22)] bg-[rgba(99,138,212,0.08)] p-4">
+                    <p className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-faint">{t.stats.projects}</p>
+                    <p className="mt-2 text-[32px] font-semibold tracking-h2 text-[#d7e1ff] tabular-nums">
+                      <AnimatedCounter value={stats.activeProjects} />
+                    </p>
+                  </div>
+                  <div className="rounded-[14px] border border-[rgba(72,152,188,0.22)] bg-[rgba(72,152,188,0.08)] p-4">
+                    <p className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-faint">{t.stats.companies}</p>
+                    <p className="mt-2 text-[32px] font-semibold tracking-h2 text-[#a8e0ef] tabular-nums">
+                      <AnimatedCounter value={stats.verifiedTeams} />
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-[16px] border border-border bg-bg-card p-4">
+                  <p className="text-[13px] font-[510] tracking-caption text-text-base">{t.safeDeal.title}</p>
+                  <div className="mt-3 space-y-3">
+                    {[
+                      t.safeDeal.step1,
+                      t.safeDeal.step2,
+                      t.safeDeal.step3,
+                    ].map((step, index) => (
+                      <div key={step} className="flex items-center justify-between rounded-[10px] border border-border bg-bg-panel px-3 py-2.5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-bg-card text-[11px] font-[510] text-text-secondary">
+                            0{index + 1}
+                          </div>
+                          <span className="text-sm text-text-secondary">{step}</span>
+                        </div>
+                        <Lock className="h-4 w-4 text-text-faint" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </section>
 
@@ -456,27 +522,27 @@ export default function HomePage() {
                   <span className="ml-2 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  {/* Escrow total */}
-                  <div className="rounded-xl border border-accent/20 bg-accent/5 p-5 text-center space-y-1">
-                    <p className="text-3xl sm:text-4xl font-bold text-accent-light tabular-nums">
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr_0.9fr_0.9fr]">
+                  <div className="rounded-[16px] border border-[rgba(73,71,171,0.22)] bg-[linear-gradient(180deg,rgba(73,71,171,0.10),rgba(76,63,150,0.08))] p-5 text-left">
+                    <p className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-faint">{t.stats.escrow}</p>
+                    <p className="mt-2 text-3xl sm:text-4xl font-semibold tracking-h2 text-[#cfc9ff] tabular-nums">
                       <AnimatedCounter value={stats.escrowTotal} /> <span className="text-lg">₸</span>
                     </p>
-                    <p className="text-xs text-text-muted">{t.stats.escrow}</p>
+                    <p className="mt-3 text-sm leading-6 text-text-secondary">Protected settlement rail for higher-trust delivery workflows.</p>
                   </div>
-                  {/* Active projects */}
-                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-5 text-center space-y-1">
-                    <p className="text-3xl sm:text-4xl font-bold text-cyan-400 tabular-nums">
+                  <div className="rounded-[16px] border border-[rgba(72,152,188,0.22)] bg-[rgba(72,152,188,0.08)] p-5 text-left">
+                    <p className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-faint">{t.stats.projects}</p>
+                    <p className="mt-2 text-3xl sm:text-4xl font-semibold tracking-h2 text-[#a8e0ef] tabular-nums">
                       <AnimatedCounter value={stats.activeProjects} />
                     </p>
-                    <p className="text-xs text-text-muted">{t.stats.projects}</p>
+                    <p className="mt-3 text-sm leading-6 text-text-secondary">Спрос на исполнителей и команды в текущем окне активности.</p>
                   </div>
-                  {/* Verified teams */}
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5 text-center space-y-1">
-                    <p className="text-3xl sm:text-4xl font-bold text-emerald-400 tabular-nums">
+                  <div className="rounded-[16px] border border-[rgba(99,138,212,0.22)] bg-[rgba(99,138,212,0.08)] p-5 text-left">
+                    <p className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-faint">{t.stats.companies}</p>
+                    <p className="mt-2 text-3xl sm:text-4xl font-semibold tracking-h2 text-[#d7e1ff] tabular-nums">
                       <AnimatedCounter value={stats.verifiedTeams} />
                     </p>
-                    <p className="text-xs text-text-muted">{t.stats.companies}</p>
+                    <p className="mt-3 text-sm leading-6 text-text-secondary">Верифицированные составы и компании для серьёзных сделок.</p>
                   </div>
                 </div>
               </div>
@@ -531,7 +597,7 @@ export default function HomePage() {
                   {['React', 'Node.js', 'Python', 'Go', 'Rust', 'SQL'].map(tag => (
                     <span
                       key={tag}
-                      className="text-xs px-2.5 py-1 rounded-lg border border-border bg-bg-surface text-text-muted"
+                      className="chip"
                     >
                       {tag}
                     </span>
@@ -606,8 +672,8 @@ export default function HomePage() {
                 title: 'Стартовый',
                 range: 'до 100 000 ₸',
                 fee: '600 ₸ фиксированная',
-                color: 'border-blue-500/30 bg-blue-500/5',
-                accent: 'text-blue-400',
+                color: 'border-[rgba(99,138,212,0.24)] bg-[rgba(99,138,212,0.08)]',
+                accent: 'text-[#bfd1ff]',
                 features: ['Быстрый запуск', 'Escrow-защита', 'Чат с исполнителем'],
               },
               {
@@ -615,8 +681,8 @@ export default function HomePage() {
                 title: 'Бизнес',
                 range: '100 001–500 000 ₸',
                 fee: '1% от суммы',
-                color: 'border-accent/30 bg-accent/5',
-                accent: 'text-accent-light',
+                color: 'border-[rgba(122,88,172,0.24)] bg-[linear-gradient(180deg,rgba(73,71,171,0.10),rgba(122,88,172,0.08))]',
+                accent: 'text-[#d8caef]',
                 features: ['Всё из Стартового', 'Приоритетный поиск', 'Расширенные отклики'],
                 popular: true,
               },
@@ -625,8 +691,8 @@ export default function HomePage() {
                 title: 'Корпоративный',
                 range: 'от 500 001 ₸',
                 fee: '10% включена в сумму',
-                color: 'border-emerald-500/30 bg-emerald-500/5',
-                accent: 'text-emerald-400',
+                color: 'border-[rgba(72,152,188,0.24)] bg-[rgba(72,152,188,0.08)]',
+                accent: 'text-[#a8e0ef]',
                 features: ['Всё из Бизнес', 'Технический надзор', 'Распределение 90/3/7%'],
               },
             ].map(pkg => (
@@ -636,26 +702,35 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: pkg.tier * 0.1 }}
-                className={`relative rounded-2xl border p-6 space-y-4 ${pkg.color}`}
+                className={`relative rounded-[18px] border p-6 space-y-5 shadow-[0_1px_0_rgba(255,255,255,0.03)] ${pkg.color}`}
               >
                 {pkg.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs px-3 py-0.5 rounded-full bg-accent text-white font-medium">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border border-[rgba(122,88,172,0.30)] bg-[linear-gradient(135deg,#4947ab,#7a58ac)] px-3 py-0.5 text-xs font-[510] text-white">
                     Популярный
                   </span>
                 )}
-                <div>
-                  <p className={`text-lg font-bold ${pkg.accent}`}>Пакет {pkg.tier} — {pkg.title}</p>
-                  <p className="text-sm text-text-muted mt-1">{pkg.range}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-faint">Пакет {pkg.tier}</p>
+                    <p className={`mt-2 text-xl font-semibold tracking-h3 ${pkg.accent}`}>{pkg.title}</p>
+                    <p className="mt-1 text-sm text-text-secondary">{pkg.range}</p>
+                  </div>
+                  <div className="rounded-[10px] border border-border bg-bg-panel px-2.5 py-1 text-[11px] font-[510] tracking-caption text-text-secondary">
+                    SLA-ready
+                  </div>
                 </div>
-                <p className="text-xl font-bold text-text-base">{pkg.fee}</p>
-                <ul className="space-y-2">
+                <p className="text-2xl font-semibold tracking-h3 text-text-base">{pkg.fee}</p>
+                <ul className="space-y-3">
                   {pkg.features.map(f => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-text-muted">
-                      <span className={`w-1.5 h-1.5 rounded-full ${pkg.accent.replace('text-', 'bg-')}`} />
+                    <li key={f} className="flex items-center gap-3 text-sm text-text-secondary">
+                      <span className={`h-2 w-2 rounded-full ${pkg.accent.replace('text-[', 'bg-[').replace(']', ']')}`} />
                       {f}
                     </li>
                   ))}
                 </ul>
+                <div className="rounded-[12px] border border-border bg-bg-panel px-3 py-2.5 text-xs leading-6 text-text-faint">
+                  Подходит для сценариев с растущей стоимостью сделки и более высоким уровнем контроля исполнения.
+                </div>
               </motion.div>
             ))}
           </div>

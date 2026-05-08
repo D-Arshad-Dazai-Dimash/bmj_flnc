@@ -13,6 +13,8 @@ import NotificationBell from '@/components/dashboard/NotificationBell'
 import ThemeToggle from '@/components/ThemeToggle'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
+const LOGO_SRC = '/logoBarnamajMini.png'
+
 const navLinks = [
   { href: '#portals',  label: 'Решения' },
   { href: '#features', label: 'Платформа' },
@@ -22,6 +24,7 @@ export default function Navbar() {
   const { isAuthenticated, user, logout, isLoading } = useAuth()
   const router = useLocaleRouter()
 
+  const logoSrc = LOGO_SRC
   const [scrolled,  setScrolled]  = useState(false)
   const [visible,   setVisible]   = useState(true)
   const [menuOpen,  setMenuOpen]  = useState(false)
@@ -65,7 +68,7 @@ export default function Navbar() {
         className={cn(
           'fixed top-0 inset-x-0 z-50 h-16 flex items-center transition-all duration-300',
           scrolled
-            ? 'glass border-b border-border/60 shadow-[0_1px_40px_rgba(0,0,0,0.7)]'
+            ? 'glass border-b border-border shadow-[0_1px_0_rgba(255,255,255,0.04),0_8px_48px_rgba(0,0,0,0.7)]'
             : 'bg-transparent border-b border-transparent'
         )}
       >
@@ -73,28 +76,29 @@ export default function Navbar() {
 
           {/* ── Logo ── */}
           <Link href="/" className="flex items-center gap-3 group select-none">
-            <div className="relative w-8 h-8">
+            <div className="relative w-7 h-7">
               <Image
-                src="/logo.png"
+                src={logoSrc}
                 alt="Barnamaj"
                 fill
-                sizes="32px"
-                className="object-contain drop-shadow-[0_0_8px_rgba(124,58,237,0.6)]"
+                sizes="28px"
+                unoptimized
+                className="object-contain drop-shadow-[0_0_8px_rgba(113,112,255,0.5)]"
                 priority
               />
             </div>
-            <span className="text-base font-semibold tracking-tight text-text-base group-hover:text-gradient transition-all">
+            <span className="text-[15px] font-semibold tracking-h3 text-text-base group-hover:text-gradient transition-all">
               Barnamaj
             </span>
           </Link>
 
           {/* ── Desktop nav ── */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-0.5">
             {navLinks.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
-                className="px-3.5 py-1.5 text-sm text-text-muted hover:text-text-base rounded-md hover:bg-bg-hover transition-all duration-200"
+                className="px-3.5 py-1.5 text-[13px] font-[510] text-text-muted hover:text-text-base rounded-md hover:bg-bg-hover transition-all duration-200 tracking-caption"
               >
                 {label}
               </Link>
@@ -114,7 +118,7 @@ export default function Navbar() {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenu(v => !v)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border hover:border-border-bright bg-bg-card hover:bg-bg-hover transition-all duration-200"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] border border-border hover:border-border-bright bg-bg-card hover:bg-bg-elevated transition-all duration-200"
                 >
                   <div className="w-6 h-6 rounded-full bg-accent/30 flex items-center justify-center text-xs font-bold text-accent-light select-none">
                     {user.profileName?.[0]?.toUpperCase() ?? '?'}
@@ -128,7 +132,7 @@ export default function Navbar() {
                 <AnimatePresence>
                   {userMenu && (
                     <motion.div
-                      className="absolute right-0 top-full mt-2 w-52 bg-bg-card border border-border rounded-xl shadow-card overflow-hidden"
+                      className="absolute right-0 top-full mt-2 w-52 bg-bg-panel border border-border rounded-[10px] shadow-elevated overflow-hidden"
                       initial={{ opacity: 0, y: -8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.96 }}

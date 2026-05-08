@@ -3,20 +3,20 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-all duration-150 disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] text-sm font-[510] tracking-caption transition-all duration-200 disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus/70',
   {
     variants: {
       variant: {
         default:
-          'bg-gradient-to-br from-accent to-accent-dim text-white shadow-glow-sm hover:shadow-glow-md hover:scale-[1.02] active:scale-[0.98]',
+          'border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(135deg,#376fb1_0%,#4947ab_55%,#7a58ac_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_0_rgba(255,255,255,0.05),0_18px_42px_rgba(5,8,48,0.45)] hover:-translate-y-[1px] hover:brightness-110 active:translate-y-0',
         outline:
-          'border border-border text-text-muted hover:border-border-bright hover:text-text-base hover:bg-bg-hover',
+          'border border-border bg-bg-card text-text-secondary shadow-[0_1px_0_rgba(255,255,255,0.03)] hover:border-border-bright hover:bg-bg-elevated hover:text-text-base',
         ghost:
-          'text-text-muted hover:text-text-base hover:bg-bg-hover',
+          'text-text-secondary hover:text-text-base hover:bg-bg-hover',
         cyan:
-          'bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-glow-cyan hover:shadow-[0_0_40px_rgba(0,212,255,0.5)] hover:scale-[1.02] active:scale-[0.98]',
+          'border border-[rgba(72,152,188,0.18)] bg-[linear-gradient(135deg,#4898bc_0%,#376fb1_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_18px_42px_rgba(7,9,45,0.4)] hover:-translate-y-[1px] hover:brightness-105 active:translate-y-0',
         destructive:
-          'bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/30',
+          'border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/14',
         link:
           'text-accent-light hover:text-accent-bright underline-offset-4 hover:underline p-0 h-auto',
       },

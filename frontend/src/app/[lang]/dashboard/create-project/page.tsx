@@ -198,7 +198,7 @@ function FieldInput({ def, value, onChange }: {
   value:    string
   onChange: (name: string, val: string) => void
 }) {
-  const base = 'w-full px-3 py-2.5 rounded-lg bg-bg-base border border-border text-text-base placeholder:text-text-faint text-sm focus:outline-none focus:border-accent transition-colors'
+  const base = 'w-full rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint shadow-[0_1px_0_rgba(255,255,255,0.03)] transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none'
 
   if (def.type === 'textarea') {
     return (
@@ -312,11 +312,11 @@ export default function CreateProjectPage() {
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="max-w-lg mx-auto mt-16 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-12 text-center flex flex-col items-center gap-4"
+        className="mx-auto mt-16 flex max-w-lg flex-col items-center gap-4 rounded-[18px] border border-[rgba(72,152,188,0.24)] bg-[linear-gradient(180deg,rgba(72,152,188,0.1),rgba(73,71,171,0.12))] p-12 text-center"
       >
-        <CheckCircle2 className="w-14 h-14 text-emerald-400" />
-        <p className="text-xl font-semibold text-emerald-300">Заказ опубликован!</p>
-        <p className="text-sm text-text-muted">Исполнители уже видят ваш заказ. Перенаправляем...</p>
+        <CheckCircle2 className="w-14 h-14 text-[#9fdcec]" />
+        <p className="text-xl font-semibold tracking-h3 text-[#dfe8ff]">Заказ опубликован!</p>
+        <p className="text-sm text-text-secondary">Исполнители уже видят ваш заказ. Перенаправляем...</p>
       </motion.div>
     )
   }
@@ -347,12 +347,13 @@ export default function CreateProjectPage() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} className="space-y-8 max-w-3xl">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-text-base">Разместить заказ</h1>
-            <p className="text-text-muted mt-1">Выберите тип услуги, чтобы разместить заказ</p>
+            <div className="chip chip-accent mb-3">Barnamaj Concierge</div>
+            <h1 className="text-[30px] font-semibold leading-[1.02] tracking-h1 text-text-base">Разместить заказ</h1>
+            <p className="mt-2 text-[15px] text-text-secondary">Выберите тип услуги, чтобы разместить заказ</p>
           </div>
           <button
             onClick={() => setShowAi(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-accent/40 bg-accent/10 text-accent-light text-sm font-medium hover:bg-accent/20 transition-colors"
+            className="flex items-center gap-2 rounded-[10px] border border-[rgba(201,143,177,0.24)] bg-[linear-gradient(135deg,rgba(201,143,177,0.10),rgba(122,88,172,0.12))] px-4 py-2.5 text-sm font-[510] tracking-caption text-[#f0d3e0] transition-all duration-200 hover:brightness-110"
           >
             <Sparkles className="w-4 h-4" />
             Создать ТЗ с ИИ
@@ -368,13 +369,13 @@ export default function CreateProjectPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => selectType(svc.key)}
-                className={`text-left p-5 rounded-2xl border ${svc.bg} transition-all duration-200 hover:shadow-lg hover:shadow-black/20 group`}
+                className={`group rounded-[16px] border p-5 text-left transition-all duration-200 hover:-translate-y-[2px] hover:shadow-[0_24px_48px_rgba(5,8,48,0.24)] ${svc.bg}`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${svc.bg}`}>
+                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] border border-border bg-bg-panel`}>
                   <Icon className={`w-5 h-5 ${svc.color}`} />
                 </div>
-                <p className={`font-semibold text-base mb-1 ${svc.color}`}>{svc.title}</p>
-                <p className="text-xs text-text-muted leading-relaxed">{svc.desc}</p>
+                <p className={`mb-1 text-base font-semibold tracking-h3 ${svc.color}`}>{svc.title}</p>
+                <p className="text-xs leading-6 text-text-secondary">{svc.desc}</p>
               </motion.button>
             )
           })}
@@ -400,25 +401,25 @@ export default function CreateProjectPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={back}
-          className="p-2 rounded-lg hover:bg-bg-card border border-border text-text-muted hover:text-text-base transition-colors"
+          className="rounded-[10px] border border-border bg-bg-card p-2 transition-colors hover:bg-bg-elevated hover:text-text-base"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <div className={`p-2 rounded-xl ${svc!.bg}`}>
+        <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-border bg-bg-card">
           <Icon className={`w-5 h-5 ${svc!.color}`} />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-text-base">{svc!.title}</h1>
-          <p className="text-sm text-text-muted">{svc!.desc}</p>
+          <h1 className="text-[28px] font-semibold tracking-h2 text-text-base">{svc!.title}</h1>
+          <p className="text-[15px] text-text-secondary">{svc!.desc}</p>
         </div>
       </div>
 
       {/* Form */}
-      <form onSubmit={submit} className="rounded-xl border border-border bg-bg-card p-6 space-y-5">
+      <form onSubmit={submit} className="rounded-[16px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-6 space-y-5 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
 
         {/* Title */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-text-muted uppercase tracking-wider">Название *</label>
+          <label className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-secondary">Название *</label>
           <input
             name="title"
             value={base.title}
@@ -431,13 +432,13 @@ export default function CreateProjectPage() {
               selectedType === 'SUPERVISION'  ? 'Технадзор мобильного приложения...' :
               'Разработка платформы для...'
             }
-            className="w-full px-3 py-2.5 rounded-lg bg-bg-base border border-border text-text-base placeholder:text-text-faint text-sm focus:outline-none focus:border-accent transition-colors"
+            className="w-full rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
           />
         </div>
 
         {/* Description */}
         <div className="space-y-1">
-          <label className="text-xs font-medium text-text-muted uppercase tracking-wider">Описание *</label>
+          <label className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-secondary">Описание *</label>
           <textarea
             name="description"
             value={base.description}
@@ -445,19 +446,19 @@ export default function CreateProjectPage() {
             rows={4}
             required
             placeholder="Опишите задачу подробнее..."
-            className="w-full px-3 py-2.5 rounded-lg bg-bg-base border border-border text-text-base placeholder:text-text-faint text-sm focus:outline-none focus:border-accent transition-colors resize-none"
+            className="w-full resize-none rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
           />
         </div>
 
         {/* Extra fields */}
         {extraFields.length > 0 && (
           <div className="space-y-4 pt-1">
-            <p className="text-xs font-medium text-text-muted uppercase tracking-wider border-t border-border pt-4">
+            <p className="border-t border-border pt-4 text-[11px] font-[510] uppercase tracking-[0.08em] text-text-secondary">
               Детали заказа
             </p>
             {extraFields.map(f => (
               <div key={f.name} className="space-y-1">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wider">{f.label}</label>
+                <label className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-secondary">{f.label}</label>
                 <FieldInput def={f} value={extras[f.name] ?? ''} onChange={handleExtra} />
               </div>
             ))}
@@ -467,7 +468,7 @@ export default function CreateProjectPage() {
         {/* Budget + Deadline */}
         <div className="grid grid-cols-2 gap-4 pt-1 border-t border-border">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-text-muted uppercase tracking-wider">Бюджет (KZT)</label>
+            <label className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-secondary">Бюджет (KZT)</label>
             <input
               name="budget"
               type="number"
@@ -475,17 +476,17 @@ export default function CreateProjectPage() {
               value={base.budget}
               onChange={handleBase}
               placeholder="500 000"
-              className="w-full px-3 py-2.5 rounded-lg bg-bg-base border border-border text-text-base placeholder:text-text-faint text-sm focus:outline-none focus:border-accent transition-colors"
+              className="w-full rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-text-muted uppercase tracking-wider">Дедлайн</label>
+            <label className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-secondary">Дедлайн</label>
             <input
               name="deadline"
               type="date"
               value={base.deadline}
               onChange={handleBase}
-              className="w-full px-3 py-2.5 rounded-lg bg-bg-base border border-border text-text-base text-sm focus:outline-none focus:border-accent transition-colors"
+              className="w-full rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
             />
           </div>
         </div>
@@ -495,13 +496,13 @@ export default function CreateProjectPage() {
           try {
             const calc = calculateCommission(tengeToTiyn(Number(base.budget)))
             return (
-              <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 space-y-2">
+              <div className="space-y-2 rounded-[14px] border border-[rgba(99,138,212,0.22)] bg-[linear-gradient(180deg,rgba(99,138,212,0.08),rgba(73,71,171,0.08))] p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono uppercase tracking-widest text-text-faint">
                     Пакет {calc.package}
                   </span>
                   {calc.includesTechSupervision && (
-                    <span className="text-xs px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+                    <span className="chip border-[rgba(72,152,188,0.24)] bg-[rgba(72,152,188,0.08)] text-[#a8e0ef]">
                       + Технадзор
                     </span>
                   )}
@@ -512,11 +513,11 @@ export default function CreateProjectPage() {
                     <p className="text-xs text-text-faint">Комиссия</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-accent-light">{formatTenge(tiynToTenge(calc.totalFromClientTiyn))}</p>
+                    <p className="text-lg font-bold text-[#c7bfff]">{formatTenge(tiynToTenge(calc.totalFromClientTiyn))}</p>
                     <p className="text-xs text-text-faint">Итого с вас</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-emerald-400">{formatTenge(tiynToTenge(calc.payoutToExecutorTiyn))}</p>
+                    <p className="text-lg font-bold text-[#9fdcec]">{formatTenge(tiynToTenge(calc.payoutToExecutorTiyn))}</p>
                     <p className="text-xs text-text-faint">Исполнителю</p>
                   </div>
                 </div>
@@ -527,7 +528,7 @@ export default function CreateProjectPage() {
           }
         })()}
 
-        {errMsg && <p className="text-sm text-red-400">{errMsg}</p>}
+        {errMsg && <p className="rounded-[10px] border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">{errMsg}</p>}
 
         <Button type="submit" loading={loading} className="w-full">
           Опубликовать заказ

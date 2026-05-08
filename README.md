@@ -194,6 +194,17 @@ docker compose run -e "ConnectionStrings__DefaultConnection=..." api
 
 ---
 
+## Frontend Design System
+
+- Текущий визуальный язык: premium dark SaaS в духе Vercel / Linear на базе brand-палитры Barnamaj
+- Основные токены живут в `frontend/src/app/globals.css` и `frontend/tailwind.config.ts`
+- Базовые принципы: полупрозрачные `rgba`-бордеры, card-surfaces вместо плоских solid panels, плотная типографика Inter Variable, спокойные градиенты из палитры логотипа
+- Ключевые экраны, приведённые к этому стилю: лендинг, navbar, auth, sidebar, dashboard overview, orders, create-project, profile, projects, settings, tests, clans, contracts, admin shell
+- Лендинг усилен в enterprise-сторону: split hero, control-layer panel, премиальные stats/pricing surfaces
+- Локальный frontend должен использовать `frontend/.env.local` с `NEXT_PUBLIC_API_URL=http://localhost:5000`
+
+---
+
 ## ИИ-аттестация
 
 Модуль аттестации разработчиков через диалог с Claude (Anthropic).

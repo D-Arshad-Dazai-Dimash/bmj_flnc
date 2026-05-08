@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { motion } from 'framer-motion'
-import { User, Save, Camera, Hexagon } from 'lucide-react'
+import { User, Save, Camera, Hexagon, Sparkles } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { KycPanel } from '@/components/kyc/KycPanel'
@@ -63,57 +63,59 @@ export default function ProfilePage() {
     >
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-accent/15">
-          <User className="w-5 h-5 text-accent-light" />
+        <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[rgba(73,71,171,0.18)] bg-[linear-gradient(180deg,rgba(99,138,212,0.12),rgba(73,71,171,0.08))]">
+          <User className="w-5 h-5 text-[#b8c7ff]" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-text-base">Профиль</h1>
-          <p className="text-sm text-text-muted">Управление личными данными</p>
+          <div className="chip chip-accent mb-2">Identity</div>
+          <h1 className="text-[28px] font-semibold tracking-h2 text-text-base">Профиль</h1>
+          <p className="text-[15px] text-text-secondary">Управление личными данными</p>
         </div>
       </div>
 
       {/* Avatar block */}
-      <div className="rounded-xl border border-border bg-bg-card p-6 flex items-center gap-5">
+      <div className="rounded-[16px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-6 shadow-[0_1px_0_rgba(255,255,255,0.03)] flex items-center gap-5">
         <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-accent/20 flex items-center justify-center text-2xl font-bold text-accent-light">
+          <div className="flex h-16 w-16 items-center justify-center rounded-[18px] border border-[rgba(99,138,212,0.20)] bg-[linear-gradient(180deg,rgba(99,138,212,0.16),rgba(73,71,171,0.14))] text-2xl font-semibold text-[#dfe6ff] shadow-[0_18px_36px_rgba(5,8,48,0.22)]">
             {user?.profileName?.[0]?.toUpperCase() ?? '?'}
           </div>
           <button
-            className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-accent flex items-center justify-center hover:bg-accent-light transition-colors"
+            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-bg-panel transition-colors hover:bg-bg-elevated"
             title="Загрузка аватара пока недоступна"
           >
-            <Camera className="w-3 h-3 text-white" />
+            <Camera className="w-3 h-3 text-[#dfe6ff]" />
           </button>
         </div>
         <div>
-          <p className="font-semibold text-text-base">{user?.profileName}</p>
-          <p className="text-sm text-text-muted">{user?.email}</p>
-          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs border border-accent/30 text-accent-light bg-accent/10">
-            {user?.accountType === 'Developer' ? '👨‍💻 Разработчик' : '💼 Заказчик'}
+          <p className="text-[18px] font-semibold tracking-h3 text-text-base">{user?.profileName}</p>
+          <p className="text-sm text-text-secondary">{user?.email}</p>
+          <span className="chip mt-2 border-[rgba(99,138,212,0.26)] bg-[rgba(99,138,212,0.08)] text-[#cdd8ff]">
+            <Sparkles className="h-3 w-3" />
+            {user?.accountType === 'Developer' ? 'Разработчик' : 'Заказчик'}
           </span>
         </div>
       </div>
 
       {/* Clan Badge */}
       {clanName && (
-        <div className="relative rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5 flex items-center gap-4 overflow-hidden">
+        <div className="relative flex items-center gap-4 overflow-hidden rounded-[16px] border border-[rgba(72,152,188,0.20)] bg-[linear-gradient(180deg,rgba(72,152,188,0.08),rgba(73,71,171,0.06))] p-5">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-            <Hexagon className="w-5 h-5 text-emerald-400" />
+          <div className="rounded-[12px] border border-[rgba(72,152,188,0.22)] bg-bg-panel p-2.5">
+            <Hexagon className="w-5 h-5 text-[#9fdcec]" />
           </div>
           <div>
-            <p className="text-xs text-text-faint mb-0.5">Клан</p>
+            <p className="mb-0.5 text-xs text-text-faint">Клан</p>
             <p className="font-semibold text-text-base">{clanName}</p>
             {clanRole && (
-              <span className="text-xs text-emerald-400">{ROLE_LABELS[clanRole]}</span>
+              <span className="text-xs text-[#9fdcec]">{ROLE_LABELS[clanRole]}</span>
             )}
           </div>
         </div>
       )}
 
       {/* Edit form */}
-      <div className="rounded-xl border border-border bg-bg-card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-text-base">Основная информация</h2>
+      <div className="rounded-[16px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-6 space-y-4 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
+        <h2 className="text-[13px] font-[510] tracking-caption text-text-base">Основная информация</h2>
 
         <Input
           label="Отображаемое имя"
@@ -143,7 +145,7 @@ export default function ProfilePage() {
         />
 
         {errMsg && (
-          <p className="text-sm text-red-400">{errMsg}</p>
+          <p className="rounded-[10px] border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">{errMsg}</p>
         )}
 
         <div className="pt-2">

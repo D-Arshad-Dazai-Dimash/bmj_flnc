@@ -61,16 +61,16 @@ export default function FindTeamsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
+          <div className="grid gap-3">
           {profiles.map(profile => (
-            <div key={profile.id} className="rounded-xl border border-border bg-bg-card p-5 flex items-center justify-between gap-4">
+            <div key={profile.id} className="rounded-[10px] border border-border bg-bg-card p-5 flex items-center justify-between gap-4 hover:bg-bg-elevated hover:border-border-focus transition-all">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-text-base">{profile.name}</h3>
+                  <h3 className="font-[510] text-text-base">{profile.name}</h3>
                   {profile.isVerified && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">✓ Верифицирован</span>
+                    <span className="chip" style={{ color: '#4ade80', background: 'rgba(74,222,128,0.08)', borderColor: 'rgba(74,222,128,0.25)' }}>✓ Верифицирован</span>
                   )}
-                  <span className="text-xs px-2 py-0.5 rounded-full border border-border text-text-faint">
+                  <span className="chip">
                     {profile.accountType}
                   </span>
                 </div>
