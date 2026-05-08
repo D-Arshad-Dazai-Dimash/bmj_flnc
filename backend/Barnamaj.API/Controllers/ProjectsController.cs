@@ -14,14 +14,17 @@ namespace Barnamaj.API.Controllers;
 [Produces("application/json")]
 public sealed class ProjectsController : ControllerBase
 {
-    private readonly IProjectService           _projectService;
+    private readonly IProjectService             _projectService;
+    private readonly IContentFilterService       _contentFilter;
     private readonly ILogger<ProjectsController> _logger;
 
     public ProjectsController(
         IProjectService projectService,
+        IContentFilterService contentFilter,
         ILogger<ProjectsController> logger)
     {
         _projectService = projectService;
+        _contentFilter  = contentFilter;
         _logger         = logger;
     }
 
@@ -62,6 +65,14 @@ public sealed class ProjectsController : ControllerBase
         [FromBody] CreateProjectDto dto,
         CancellationToken ct)
     {
+        var titleCheck = _contentFilter.Check(dto.Title);
+        if (!titleCheck.IsAllowed)
+            return BadRequest(new { error = titleCheck.Reason });
+
+        var descCheck = _contentFilter.Check(dto.Description);
+        if (!descCheck.IsAllowed)
+            return BadRequest(new { error = descCheck.Reason });
+
         try
         {
             var result = await _projectService.CreateProjectAsync(dto, CurrentUserId, ct);
@@ -182,6 +193,10 @@ public sealed class ProjectsController : ControllerBase
         [FromBody]  ApplyToProjectDto dto,
         CancellationToken ct)
     {
+        var coverCheck = _contentFilter.Check(dto.CoverLetter);
+        if (!coverCheck.IsAllowed)
+            return BadRequest(new { error = coverCheck.Reason });
+
         try
         {
             var result = await _projectService.ApplyAsync(id, dto, CurrentUserId, ct);
