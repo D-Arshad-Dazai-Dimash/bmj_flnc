@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { ApiError, toBackendAccountType } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
+import MatrixRain from '@/components/MatrixRain'
 
 type Mode = 'login' | 'register'
 type Acct = 'Developer' | 'Client'
@@ -433,13 +434,22 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-bg-base flex flex-col">
+      {/* Matrix Rain фон */}
+      <div className="fixed inset-0 pointer-events-none" aria-hidden>
+        <MatrixRain speed={40} className="opacity-30" />
+      </div>
+      {/* Затемняющий градиент поверх дождя */}
       <div
-        className="fixed inset-0 bg-grid-pattern bg-grid pointer-events-none"
+        className="fixed inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 80% 80% at 50% 50%, rgba(3,6,25,0.55) 0%, rgba(3,6,25,0.9) 100%)' }}
+      />
+      <div
+        className="fixed inset-0 bg-grid-pattern bg-grid pointer-events-none opacity-20"
         style={{ maskImage: 'radial-gradient(ellipse 70% 70% at 50% 30%, black 10%, transparent 80%)' }}
       />
       <div
         className="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-96 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)' }}
+        style={{ background: 'radial-gradient(circle, rgba(73,71,171,0.15) 0%, transparent 70%)' }}
       />
 
       <header className="relative z-10 flex items-center justify-between px-6 py-5">
@@ -464,7 +474,7 @@ export default function AuthPage() {
           style={{
             background: 'rgba(12, 12, 18, 0.85)',
             border: '1px solid rgba(255,255,255,0.07)',
-            boxShadow: '0 25px 80px rgba(0,0,0,0.8), 0 0 80px rgba(124,58,237,0.08)',
+            boxShadow: '0 25px 80px rgba(0,0,0,0.8), 0 0 80px rgba(73,71,171,0.12)',
             backdropFilter: 'blur(20px)',
           }}
         >
