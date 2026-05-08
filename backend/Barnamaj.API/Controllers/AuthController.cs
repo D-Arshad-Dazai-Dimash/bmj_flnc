@@ -2,6 +2,7 @@ using Barnamaj.API.DTOs.Auth;
 using Barnamaj.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Barnamaj.API.Controllers;
 
@@ -71,6 +72,7 @@ public sealed class AuthController : ControllerBase
     /// Создаёт аккаунт User + публичный Profile. Устанавливает httpOnly cookies.
     /// </summary>
     [HttpPost("register")]
+    [EnableRateLimiting("register")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register(
@@ -95,6 +97,7 @@ public sealed class AuthController : ControllerBase
     /// Вход в систему. Устанавливает httpOnly cookies с access и refresh токенами.
     /// </summary>
     [HttpPost("login")]
+    [EnableRateLimiting("login")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

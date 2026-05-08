@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useLang } from '@/context/LangContext'
+import MatrixRain from '@/components/MatrixRain'
 
 const Footer = lazy(() => import('@/components/Footer'))
 
@@ -353,6 +354,8 @@ export default function HomePage() {
            HERO SECTION
            ═══════════════════════════════════════════════════════════ */}
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 pt-20 pb-32">
+          {/* Matrix rain background */}
+          <MatrixRain className="absolute inset-0 opacity-[0.07] pointer-events-none" speed={60} />
           {/* Glow orbs */}
           <div className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full pointer-events-none"
                style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)' }} />

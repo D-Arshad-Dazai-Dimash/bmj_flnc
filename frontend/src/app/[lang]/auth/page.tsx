@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { ApiError, toBackendAccountType } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
+import MatrixRain from '@/components/MatrixRain'
 
 const LOGO_SRC = '/logoBarnamajMini.png'
 
@@ -466,6 +467,7 @@ export default function AuthPage() {
         <div className="grid w-full items-stretch gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <section className="surface-card relative hidden overflow-hidden rounded-[20px] p-8 lg:flex lg:flex-col lg:justify-between">
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(99,138,212,0.08),rgba(255,255,255,0.01)_38%,rgba(73,71,171,0.08))]" />
+            <MatrixRain className="absolute inset-0 opacity-25" speed={50} />
             <div className="relative space-y-8">
               <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(99,138,212,0.24)] bg-[rgba(99,138,212,0.08)] px-3 py-1.5 text-[11px] font-[510] tracking-caption text-[#bed2ff]">
                 <Sparkles className="h-3.5 w-3.5" />

@@ -43,6 +43,7 @@ public sealed class LoginDtoValidator : AbstractValidator<LoginDto>
             .EmailAddress().WithMessage("Некорректный формат email.");
 
         RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Пароль обязателен.");
+            .NotEmpty().WithMessage("Пароль обязателен.")
+            .MaximumLength(128).WithMessage("Пароль не может быть длиннее 128 символов.");
     }
 }

@@ -97,6 +97,30 @@ try
                     QueueLimit = 5
                 }));
 
+        // Лимит для login: 10 попыток в 15 минут с одного IP
+        options.AddPolicy("login", ctx =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(15),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0
+                }));
+
+        // Лимит для register: 5 аккаунтов в час с одного IP
+        options.AddPolicy("register", ctx =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromHours(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0
+                }));
+
         // Строгий лимит для assessment/submit: 5 попыток в 5 минут на пользователя
         options.AddPolicy("assessment-submit", ctx =>
             RateLimitPartition.GetFixedWindowLimiter(
@@ -210,13 +234,28 @@ try
         };
     });
 
-    // В Production Swagger тоже доступен (ограничьте через env при необходимости)
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    // Security headers
+    app.Use(async (context, next) =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Barnamaj API v1");
-        c.RoutePrefix = "swagger"; // Swagger на /swagger, корень — index.html
+        context.Response.Headers.Append("X-Frame-Options", "DENY");
+        context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+        context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+        if (!app.Environment.IsDevelopment())
+            context.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+        await next();
     });
+
+    // Swagger — только в Development
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Barnamaj API v1");
+            c.RoutePrefix = "swagger";
+        });
+    }
 
     app.UseResponseCaching();
     app.UseResponseCompression();
