@@ -2,46 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Tokens ─────────────────────────────────────────────────────── */
+/* ── Tokens (Barnamaj brand palette) ────────────────────────────── */
 :root {
-  --bg-base:     #050508;
-  --bg-surface:  #0c0c12;
-  --bg-card:     #10101a;
-  --bg-hover:    #151521;
-  --accent:      #7c3aed;
-  --accent-dim:  #5b21b6;
-  --accent-glow: rgba(124, 58, 237, 0.35);
-  --accent-light:#a78bfa;
-  --accent-bright:#c4b5fd;
-  --cyan-glow:   rgba(0, 212, 255, 0.3);
-  --text-base:   #f1f0ff;
-  --text-muted:  #7b7a99;
-  --text-faint:  #3d3d5c;
-  --text-accent: #a78bfa;
-  --border:      #1c1c2e;
-  --border-subtle:#13131f;
-  --border-bright:#2a2a42;
+  --bg-base:     #030619;
+  --bg-surface:  #07092d;
+  --bg-card:     #0c1140;
+  --bg-hover:    #131848;
+  --accent:       #4947ab;
+  --accent-dim:   #4c3f96;
+  --accent-glow:  rgba(73, 71, 171, 0.35);
+  --accent-light: #7a58ac;
+  --accent-bright:#c98fb1;
+  --cyan-glow:   rgba(72, 152, 188, 0.3);
+  --text-base:   #e4e8ff;
+  --text-muted:  #638ad4;
+  --text-faint:  #2a3870;
+  --text-accent: #7a58ac;
+  --border:        #1c286d;
+  --border-subtle: #0f1850;
+  --border-bright: #376fb1;
+  /* Brand shortcuts */
+  --brand-blue:   #638ad4;
+  --brand-navy:   #050830;
+  --brand-royal:  #376fb1;
+  --brand-teal:   #4898bc;
+  --brand-pink:   #c98fb1;
+  --brand-violet: #7a58ac;
+  --brand-purple: #4947ab;
+  --brand-dark:   #4c3f96;
+  --brand-rose:   #a46c84;
 }
 
 /* ── Light theme ─────────────────────────────────────────────────── */
 .light {
-  --bg-base:     #f8f8fc;
+  --bg-base:     #f0f2fc;
   --bg-surface:  #ffffff;
-  --bg-card:     #f0f0f6;
-  --bg-hover:    #e8e8f0;
-  --accent:      #7c3aed;
-  --accent-dim:  #6d28d9;
-  --accent-glow: rgba(124, 58, 237, 0.15);
-  --accent-light:#7c3aed;
-  --accent-bright:#5b21b6;
-  --cyan-glow:   rgba(0, 180, 220, 0.12);
-  --text-base:   #1a1a2e;
-  --text-muted:  #6b6b8a;
-  --text-faint:  #a0a0b8;
-  --text-accent: #7c3aed;
-  --border:      #d8d8e6;
-  --border-subtle:#e4e4ee;
-  --border-bright:#c0c0d4;
+  --bg-card:     #e8ecf8;
+  --bg-hover:    #dce2f4;
+  --accent:       #4947ab;
+  --accent-dim:   #4c3f96;
+  --accent-glow:  rgba(73, 71, 171, 0.15);
+  --accent-light: #7a58ac;
+  --accent-bright:#c98fb1;
+  --cyan-glow:   rgba(72, 152, 188, 0.12);
+  --text-base:   #050830;
+  --text-muted:  #376fb1;
+  --text-faint:  #638ad4;
+  --text-accent: #4947ab;
+  --border:      #c5cee8;
+  --border-subtle:#d8ddf0;
+  --border-bright:#376fb1;
 }
 
 /* ── Base ────────────────────────────────────────────────────────── */
@@ -61,15 +71,15 @@ body {
 /* ── Scrollbar ───────────────────────────────────────────────────── */
 ::-webkit-scrollbar          { width: 5px; }
 ::-webkit-scrollbar-track    { background: var(--bg-base); }
-::-webkit-scrollbar-thumb    { background: #2a2a42; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #3d3d5e; }
+::-webkit-scrollbar-thumb    { background: #1c286d; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #376fb1; }
 
 /* ── Selection ───────────────────────────────────────────────────── */
-::selection { background: rgba(124, 58, 237, 0.35); color: #f1f0ff; }
+::selection { background: rgba(73, 71, 171, 0.35); color: #e4e8ff; }
 
 /* ── Focus ───────────────────────────────────────────────────────── */
 *:focus-visible {
-  outline: 2px solid rgba(124, 58, 237, 0.7);
+  outline: 2px solid rgba(99, 138, 212, 0.7);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -77,9 +87,9 @@ body {
 /* ── Utilities ───────────────────────────────────────────────────── */
 @layer utilities {
 
-  /* Gradient text */
+  /* Gradient text — розово-фиолетово-синий (brand palette) */
   .text-gradient {
-    background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 40%, #60a5fa 100%);
+    background: linear-gradient(135deg, #c98fb1 0%, #7a58ac 40%, #638ad4 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -87,7 +97,7 @@ body {
   }
 
   .text-gradient-cyan {
-    background: linear-gradient(135deg, #67e8f9 0%, #22d3ee 50%, #818cf8 100%);
+    background: linear-gradient(135deg, #4898bc 0%, #638ad4 50%, #7a58ac 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -123,23 +133,27 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
   }
 
-  /* Glow border */
+  /* Glow borders — brand palette */
   .glow-border-purple {
-    box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.5), 0 0 20px rgba(124, 58, 237, 0.2);
+    box-shadow: 0 0 0 1px rgba(73, 71, 171, 0.5), 0 0 20px rgba(73, 71, 171, 0.2);
   }
 
   .glow-border-cyan {
-    box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.4), 0 0 20px rgba(0, 212, 255, 0.15);
+    box-shadow: 0 0 0 1px rgba(72, 152, 188, 0.4), 0 0 20px rgba(72, 152, 188, 0.15);
   }
 
-  /* Animated shimmer text */
+  .glow-border-pink {
+    box-shadow: 0 0 0 1px rgba(201, 143, 177, 0.4), 0 0 20px rgba(201, 143, 177, 0.15);
+  }
+
+  /* Animated shimmer text — brand palette */
   .shimmer-text {
     background: linear-gradient(
       90deg,
-      rgba(167, 139, 250, 0.5) 0%,
-      rgba(196, 181, 253, 1) 30%,
-      rgba(167, 139, 250, 0.5) 60%,
-      rgba(196, 181, 253, 1) 100%
+      rgba(99, 138, 212, 0.5) 0%,
+      rgba(201, 143, 177, 1) 30%,
+      rgba(122, 88, 172, 0.5) 60%,
+      rgba(99, 138, 212, 1) 100%
     );
     background-size: 200% auto;
     -webkit-background-clip: text;
@@ -172,12 +186,12 @@ body {
     @apply relative px-6 py-3 text-sm font-semibold text-white rounded-lg
            overflow-hidden transition-all duration-300
            hover:scale-[1.02] active:scale-[0.98];
-    background: linear-gradient(135deg, #7c3aed, #6d28d9);
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+    background: linear-gradient(135deg, #4947ab, #4c3f96);
+    box-shadow: 0 0 20px rgba(73, 71, 171, 0.3);
   }
 
   .btn-primary:hover {
-    box-shadow: 0 0 35px rgba(124, 58, 237, 0.5);
+    box-shadow: 0 0 35px rgba(73, 71, 171, 0.5);
   }
 
   .btn-ghost {
