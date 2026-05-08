@@ -22,6 +22,7 @@ export interface AuthUser {
   accountType: 'Developer' | 'Client'
   avatarUrl?: string | null
   bio?: string | null
+  specialties?: string[]
 }
 
 interface AuthState {
@@ -39,6 +40,10 @@ interface AuthContextValue extends AuthState {
   updateUser: (partial: Partial<AuthUser>) => void
   /** @deprecated TODO: реализовать через PATCH /api/auth/profile */
   updateProfile: (data: { full_name?: string; bio?: string; avatar_url?: string }) => Promise<void>
+  /** Возвращает true если роль пользователя ≥ minimum. */
+  isAtLeast: (minimum: 'Moderator' | 'SeniorAdmin' | 'HeadAdmin') => boolean
+  /** Возвращает true если у пользователя есть активная специализация. */
+  hasSpecialty: (specialty: string) => boolean
 }
 
 export interface RegisterData {
@@ -59,6 +64,21 @@ function mapAccountType(raw: string): 'Developer' | 'Client' {
   return raw === 'Company' ? 'Client' : 'Developer'
 }
 
+/** Числовой ранг роли. Чем больше — тем больше прав. */
+export function roleRank(role: string): number {
+  switch (role) {
+    case 'HeadAdmin':   return 4
+    case 'SeniorAdmin': return 3
+    case 'Moderator':   return 2
+    default:            return 1  // Member
+  }
+}
+
+/** Возвращает true если переданная роль пользователя ≥ минимальной. */
+export function isAtLeast(userRole: string, minimum: 'Moderator' | 'SeniorAdmin' | 'HeadAdmin'): boolean {
+  return roleRank(userRole) >= roleRank(minimum)
+}
+
 function toAuthUser(dto: {
   id: string
   email: string
@@ -66,6 +86,7 @@ function toAuthUser(dto: {
   profileId: string | null
   profileName: string
   accountType: string
+  specialties?: string[]
 }): AuthUser {
   return {
     id:          dto.id,
@@ -74,6 +95,7 @@ function toAuthUser(dto: {
     profileId:   dto.profileId,
     profileName: dto.profileName,
     accountType: mapAccountType(dto.accountType),
+    specialties: dto.specialties ?? [],
   }
 }
 
@@ -191,8 +213,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const isAtLeastFn = useCallback((minimum: 'Moderator' | 'SeniorAdmin' | 'HeadAdmin') => {
+    if (!state.user) return false
+    return isAtLeast(state.user.role, minimum)
+  }, [state.user])
+
+  const hasSpecialtyFn = useCallback((specialty: string) => {
+    if (!state.user) return false
+    // SeniorAdmin+ имеют все специализации без явного гранта
+    if (isAtLeast(state.user.role, 'SeniorAdmin')) return true
+    return (state.user.specialties ?? []).includes(specialty)
+  }, [state.user])
+
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, signOut, updateUser, updateProfile }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, signOut, updateUser, updateProfile, isAtLeast: isAtLeastFn, hasSpecialty: hasSpecialtyFn }}>
       {children}
     </AuthContext.Provider>
   )

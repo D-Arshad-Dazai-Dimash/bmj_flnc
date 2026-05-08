@@ -40,6 +40,15 @@ public class Profile
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? DeletedAt { get; set; }
 
+    // ── Юридические реквизиты (ТОО/ИП, только Company) ──────
+    public string? LegalForm       { get; set; }   // ТОО | ИП
+    public string? Bin             { get; set; }   // БИН 12 символов
+    public string? IinEntrepreneur { get; set; }   // ИИН для ИП
+    public string? LegalName       { get; set; }   // Официальное название
+    public string? LegalAddress    { get; set; }   // Юридический адрес
+    public string? DirectorName    { get; set; }   // ФИО директора
+    public string? ContactPhone    { get; set; }   // Телефон компании
+
     // ── Навигационные свойства ───────────────────────────────
 
     /// <summary>Участники этого клана/компании</summary>

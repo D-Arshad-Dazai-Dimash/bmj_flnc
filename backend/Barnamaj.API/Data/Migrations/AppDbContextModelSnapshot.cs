@@ -22,6 +22,58 @@ namespace Barnamaj.API.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Barnamaj.API.Entities.AdminAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid>("AdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("admin_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<Guid?>("TargetUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_admin_audit_logs");
+
+                    b.HasIndex("AdminId")
+                        .HasDatabaseName("ix_audit_logs_admin_id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_audit_logs_created_at");
+
+                    b.HasIndex("TargetUserId")
+                        .HasDatabaseName("ix_audit_logs_target_user_id");
+
+                    b.ToTable("admin_audit_logs", (string)null);
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.AssessmentAttempt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -207,10 +259,18 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("account_type");
 
+                    b.Property<string>("Bin")
+                        .HasColumnType("text")
+                        .HasColumnName("bin");
+
                     b.Property<string>("Bio")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("bio");
+
+                    b.Property<string>("ContactPhone")
+                        .HasColumnType("text")
+                        .HasColumnName("contact_phone");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -222,11 +282,31 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<string>("DirectorName")
+                        .HasColumnType("text")
+                        .HasColumnName("director_name");
+
+                    b.Property<string>("IinEntrepreneur")
+                        .HasColumnType("text")
+                        .HasColumnName("iin_entrepreneur");
+
                     b.Property<bool>("IsVerified")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("is_verified");
+
+                    b.Property<string>("LegalAddress")
+                        .HasColumnType("text")
+                        .HasColumnName("legal_address");
+
+                    b.Property<string>("LegalForm")
+                        .HasColumnType("text")
+                        .HasColumnName("legal_form");
+
+                    b.Property<string>("LegalName")
+                        .HasColumnType("text")
+                        .HasColumnName("legal_name");
 
                     b.Property<string>("LogoUrl")
                         .HasMaxLength(2048)
@@ -429,6 +509,52 @@ namespace Barnamaj.API.Data.Migrations
                     b.ToTable("project_applications", (string)null);
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.ProjectRoleGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("GrantedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("granted_by_admin_id");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<byte>("Role")
+                        .HasColumnType("smallint")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_project_role_grants");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_project_role_grants_project_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_project_role_grants_user_id");
+
+                    b.HasIndex("ProjectId", "UserId", "Role")
+                        .IsUnique()
+                        .HasDatabaseName("ix_project_role_grants_project_id_user_id_role");
+
+                    b.ToTable("project_role_grants", (string)null);
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.Question", b =>
                 {
                     b.Property<Guid>("Id")
@@ -521,6 +647,70 @@ namespace Barnamaj.API.Data.Migrations
                         .HasDatabaseName("uq_skills_name");
 
                     b.ToTable("skills", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.Transaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid?>("CreatedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_admin_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid?>("RelatedProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("related_project_id");
+
+                    b.Property<byte>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint")
+                        .HasDefaultValue((byte)1)
+                        .HasColumnName("status");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("smallint")
+                        .HasColumnName("type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("wallet_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_transactions");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_transactions_created_at");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_transactions_user_id");
+
+                    b.HasIndex("WalletId")
+                        .HasDatabaseName("ix_transactions_wallet_id");
+
+                    b.ToTable("transactions", (string)null);
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.User", b =>
@@ -730,6 +920,168 @@ namespace Barnamaj.API.Data.Migrations
                     b.ToTable("user_documents", (string)null);
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.UserRoleGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("GrantedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("granted_by_admin_id");
+
+                    b.Property<byte>("GrantedRole")
+                        .HasColumnType("smallint")
+                        .HasColumnName("granted_role");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_revoked");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_role_grants");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_role_grants_expires_at");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_role_grants_user_id");
+
+                    b.HasIndex("UserId", "GrantedRole")
+                        .HasDatabaseName("ix_role_grants_user_role");
+
+                    b.ToTable("user_role_grants", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.UserSpecialtyGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("GrantedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("granted_by_admin_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("note");
+
+                    b.Property<byte>("Specialty")
+                        .HasColumnType("smallint")
+                        .HasColumnName("specialty");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_specialty_grants");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_specialty_grants_expires_at");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_specialty_grants_user_id");
+
+                    b.HasIndex("UserId", "Specialty")
+                        .HasDatabaseName("ix_specialty_grants_user_specialty");
+
+                    b.ToTable("user_specialty_grants", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.Wallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<decimal>("AvailableBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("available_balance");
+
+                    b.Property<decimal>("FrozenBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("frozen_balance");
+
+                    b.Property<decimal>("PendingWithdrawal")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("pending_withdrawal");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_wallets");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_wallets_user_id");
+
+                    b.ToTable("wallets", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.AdminAuditLog", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "Admin")
+                        .WithMany()
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_admin_audit_logs_user_admin_id");
+
+                    b.Navigation("Admin");
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.AssessmentAttempt", b =>
                 {
                     b.HasOne("Barnamaj.API.Entities.Profile", "Profile")
@@ -846,6 +1198,27 @@ namespace Barnamaj.API.Data.Migrations
                     b.Navigation("Project");
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.ProjectRoleGrant", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_role_grants_projects_project_id");
+
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_role_grants_user_user_id");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.Question", b =>
                 {
                     b.HasOne("Barnamaj.API.Entities.Skill", "Skill")
@@ -856,6 +1229,27 @@ namespace Barnamaj.API.Data.Migrations
                         .HasConstraintName("fk_questions_skill_skill_id");
 
                     b.Navigation("Skill");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.Transaction", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_transactions_user_user_id");
+
+                    b.HasOne("Barnamaj.API.Entities.Wallet", "Wallet")
+                        .WithMany("Transactions")
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_transactions_wallet_wallet_id");
+
+                    b.Navigation("User");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.User", b =>
@@ -877,6 +1271,42 @@ namespace Barnamaj.API.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_documents_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.UserRoleGrant", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_role_grants_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.UserSpecialtyGrant", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_specialty_grants_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.Wallet", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("Barnamaj.API.Entities.Wallet", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_wallets_users_user_id");
 
                     b.Navigation("User");
                 });
@@ -909,6 +1339,11 @@ namespace Barnamaj.API.Data.Migrations
                     b.Navigation("KycEvents");
 
                     b.Navigation("Memberships");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.Wallet", b =>
+                {
+                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }

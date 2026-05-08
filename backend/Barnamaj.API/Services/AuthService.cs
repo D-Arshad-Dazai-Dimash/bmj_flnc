@@ -70,6 +70,14 @@ public sealed class AuthService : IAuthService
                     Bio         = dto.Bio?.Trim(),
                     AccountType = dto.AccountType,
                     IsVerified  = false,
+                    // Юридические реквизиты (только для Company/ИП)
+                    LegalForm       = dto.LegalForm?.Trim(),
+                    Bin             = dto.Bin?.Trim(),
+                    IinEntrepreneur = dto.IinEntrepreneur?.Trim(),
+                    LegalName       = dto.LegalName?.Trim(),
+                    LegalAddress    = dto.LegalAddress?.Trim(),
+                    DirectorName    = dto.DirectorName?.Trim(),
+                    ContactPhone    = dto.ContactPhone?.Trim(),
                 };
                 _db.Profiles.Add(profile);
 

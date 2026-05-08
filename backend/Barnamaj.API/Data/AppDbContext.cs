@@ -38,6 +38,18 @@ public class AppDbContext : DbContext
     public DbSet<UserDocument>       UserDocuments       => Set<UserDocument>();
     public DbSet<KycEvent>           KycEvents           => Set<KycEvent>();
 
+    // ── Wallet & Finance ────────────────────────────────────
+    public DbSet<Wallet>             Wallets             => Set<Wallet>();
+    public DbSet<Transaction>        Transactions        => Set<Transaction>();
+
+    // ── Roles & Specialties ─────────────────────────────────
+    public DbSet<UserSpecialtyGrant> UserSpecialtyGrants => Set<UserSpecialtyGrant>();
+    public DbSet<UserRoleGrant>      UserRoleGrants      => Set<UserRoleGrant>();
+    public DbSet<ProjectRoleGrant>   ProjectRoleGrants   => Set<ProjectRoleGrant>();
+
+    // ── Audit ────────────────────────────────────────────────
+    public DbSet<AdminAuditLog>      AdminAuditLogs      => Set<AdminAuditLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

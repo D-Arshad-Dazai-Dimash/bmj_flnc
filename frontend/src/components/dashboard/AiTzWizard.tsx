@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react'
+import { X, Send, Sparkles, CheckCircle2, RefreshCw, Save, RotateCcw } from 'lucide-react'
 import type { OrderType } from '@/lib/database.types'
+import { useTzDraft } from '@/hooks/useTzDraft'
 
 interface TzResult {
   ready: boolean
@@ -43,8 +44,36 @@ export default function AiTzWizard({ onApply, onClose }: Props) {
   const [loading, setLoading] = useState(false)
   const [result, setResult]   = useState<TzResult | null>(null)
   const [error, setError]     = useState<string | null>(null)
+  const [title, setTitle]     = useState('')
+  const [showRestore, setShowRestore] = useState(false)
+  const [savedNotice, setSavedNotice] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const { savedDraft, hasDraft, saveDraft, clearDraft } = useTzDraft(title, messages)
+
+  // Show restore dialog if there's an existing draft
+  useEffect(() => {
+    if (hasDraft) setShowRestore(true)
+  }, [hasDraft])
+
+  function restoreDraft() {
+    if (!savedDraft) return
+    setTitle(savedDraft.title)
+    setMessages(savedDraft.messages)
+    setShowRestore(false)
+  }
+
+  function dismissDraft() {
+    clearDraft()
+    setShowRestore(false)
+  }
+
+  function handleSave() {
+    saveDraft()
+    setSavedNotice(true)
+    setTimeout(() => setSavedNotice(false), 2000)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -114,12 +143,45 @@ export default function AiTzWizard({ onApply, onClose }: Props) {
   function reset() {
     setMessages([{ role: 'assistant', content: STARTER }])
     setInput('')
+    setTitle('')
     setResult(null)
     setError(null)
+    clearDraft()
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      {/* Restore draft modal */}
+      <AnimatePresence>
+        {showRestore && savedDraft && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute z-10 bg-bg-card border border-border rounded-xl p-5 w-80 shadow-xl"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <RotateCcw className="w-4 h-4 text-accent" />
+              <p className="font-semibold text-text-base text-sm">Восстановить черновик?</p>
+            </div>
+            <p className="text-xs text-text-muted mb-1">
+              Найден незавершённый черновик ТЗ
+              {savedDraft.title && <span className="font-medium text-text-base"> «{savedDraft.title}»</span>}
+            </p>
+            <p className="text-xs text-text-faint mb-4">
+              Сохранён {new Date(savedDraft.savedAt).toLocaleString('ru-KZ')}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={dismissDraft} className="flex-1 py-2 rounded-lg border border-border text-xs text-text-muted hover:text-text-base hover:bg-bg-hover transition-colors">
+                Начать заново
+              </button>
+              <button onClick={restoreDraft} className="flex-1 py-2 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent/90 transition-colors">
+                Восстановить
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 16 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -138,6 +200,13 @@ export default function AiTzWizard({ onApply, onClose }: Props) {
             <p className="text-xs text-text-faint">Опишите идею — ИИ составит техзадание</p>
           </div>
           <div className="flex gap-1">
+            <button
+              onClick={handleSave}
+              title={savedNotice ? 'Сохранено!' : 'Сохранить черновик'}
+              className={`p-1.5 rounded-lg transition-colors ${savedNotice ? 'text-emerald-400' : 'text-text-faint hover:text-text-muted hover:bg-bg-hover'}`}
+            >
+              <Save className="w-4 h-4" />
+            </button>
             <button
               onClick={reset}
               title="Начать заново"
@@ -211,7 +280,7 @@ export default function AiTzWizard({ onApply, onClose }: Props) {
                 <p className="text-xs text-text-faint truncate">{result.title}</p>
               </div>
               <button
-                onClick={() => onApply(result)}
+                onClick={() => { onApply(result); clearDraft() }}
                 className="flex-shrink-0 px-4 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-400 transition-colors"
               >
                 Применить →

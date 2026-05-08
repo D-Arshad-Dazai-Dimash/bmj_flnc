@@ -25,6 +25,14 @@ export interface RegisterRequest {
   /** 1 = Individual (Developer), 2 = Company (Client) */
   accountType: number
   bio?: string
+  // ── ТОО/ИП (заполняются только для Company) ──────────────
+  legalForm?: string
+  bin?: string
+  iinEntrepreneur?: string
+  legalName?: string
+  legalAddress?: string
+  directorName?: string
+  contactPhone?: string
 }
 
 export interface LoginRequest {
@@ -397,6 +405,79 @@ export const api = {
       return uploadMultipart<KycDocumentSummaryDto>('/api/kyc/document', fd)
     },
   },
+
+  // ── Wallet ──────────────────────────────────────────────────────────────────
+  wallet: {
+    /** Мой кошелёк (создаётся автоматически при первом запросе) */
+    me: () => request<WalletDto>('/api/wallet/me'),
+    /** История транзакций (paginated) */
+    history: (page = 1, pageSize = 20) =>
+      request<WalletHistoryDto>(`/api/wallet/history?page=${page}&pageSize=${pageSize}`),
+  },
+
+  // ── Admin: Finance ──────────────────────────────────────────────────────────
+  adminFinance: {
+    wallets: () => request<AdminWalletSummaryDto[]>('/api/admin/finance/wallets'),
+    adjust: (userId: string, amount: number, description?: string) =>
+      request<WalletDto>(`/api/admin/finance/wallets/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ amount, description: description ?? null }),
+      }),
+  },
+
+  // ── Admin: Role Grants ──────────────────────────────────────────────────
+  adminRoleGrants: {
+    getForUser: (userId: string) =>
+      request<RoleGrantDto[]>(`/api/admin/role-grants/${userId}`),
+    getEffectiveRole: (userId: string) =>
+      request<{ role: string; roleValue: number }>(`/api/admin/role-grants/${userId}/effective`),
+    grant: (userId: string, data: GrantRoleRequest) =>
+      request<RoleGrantDto>(`/api/admin/role-grants/${userId}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    revoke: (grantId: string) =>
+      request<void>(`/api/admin/role-grants/${grantId}`, { method: 'DELETE' }),
+  },
+
+  // ── Admin: Specialties ──────────────────────────────────────────────────────
+  adminSpecialties: {
+    getForUser: (userId: string) =>
+      request<SpecialtyGrantDto[]>(`/api/admin/specialties/${userId}`),
+    grant: (userId: string, data: GrantSpecialtyRequest) =>
+      request<SpecialtyGrantDto>(`/api/admin/specialties/${userId}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    revoke: (userId: string, specialty: string) =>
+      request<void>(`/api/admin/specialties/${userId}/${specialty}`, { method: 'DELETE' }),
+  },
+
+  // ── Admin: Audit Log ────────────────────────────────────────────────────────
+  adminAudit: {
+    getLogs: (params?: { page?: number; pageSize?: number; adminId?: string; targetUserId?: string; action?: string }) => {
+      const qs = new URLSearchParams()
+      if (params?.page)         qs.set('page',         String(params.page))
+      if (params?.pageSize)     qs.set('pageSize',      String(params.pageSize))
+      if (params?.adminId)      qs.set('adminId',       params.adminId)
+      if (params?.targetUserId) qs.set('targetUserId',  params.targetUserId)
+      if (params?.action)       qs.set('action',        params.action)
+      return request<AuditLogPageDto>(`/api/admin/audit?${qs.toString()}`)
+    },
+  },
+
+  // ── Project roles ───────────────────────────────────────────────────────────
+  projectRoles: {
+    getForProject: (projectId: string) =>
+      request<ProjectRoleGrantDto[]>(`/api/projects/${projectId}/roles`),
+    grant: (projectId: string, data: GrantProjectRoleRequest) =>
+      request<ProjectRoleGrantDto>(`/api/projects/${projectId}/roles`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    revoke: (projectId: string, grantId: string) =>
+      request<void>(`/api/projects/${projectId}/roles/${grantId}`, { method: 'DELETE' }),
+  },
 }
 
 // ─── KYC types ────────────────────────────────────────────────────────────────
@@ -429,6 +510,119 @@ export interface KycStatusDto {
   iinMasked: string | null
   kycVerifiedAt: string | null
   latestDocument: KycDocumentSummaryDto | null
+}
+
+// ─── Wallet types ─────────────────────────────────────────────────────────────
+
+export interface WalletDto {
+  walletId: string
+  availableBalance: number
+  frozenBalance: number
+  pendingWithdrawal: number
+  updatedAt: string
+}
+
+export interface TransactionDto {
+  id: string
+  type: string
+  status: string
+  amount: number
+  description: string | null
+  relatedProjectId: string | null
+  createdAt: string
+}
+
+export interface WalletHistoryDto {
+  wallet: WalletDto
+  transactions: TransactionDto[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface AdminWalletSummaryDto {
+  userId: string
+  email: string
+  fullName: string
+  walletId: string
+  availableBalance: number
+  frozenBalance: number
+  pendingWithdrawal: number
+  updatedAt: string
+}
+
+// ─── Role Grant types ──────────────────────────────────────────────────────────
+
+export interface RoleGrantDto {
+  id: string
+  grantedRole: string
+  expiresAt: string | null
+  grantedByAdminId: string
+  reason: string | null
+  isRevoked: boolean
+  isActive: boolean
+  createdAt: string
+}
+
+export interface GrantRoleRequest {
+  grantedRole: string
+  expiresAt?: string | null
+  reason?: string | null
+}
+
+// ─── Project Role types ────────────────────────────────────────────────────────
+
+export interface ProjectRoleGrantDto {
+  id: string
+  projectId: string
+  userId: string
+  role: string
+  grantedByAdminId: string
+  createdAt: string
+}
+
+export interface GrantProjectRoleRequest {
+  userId: string
+  role: string
+}
+
+// ─── Specialty types ───────────────────────────────────────────────────────────
+
+export interface SpecialtyGrantDto {
+  id: string
+  specialty: string
+  expiresAt: string | null
+  grantedByAdminId: string
+  note: string | null
+  createdAt: string
+  isActive: boolean
+}
+
+export interface GrantSpecialtyRequest {
+  specialty: string
+  expiresAt?: string | null
+  note?: string | null
+}
+
+// ─── Audit types ───────────────────────────────────────────────────────────────
+
+export interface AuditLogDto {
+  id: string
+  adminId: string
+  adminEmail: string
+  action: string
+  targetUserId: string | null
+  targetEmail: string | null
+  payload: string | null
+  ipAddress: string | null
+  createdAt: string
+}
+
+export interface AuditLogPageDto {
+  items: AuditLogDto[]
+  total: number
+  page: number
+  pageSize: number
 }
 
 // ─── Multipart upload (KYC документы) ─────────────────────────────────────────

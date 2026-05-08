@@ -163,17 +163,23 @@ public sealed class AuthController : ControllerBase
     [Authorize]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public IActionResult Me()
+    public async Task<IActionResult> Me(
+        [FromServices] ISpecialtyService specialtyService,
+        CancellationToken ct)
     {
+        var userId = Guid.Parse(User.FindFirst("sub")!.Value);
+        var activeSpecialties = await specialtyService.GetActiveForUserAsync(userId, ct);
+
         return Ok(new UserDto(
-            Id:              Guid.Parse(User.FindFirst("sub")!.Value),
+            Id:              userId,
             Email:           User.FindFirst("email")!.Value,
             Role:            User.FindFirst("role")!.Value,
             ProfileId:       Guid.TryParse(User.FindFirst("profile_id")?.Value, out var pid) ? pid : null,
             ProfileName:     User.FindFirst("profile_name")?.Value ?? string.Empty,
             AccountType:     User.FindFirst("account_type")?.Value ?? string.Empty,
             IsEmailVerified: false,
-            CreatedAt:       DateTime.UtcNow
+            CreatedAt:       DateTime.UtcNow,
+            Specialties:     activeSpecialties.Select(s => s.Specialty).ToList()
         ));
     }
 

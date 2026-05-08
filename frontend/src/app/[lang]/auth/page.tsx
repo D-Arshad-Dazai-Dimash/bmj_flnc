@@ -135,6 +135,14 @@ function AuthForm({ mode, acct, onAcctChange }: AuthFormProps) {
   const [consent,  setConsent]  = useState(false)
   const [touched,  setTouched]  = useState<Record<string, boolean>>({})
 
+  // ── ТОО/ИП поля (только для Client/Company) ───────────────
+  const [legalForm,       setLegalForm]       = useState('ТОО')
+  const [bin,             setBin]             = useState('')
+  const [legalName,       setLegalName]       = useState('')
+  const [legalAddress,    setLegalAddress]    = useState('')
+  const [directorName,    setDirectorName]    = useState('')
+  const [contactPhone,    setContactPhone]    = useState('')
+  const [iinEntrepreneur, setIinEntrepreneur] = useState('')
   // reset on mode flip
   useEffect(() => {
     setErrMsg(null)
@@ -180,6 +188,15 @@ function AuthForm({ mode, acct, onAcctChange }: AuthFormProps) {
           password,
           name: name.trim(),
           accountType: toBackendAccountType(acct),
+          ...(acct === 'Client' ? {
+            legalForm:       legalForm || undefined,
+            bin:             bin.trim() || undefined,
+            legalName:       legalName.trim() || undefined,
+            legalAddress:    legalAddress.trim() || undefined,
+            directorName:    directorName.trim() || undefined,
+            contactPhone:    contactPhone.trim() || undefined,
+            iinEntrepreneur: legalForm === 'ИП' ? iinEntrepreneur.trim() || undefined : undefined,
+          } : {}),
         })
       }
       setSuccess(true)
@@ -224,6 +241,42 @@ function AuthForm({ mode, acct, onAcctChange }: AuthFormProps) {
           autoComplete="name"
           autoFocus
         />
+      )}
+
+      {/* ── ТОО/ИП реквизиты (только для Client) ── */}
+      {mode === 'register' && acct === 'Client' && (
+        <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-bg-surface/40 p-4">
+          <p className="text-xs font-medium text-text-muted">Юридические реквизиты (необязательно)</p>
+
+          {/* Форма организации */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-text-muted">Форма организации</span>
+            <div className="flex gap-2">
+              {['ТОО', 'АО', 'ИП'].map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setLegalForm(f)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs border transition-colors',
+                    legalForm === f
+                      ? 'border-accent/50 bg-accent/10 text-accent-light'
+                      : 'border-border text-text-muted hover:border-border-bright',
+                  )}
+                >{f}</button>
+              ))}
+            </div>
+          </div>
+
+          <Input label="БИН" placeholder="123456789012" value={bin} onChange={e => setBin(e.target.value)} autoComplete="off" />
+          {legalForm === 'ИП' && (
+            <Input label="ИИН предпринимателя" placeholder="123456789012" value={iinEntrepreneur} onChange={e => setIinEntrepreneur(e.target.value)} autoComplete="off" />
+          )}
+          <Input label="Официальное название" placeholder="ТОО «Барнамаж»" value={legalName} onChange={e => setLegalName(e.target.value)} autoComplete="off" />
+          <Input label="Юридический адрес" placeholder="г. Алматы, ул. ..." value={legalAddress} onChange={e => setLegalAddress(e.target.value)} autoComplete="off" />
+          <Input label="ФИО директора" placeholder="Иванов Иван Иванович" value={directorName} onChange={e => setDirectorName(e.target.value)} autoComplete="off" />
+          <Input label="Контактный телефон" type="tel" placeholder="+7 (777) 000-00-00" value={contactPhone} onChange={e => setContactPhone(e.target.value)} autoComplete="tel" />
+        </div>
       )}
 
       <Input

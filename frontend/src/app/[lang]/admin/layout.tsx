@@ -3,23 +3,26 @@
 import { useEffect, useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { useAuth } from '@/context/AuthContext'
+import { isAtLeast } from '@/context/AuthContext'
 import Link from '@/components/ui/LocaleLink'
-import { Loader2, Shield, LayoutDashboard, Megaphone, Users, ClipboardList, MessageSquare, ToggleRight, Eye } from 'lucide-react'
+import { Loader2, Shield, LayoutDashboard, Megaphone, Users, ClipboardList, MessageSquare, ToggleRight, Eye, Wallet, FileText } from 'lucide-react'
 
 const NAV = [
-  { href: '/admin',               icon: LayoutDashboard, label: 'Обзор' },
-  { href: '/admin/announcements',  icon: Megaphone,      label: 'Объявления' },
-  { href: '/admin/users',          icon: Users,          label: 'Пользователи' },
-  { href: '/admin/orders',         icon: ClipboardList,  label: 'Заказы' },
-  { href: '/admin/chats',          icon: MessageSquare,  label: 'Чаты' },
-  { href: '/admin/features',       icon: ToggleRight,    label: 'Фичи' },
-  { href: '/admin/supervision',    icon: Eye,            label: 'Технадзор' },
-]
+  { href: '/admin',               icon: LayoutDashboard, label: 'Обзор',          minRole: null },
+  { href: '/admin/announcements', icon: Megaphone,       label: 'Объявления',     minRole: null },
+  { href: '/admin/users',         icon: Users,           label: 'Пользователи',   minRole: null },
+  { href: '/admin/orders',        icon: ClipboardList,   label: 'Заказы',         minRole: null },
+  { href: '/admin/chats',         icon: MessageSquare,   label: 'Чаты',           minRole: null },
+  { href: '/admin/features',      icon: ToggleRight,     label: 'Фичи',           minRole: 'SeniorAdmin' },
+  { href: '/admin/supervision',   icon: Eye,             label: 'Технадзор',      minRole: null },
+  { href: '/admin/finance',       icon: Wallet,          label: 'Финансы',        minRole: null },
+  { href: '/admin/audit',         icon: FileText,        label: 'Аудит',          minRole: 'HeadAdmin' },
+] as const
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading } = useAuth()
   const router = useLocaleRouter()
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -27,14 +30,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return
     }
     if (user) {
-      // Admin check: role === 'Admin' в JWT-клейме от .NET API
-      const isAdminUser = user.role === 'Admin'
-      setIsAdmin(isAdminUser)
-      if (!isAdminUser) router.replace('/dashboard')
+      // Доступ к admin-панели: Moderator, SeniorAdmin, HeadAdmin
+      const allowed = isAtLeast(user.role, 'Moderator')
+      setHasAccess(allowed)
+      if (!allowed) router.replace('/dashboard')
     }
   }, [user, isLoading, isAuthenticated, router])
 
-  if (isLoading || isAdmin === null) {
+  if (isLoading || hasAccess === null) {
     return (
       <div className="min-h-screen bg-bg-base flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-accent animate-spin" />
@@ -42,7 +45,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     )
   }
 
-  if (!isAdmin) return null
+  if (!hasAccess) return null
+
+  const visibleNav = NAV.filter(item =>
+    item.minRole === null || isAtLeast(user!.role, item.minRole as 'Moderator' | 'SeniorAdmin' | 'HeadAdmin')
+  )
 
   return (
     <div className="min-h-screen bg-bg-base flex">
@@ -51,9 +58,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-4 flex items-center gap-2 border-b border-border">
           <Shield className="w-5 h-5 text-red-400" />
           <span className="font-bold text-text-base text-sm">Admin Panel</span>
+          {user && (
+            <span className="ml-auto text-[10px] text-text-faint bg-bg-hover px-1.5 py-0.5 rounded">
+              {user.role}
+            </span>
+          )}
         </div>
         <nav className="flex-1 p-2 space-y-0.5">
-          {NAV.map(item => (
+          {visibleNav.map(item => (
             <Link
               key={item.href}
               href={item.href}

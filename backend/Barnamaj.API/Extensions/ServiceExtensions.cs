@@ -91,6 +91,13 @@ public static class ServiceExtensions
         services.AddScoped<IProfileService,    ProfileService>();
         services.AddScoped<IProjectService,    ProjectService>();
         services.AddScoped<IAssessmentService, AssessmentService>();
+        services.AddScoped<IWalletService,      WalletService>();
+        services.AddScoped<ISpecialtyService,   SpecialtyService>();
+        services.AddScoped<IAuditService,       AuditService>();
+        services.AddScoped<IRoleGrantService,   RoleGrantService>();
+        services.AddScoped<IProjectRoleService, ProjectRoleService>();
+        services.AddSingleton<IContentFilterService, ContentFilterService>();
+        services.AddHttpContextAccessor();
 
         // ── KYC (рынок РК) ───────────────────────────────────
         services.AddSingleton<IIinProtector,         IinProtector>();
