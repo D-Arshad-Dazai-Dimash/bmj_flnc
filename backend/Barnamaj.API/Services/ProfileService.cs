@@ -52,6 +52,25 @@ public interface IProfileService
     Task<ProfileSummaryDto?> GetByIdAsync(
         Guid profileId,
         CancellationToken ct = default);
+
+    /// <summary>Обновить социальные поля своего профиля.</summary>
+    Task<ProfileSummaryDto> UpdateSocialAsync(
+        Guid profileId,
+        UpdateProfileSocialDto dto,
+        CancellationToken ct = default);
+
+    /// <summary>Закрепить / открепить проект в профиле (max 6).</summary>
+    Task<IReadOnlyList<Guid>> TogglePinAsync(
+        Guid profileId,
+        Guid projectId,
+        CancellationToken ct = default);
+
+    /// <summary>Проекты, в которых этот профиль участвует как заказчик или исполнитель.</summary>
+    Task<IReadOnlyList<ProfileProjectDto>> GetProjectsAsync(
+        Guid profileId,
+        int page,
+        int pageSize,
+        CancellationToken ct = default);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -345,17 +364,158 @@ public sealed class ProfileService : IProfileService
     }
 
     // ── HELPERS ───────────────────────────────────────────────
+    private const int MaxPinned = 6;
+
     private static ProfileSummaryDto ToSummaryDto(Profile p, int memberCount) =>
         new(
-            Id:          p.Id,
-            Name:        p.Name,
-            Bio:         p.Bio,
-            LogoUrl:     p.LogoUrl,
-            AccountType: p.AccountType.ToString(),
-            IsVerified:  p.IsVerified,
-            MemberCount: memberCount,
-            CreatedAt:   p.CreatedAt
+            Id:               p.Id,
+            Name:             p.Name,
+            Bio:              p.Bio,
+            LogoUrl:          p.LogoUrl,
+            AccountType:      p.AccountType.ToString(),
+            IsVerified:       p.IsVerified,
+            MemberCount:      memberCount,
+            CreatedAt:        p.CreatedAt,
+            CoverPresetId:    p.CoverPresetId,
+            Status:           p.Status,
+            PinnedProjectIds: ParsePinned(p.PinnedProjectIdsJson),
+            AvgRating:        p.AvgRating,
+            RatingsCount:     p.RatingsCount
         );
+
+    private static IReadOnlyList<Guid> ParsePinned(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return Array.Empty<Guid>();
+        try
+        {
+            var arr = System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(json);
+            return arr is null ? Array.Empty<Guid>() : arr;
+        }
+        catch { return Array.Empty<Guid>(); }
+    }
+
+    private static string SerializePinned(IEnumerable<Guid> ids) =>
+        System.Text.Json.JsonSerializer.Serialize(ids);
+
+    // ── UPDATE SOCIAL ──────────────────────────────────────────
+    public async Task<ProfileSummaryDto> UpdateSocialAsync(
+        Guid profileId,
+        UpdateProfileSocialDto dto,
+        CancellationToken ct = default)
+    {
+        var profile = await _db.Profiles.FirstOrDefaultAsync(p => p.Id == profileId, ct)
+            ?? throw new ProfileException("Профиль не найден.", 404);
+
+        if (dto.Name is not null)
+        {
+            var name = dto.Name.Trim();
+            if (name.Length is < 2 or > 256)
+                throw new ProfileException("Имя должно быть от 2 до 256 символов.");
+            profile.Name = name;
+        }
+        if (dto.Bio is not null)
+        {
+            var bio = dto.Bio.Trim();
+            if (bio.Length > 2000) throw new ProfileException("Описание слишком длинное (до 2000).");
+            profile.Bio = bio.Length == 0 ? null : bio;
+        }
+        if (dto.Status is not null)
+        {
+            var status = dto.Status.Trim();
+            if (status.Length > 80) throw new ProfileException("Статус до 80 символов.");
+            profile.Status = status.Length == 0 ? null : status;
+        }
+        if (dto.LogoUrl is not null)
+        {
+            var url = dto.LogoUrl.Trim();
+            if (url.Length > 2048) throw new ProfileException("URL слишком длинный.");
+            profile.LogoUrl = url.Length == 0 ? null : url;
+        }
+        if (dto.CoverPresetId is { } cover)
+        {
+            if (cover < 0 || cover > 9)
+                throw new ProfileException("Пресет обложки — число 0..9.");
+            profile.CoverPresetId = cover;
+        }
+
+        profile.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        var memberCount = await _db.Memberships.AsNoTracking()
+            .CountAsync(m => m.ProfileId == profileId && m.Status == MembershipStatus.Active, ct);
+        return ToSummaryDto(profile, memberCount);
+    }
+
+    // ── TOGGLE PIN ────────────────────────────────────────────────
+    public async Task<IReadOnlyList<Guid>> TogglePinAsync(
+        Guid profileId,
+        Guid projectId,
+        CancellationToken ct = default)
+    {
+        var profile = await _db.Profiles.FirstOrDefaultAsync(p => p.Id == profileId, ct)
+            ?? throw new ProfileException("Профиль не найден.", 404);
+
+        // Проверяем что проект имеет отношение к профилю (заказчик / исполнитель).
+        var related = await _db.Projects.AsNoTracking().AnyAsync(p =>
+            p.Id == projectId &&
+            (p.ClientProfileId == profileId || p.ExecutorProfileId == profileId), ct);
+        if (!related)
+            throw new ProfileException("Проект не принадлежит этому профилю.", 400);
+
+        var current = ParsePinned(profile.PinnedProjectIdsJson).ToList();
+        if (current.Contains(projectId))
+            current.Remove(projectId);
+        else
+        {
+            if (current.Count >= MaxPinned)
+                throw new ProfileException($"Можно закрепить не больше {MaxPinned} проектов.");
+            current.Insert(0, projectId);
+        }
+
+        profile.PinnedProjectIdsJson = SerializePinned(current);
+        profile.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return current;
+    }
+
+    // ── GET PROJECTS ──────────────────────────────────────────────
+    public async Task<IReadOnlyList<ProfileProjectDto>> GetProjectsAsync(
+        Guid profileId,
+        int page,
+        int pageSize,
+        CancellationToken ct = default)
+    {
+        page     = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 50 ? 12 : pageSize;
+
+        var profile = await _db.Profiles.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == profileId, ct);
+        if (profile is null) return Array.Empty<ProfileProjectDto>();
+
+        var pinned = ParsePinned(profile.PinnedProjectIdsJson).ToHashSet();
+
+        var projects = await _db.Projects.AsNoTracking()
+            .Where(p => p.ClientProfileId == profileId || p.ExecutorProfileId == profileId)
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new ProfileProjectDto(
+                p.Id,
+                p.Title,
+                p.Description,
+                p.Budget,
+                p.Status.ToString(),
+                p.CreatedAt,
+                p.ClientProfileId == profileId,
+                p.ExecutorProfileId == profileId,
+                false))
+            .ToListAsync(ct);
+
+        // Проставим IsPinned в памяти без повторного запроса.
+        return projects
+            .Select(p => p with { IsPinned = pinned.Contains(p.Id) })
+            .ToList();
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -39,7 +39,40 @@ public sealed record ProfileSummaryDto(
     string      AccountType,
     bool        IsVerified,
     int         MemberCount,
-    DateTime    CreatedAt
+    DateTime    CreatedAt,
+    int         CoverPresetId   = 0,
+    string?     Status          = null,
+    IReadOnlyList<Guid>? PinnedProjectIds = null,
+    decimal?    AvgRating       = null,
+    int         RatingsCount    = 0
+);
+
+/// <summary>
+/// Запрос на обновление "социальной" части своего профиля
+/// (имя, био, статус, аватар-URL, обложка-пресет).
+/// Любое поле null = не менять.
+/// </summary>
+public sealed record UpdateProfileSocialDto(
+    string?  Name           = null,
+    string?  Bio            = null,
+    string?  Status         = null,
+    string?  LogoUrl        = null,
+    int?     CoverPresetId  = null
+);
+
+/// <summary>
+/// Карточка проекта в "ленте" профиля.
+/// </summary>
+public sealed record ProfileProjectDto(
+    Guid     Id,
+    string   Title,
+    string?  Description,
+    decimal? Budget,
+    string   Status,
+    DateTime CreatedAt,
+    bool     IsClient,
+    bool     IsExecutor,
+    bool     IsPinned
 );
 
 /// <summary>

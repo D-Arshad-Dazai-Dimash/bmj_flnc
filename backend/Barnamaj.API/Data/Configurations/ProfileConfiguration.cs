@@ -34,6 +34,14 @@ public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
         builder.Property(p => p.LogoUrl)
             .HasMaxLength(2048);
 
+        // ── Социальный вид: обложка / статус / закрепы ───────
+        builder.Property(p => p.CoverPresetId)
+            .HasDefaultValue(0);
+        builder.Property(p => p.Status)
+            .HasMaxLength(80);
+        builder.Property(p => p.PinnedProjectIdsJson)
+            .HasColumnType("text");
+
         // ── AccountType ──────────────────────────────────────
         // HasDefaultValue не нужен: AccountType.Individual задан в сущности
         builder.Property(p => p.AccountType)

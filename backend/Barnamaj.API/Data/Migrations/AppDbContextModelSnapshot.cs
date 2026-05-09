@@ -387,6 +387,12 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("contact_phone");
 
+                    b.Property<int>("CoverPresetId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("cover_preset_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -434,11 +440,20 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
+                    b.Property<string>("PinnedProjectIdsJson")
+                        .HasColumnType("text")
+                        .HasColumnName("pinned_project_ids_json");
+
                     b.Property<int>("RatingsCount")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0)
                         .HasColumnName("ratings_count");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("status");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAddOrUpdate()

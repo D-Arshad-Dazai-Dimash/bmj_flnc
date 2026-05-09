@@ -27,6 +27,18 @@ public class Profile
     /// <summary>URL логотипа (хранится в объектном хранилище)</summary>
     public string? LogoUrl { get; set; }
 
+    // ── Социальный вид профиля ────────────────────────────────────
+    /// <summary>Пресет обложки (0..9). Рисуется на фронте как CSS-gradient —
+    /// без хранилища файлов.</summary>
+    public int CoverPresetId { get; set; } = 0;
+
+    /// <summary>Короткий статус («Открыт к предложениям» и т.п.). До 80 символов.</summary>
+    public string? Status { get; set; }
+
+    /// <summary>JSON-массив Guid закреплённых проектов (max 6).
+    /// Порядок в массиве = порядок отображения.</summary>
+    public string? PinnedProjectIdsJson { get; set; }
+
     // ── Тип профиля ──────────────────────────────────────────
     /// <summary>Individual | Company | Clan</summary>
     public AccountType AccountType { get; set; } = AccountType.Individual;
