@@ -193,6 +193,117 @@ namespace Barnamaj.API.Data.Migrations
                     b.ToTable("kyc_events", (string)null);
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.KycSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<double?>("AiConfidence")
+                        .HasColumnType("double precision")
+                        .HasColumnName("ai_confidence");
+
+                    b.Property<string>("AiDecision")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("ai_decision");
+
+                    b.Property<string>("AiReasoning")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("ai_reasoning");
+
+                    b.Property<string>("Bin")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("bin");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("contact_phone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("smallint")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LegalAddress")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("legal_address");
+
+                    b.Property<string>("LegalForm")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("legal_form");
+
+                    b.Property<string>("LegalName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("legal_name");
+
+                    b.Property<string>("RegistrySnapshotJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("registry_snapshot_json");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<string>("ResponsibleName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("responsible_name");
+
+                    b.Property<byte?>("ResponsibleRole")
+                        .HasColumnType("smallint")
+                        .HasColumnName("responsible_role");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_kyc_submissions");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_kyc_submissions_user_active")
+                        .HasFilter("status < 4");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_kyc_submissions_status_created");
+
+                    b.ToTable("kyc_submissions", (string)null);
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -896,6 +1007,10 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("status");
 
+                    b.Property<Guid?>("SubmissionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("submission_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp with time zone")
@@ -912,9 +1027,12 @@ namespace Barnamaj.API.Data.Migrations
                     b.HasIndex("FrontSha256")
                         .HasDatabaseName("ix_user_documents_front_sha");
 
-                    b.HasIndex("UserId")
+                    b.HasIndex("SubmissionId")
+                        .HasDatabaseName("ix_user_documents_submission");
+
+                    b.HasIndex("UserId", "DocumentType")
                         .IsUnique()
-                        .HasDatabaseName("ux_user_documents_user_active")
+                        .HasDatabaseName("ux_user_documents_user_type_active")
                         .HasFilter("status <> 3");
 
                     b.ToTable("user_documents", (string)null);
@@ -1115,6 +1233,18 @@ namespace Barnamaj.API.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.KycSubmission", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_kyc_submissions_user_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.Membership", b =>
                 {
                     b.HasOne("Barnamaj.API.Entities.Profile", "Profile")
@@ -1265,12 +1395,20 @@ namespace Barnamaj.API.Data.Migrations
 
             modelBuilder.Entity("Barnamaj.API.Entities.UserDocument", b =>
                 {
+                    b.HasOne("Barnamaj.API.Entities.KycSubmission", "Submission")
+                        .WithMany("Documents")
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_user_documents_kyc_submissions_submission_id");
+
                     b.HasOne("Barnamaj.API.Entities.User", "User")
                         .WithMany("Documents")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_documents_users_user_id");
+
+                    b.Navigation("Submission");
 
                     b.Navigation("User");
                 });
@@ -1309,6 +1447,11 @@ namespace Barnamaj.API.Data.Migrations
                         .HasConstraintName("fk_wallets_users_user_id");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.KycSubmission", b =>
+                {
+                    b.Navigation("Documents");
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.Profile", b =>

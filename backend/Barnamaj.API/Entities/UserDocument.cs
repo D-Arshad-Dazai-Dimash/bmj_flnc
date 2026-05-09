@@ -3,6 +3,7 @@ namespace Barnamaj.API.Entities;
 /// <summary>Тип удостоверяющего документа (рынок РК).</summary>
 public enum DocumentType : byte
 {
+    // ── Документы физического лица (Individual KYC) ─────────
     /// <summary>Удостоверение личности гражданина РК (требует обе стороны)</summary>
     NationalId = 1,
 
@@ -11,6 +12,22 @@ public enum DocumentType : byte
 
     /// <summary>Вид на жительство / удостоверение лица без гражданства</summary>
     ResidencePermit = 3,
+
+    // ── Документы юридического лица (Legal KYC) ─────────────
+    /// <summary>Удостоверение личности ответственного лица (representative) + селфи.
+    /// Используется в Legal-заявке для подтверждения личности подающего.</summary>
+    ResponsiblePersonId = 10,
+
+    /// <summary>Документ-основание полномочий ответственного лица.
+    /// Универсальный слот: приказ о назначении / нотариальная доверенность /
+    /// решение учредителей / выписка из устава.
+    /// Для ИП с representative=Owner НЕ требуется.</summary>
+    AuthorityDocument = 11,
+
+    /// <summary>Справка/выписка о государственной регистрации юр. лица или ИП.
+    /// Опционально — может быть запрошен модератором, если данных из госреестра
+    /// недостаточно (например, реестр недоступен или БИН свежей даты).</summary>
+    CompanyRegistration = 12,
 }
 
 /// <summary>Статус проверки документа модератором или KYC-провайдером.</summary>
@@ -42,6 +59,11 @@ public class UserDocument
 
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
+
+    /// <summary>FK на KycSubmission, в которую входит документ.
+    /// Null — для legacy-документов, загруженных до введения submissions.</summary>
+    public Guid? SubmissionId { get; set; }
+    public KycSubmission? Submission { get; set; }
 
     public DocumentType   DocumentType { get; set; }
     public DocumentStatus Status       { get; set; } = DocumentStatus.Pending;

@@ -20,6 +20,7 @@ import { X, Phone, IdCard, Upload, CheckCircle2, AlertCircle, Loader2 } from 'lu
 import { api, ApiError, KycDocumentType, type KycStatusDto } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { LegalKycForm } from './LegalKycForm'
 
 type Step = 'phone' | 'iin' | 'document' | 'done'
 
@@ -91,8 +92,8 @@ export function KycWizard({ startStep = 'phone', initialStatus, onClose, onCompl
           </button>
         </div>
 
-        {/* Stepper */}
-        <Stepper current={step} />
+        {/* Stepper (только для Individual) */}
+        {initialStatus?.accountType !== 'Company' && <Stepper current={step} />}
 
         {/* Body */}
         <div className="p-5">
@@ -103,43 +104,51 @@ export function KycWizard({ startStep = 'phone', initialStatus, onClose, onCompl
             </div>
           )}
 
-          {step === 'phone' && (
-            <PhoneStep
-              busy={busy}
-              setBusy={setBusy}
-              setErr={setErr}
-              onDone={() => { setErr(null); setStep('iin') }}
+          {initialStatus?.accountType === 'Company' ? (
+            <LegalKycForm
+              onComplete={() => { onComplete?.() }}
             />
-          )}
+          ) : (
+            <>
+              {step === 'phone' && (
+                <PhoneStep
+                  busy={busy}
+                  setBusy={setBusy}
+                  setErr={setErr}
+                  onDone={() => { setErr(null); setStep('iin') }}
+                />
+              )}
 
-          {step === 'iin' && (
-            <IinStep
-              busy={busy}
-              setBusy={setBusy}
-              setErr={setErr}
-              onDone={() => { setErr(null); setStep('document') }}
-              onSkip={() => { setErr(null); setStep('document') }}
-            />
-          )}
+              {step === 'iin' && (
+                <IinStep
+                  busy={busy}
+                  setBusy={setBusy}
+                  setErr={setErr}
+                  onDone={() => { setErr(null); setStep('document') }}
+                  onSkip={() => { setErr(null); setStep('document') }}
+                />
+              )}
 
-          {step === 'document' && (
-            <DocumentStep
-              busy={busy}
-              setBusy={setBusy}
-              setErr={setErr}
-              onDone={() => { setErr(null); setStep('done'); onComplete?.() }}
-            />
-          )}
+              {step === 'document' && (
+                <DocumentStep
+                  busy={busy}
+                  setBusy={setBusy}
+                  setErr={setErr}
+                  onDone={() => { setErr(null); setStep('done'); onComplete?.() }}
+                />
+              )}
 
-          {step === 'done' && (
-            <div className="text-center py-6 space-y-4">
-              <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto" />
-              <h3 className="text-lg font-semibold text-text-base">Документ отправлен!</h3>
-              <p className="text-sm text-text-muted">
-                Модератор проверит данные в течение 24 часов. Вы получите уведомление о результате.
-              </p>
-              <Button variant="default" size="md" onClick={onClose}>Закрыть</Button>
-            </div>
+              {step === 'done' && (
+                <div className="text-center py-6 space-y-4">
+                  <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto" />
+                  <h3 className="text-lg font-semibold text-text-base">Документ отправлен!</h3>
+                  <p className="text-sm text-text-muted">
+                    Модератор проверит данные в течение 24 часов. Вы получите уведомление о результате.
+                  </p>
+                  <Button variant="default" size="md" onClick={onClose}>Закрыть</Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -371,6 +380,14 @@ function DocumentStep({ busy, setBusy, setErr, onDone }: StepProps) {
     setErr(null); setBusy(true)
     try {
       await api.kyc.uploadDocument(docType, front!, selfie!, needsBack ? back : null)
+      // Финализируем Individual KYC: оборачиваем документ в submission,
+      // запускаем AI-проверку и постановку в очередь модерации.
+      try {
+        await api.kyc.submitIndividual()
+      } catch (e) {
+        // submission уже мог существовать (повторная загрузка) — это не блокер.
+        if (!(e instanceof ApiError)) throw e
+      }
       onDone()
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : 'Не удалось загрузить документ')

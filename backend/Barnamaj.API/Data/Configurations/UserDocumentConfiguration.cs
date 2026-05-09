@@ -25,9 +25,12 @@ public class UserDocumentConfiguration : IEntityTypeConfiguration<UserDocument>
         b.Property(x => x.CreatedAt).HasDefaultValueSql("NOW()").ValueGeneratedOnAdd();
         b.Property(x => x.UpdatedAt).HasDefaultValueSql("NOW()").ValueGeneratedOnAddOrUpdate();
 
-        // Один активный (не Rejected) документ на пользователя — частичный уникальный индекс
-        b.HasIndex(x => x.UserId)
-            .HasDatabaseName("ux_user_documents_user_active")
+        // Один активный (не Rejected) документ ОДНОГО ТИПА на пользователя.
+        // Для legal-KYC нужно несколько разных DocumentType одновременно
+        // (ResponsiblePersonId + AuthorityDocument + CompanyRegistration), поэтому
+        // ключ уникальности расширен типом документа.
+        b.HasIndex(x => new { x.UserId, x.DocumentType })
+            .HasDatabaseName("ux_user_documents_user_type_active")
             .IsUnique()
             .HasFilter("status <> 3"); // 3 = Rejected
 
@@ -35,9 +38,17 @@ public class UserDocumentConfiguration : IEntityTypeConfiguration<UserDocument>
         b.HasIndex(x => x.FrontSha256)
             .HasDatabaseName("ix_user_documents_front_sha");
 
+        b.HasIndex(x => x.SubmissionId)
+            .HasDatabaseName("ix_user_documents_submission");
+
         b.HasOne(x => x.User)
             .WithMany(u => u.Documents)
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        b.HasOne(x => x.Submission)
+            .WithMany(s => s.Documents)
+            .HasForeignKey(x => x.SubmissionId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

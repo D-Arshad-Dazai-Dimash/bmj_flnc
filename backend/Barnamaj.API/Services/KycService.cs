@@ -286,7 +286,8 @@ public sealed class KycService : IKycService
             .Select(u => new
             {
                 u.KycStatus, u.IsPhoneVerified, u.Phone, u.IinHmac,
-                u.IinEncrypted, u.KycVerifiedAt
+                u.IinEncrypted, u.KycVerifiedAt,
+                AccountType = u.Profile != null ? u.Profile.AccountType : AccountType.Individual
             })
             .FirstOrDefaultAsync(ct)
             ?? throw new KycException("user_not_found", "Пользователь не найден.");
@@ -297,6 +298,15 @@ public sealed class KycService : IKycService
             .Select(d => new DocumentSummaryDto(
                 d.Id, d.DocumentType.ToString(), d.Status.ToString(),
                 d.CreatedAt, d.ReviewedAt, d.RejectionReason))
+            .FirstOrDefaultAsync(ct);
+
+        var latestSubmission = await _db.KycSubmissions
+            .AsNoTracking()
+            .Where(s => s.UserId == userId)
+            .OrderByDescending(s => s.CreatedAt)
+            .Select(s => new SubmissionSummaryDto(
+                s.Id, s.Kind.ToString(), s.Status.ToString(),
+                s.AiDecision, s.CreatedAt, s.ReviewedAt, s.RejectionReason))
             .FirstOrDefaultAsync(ct);
 
         string? iinMasked = null;
@@ -311,13 +321,15 @@ public sealed class KycService : IKycService
         }
 
         return new KycStatusDto(
-            Status:          user.KycStatus.ToString(),
-            IsPhoneVerified: user.IsPhoneVerified,
-            Phone:           MaskPhone(user.Phone),
-            HasIin:          !string.IsNullOrEmpty(user.IinHmac),
-            IinMasked:       iinMasked,
-            KycVerifiedAt:   user.KycVerifiedAt,
-            LatestDocument:  latest);
+            Status:           user.KycStatus.ToString(),
+            IsPhoneVerified:  user.IsPhoneVerified,
+            Phone:            MaskPhone(user.Phone),
+            HasIin:           !string.IsNullOrEmpty(user.IinHmac),
+            IinMasked:        iinMasked,
+            KycVerifiedAt:    user.KycVerifiedAt,
+            LatestDocument:   latest,
+            LatestSubmission: latestSubmission,
+            AccountType:      user.AccountType.ToString());
     }
 
     private static string? MaskPhone(string? phone)

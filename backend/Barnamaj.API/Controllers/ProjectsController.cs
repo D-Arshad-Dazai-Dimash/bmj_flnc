@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using Barnamaj.API.DTOs.Projects;
+using Barnamaj.API.Entities;
+using Barnamaj.API.Filters;
 using Barnamaj.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -58,6 +60,7 @@ public sealed class ProjectsController : ControllerBase
     /// <response code="404">Профиль не найден.</response>
     [HttpPost]
     [Authorize]
+    [RequireKyc(KycStatus.Lite)]
     [ProducesResponseType(typeof(ProjectDetailDto),  StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails),    StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails),    StatusCodes.Status403Forbidden)]
@@ -184,6 +187,7 @@ public sealed class ProjectsController : ControllerBase
     /// <response code="404">Проект или профиль не найдены.</response>
     [HttpPost("{id:guid}/apply")]
     [Authorize]
+    [RequireKyc(KycStatus.Lite)]
     [ProducesResponseType(typeof(ApplicationResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails),         StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails),         StatusCodes.Status403Forbidden)]

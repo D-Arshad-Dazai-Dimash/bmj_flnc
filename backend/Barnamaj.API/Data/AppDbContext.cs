@@ -37,6 +37,7 @@ public class AppDbContext : DbContext
     // ── KYC ─────────────────────────────────────────────────
     public DbSet<UserDocument>       UserDocuments       => Set<UserDocument>();
     public DbSet<KycEvent>           KycEvents           => Set<KycEvent>();
+    public DbSet<KycSubmission>      KycSubmissions      => Set<KycSubmission>();
 
     // ── Wallet & Finance ────────────────────────────────────
     public DbSet<Wallet>             Wallets             => Set<Wallet>();

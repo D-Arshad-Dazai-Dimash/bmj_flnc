@@ -404,6 +404,64 @@ export const api = {
       if (back) fd.append('back', back)
       return uploadMultipart<KycDocumentSummaryDto>('/api/kyc/document', fd)
     },
+
+    /** Финализирует Individual KYC: создаёт submission из загруженного документа. */
+    submitIndividual: () =>
+      request<KycSubmissionSummaryDto>('/api/kyc/individual/submit', { method: 'POST' }),
+
+    /** Поиск юр. лица по БИН в реестре (для autofill). */
+    lookupBin: (bin: string) =>
+      request<LegalEntityLookupDto>(`/api/kyc/legal/lookup/${encodeURIComponent(bin)}`),
+
+    /**
+     * Подаёт Legal KYC-заявку (multipart).
+     * Обязательно: responsibleIdFront + responsibleIdSelfie.
+     * authorityDocument обязателен, кроме случая ИП с responsibleRole=Owner.
+     */
+    submitLegal: async (
+      fields: LegalKycFields,
+      files: {
+        responsibleIdFront: File
+        responsibleIdSelfie: File
+        responsibleIdBack?: File | null
+        authorityDocument?: File | null
+        companyRegistration?: File | null
+      }
+    ): Promise<KycSubmissionSummaryDto> => {
+      const fd = new FormData()
+      fd.append('LegalForm',       fields.legalForm)
+      fd.append('Bin',             fields.bin)
+      fd.append('LegalName',       fields.legalName)
+      if (fields.legalAddress)  fd.append('LegalAddress',    fields.legalAddress)
+      if (fields.contactPhone)  fd.append('ContactPhone',    fields.contactPhone)
+      fd.append('ResponsibleRole', fields.responsibleRole)
+      fd.append('ResponsibleName', fields.responsibleName)
+
+      fd.append('responsibleIdFront',  files.responsibleIdFront)
+      fd.append('responsibleIdSelfie', files.responsibleIdSelfie)
+      if (files.responsibleIdBack)   fd.append('responsibleIdBack',   files.responsibleIdBack)
+      if (files.authorityDocument)   fd.append('authorityDocument',   files.authorityDocument)
+      if (files.companyRegistration) fd.append('companyRegistration', files.companyRegistration)
+
+      return uploadMultipart<KycSubmissionSummaryDto>('/api/kyc/legal/submit', fd)
+    },
+  },
+
+  // ── Admin: KYC moderation (submissions) ────────────────────────────────────
+  adminKyc: {
+    listSubmissions: (kind?: KycSubmissionKindStr, limit = 50) => {
+      const qs = new URLSearchParams()
+      if (kind) qs.set('kind', kind)
+      qs.set('limit', String(limit))
+      return request<PendingSubmissionDto[]>(`/api/kyc/moderation/submissions?${qs.toString()}`)
+    },
+    approveSubmission: (id: string) =>
+      request<{ ok: true }>(`/api/kyc/moderation/submissions/${id}/approve`, { method: 'POST' }),
+    rejectSubmission: (id: string, reason: string) =>
+      request<{ ok: true }>(`/api/kyc/moderation/submissions/${id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
   },
 
   // ── Wallet ──────────────────────────────────────────────────────────────────
@@ -484,11 +542,15 @@ export const api = {
 
 export type KycStatusValue = 'None' | 'Lite' | 'DocPending' | 'Full' | 'Rejected'
 
-/** Соответствует backend enum DocumentType (byte): 1 = NationalId, 2 = Passport, 3 = ResidencePermit */
+/** Соответствует backend enum DocumentType (byte). */
 export const KycDocumentType = {
-  NationalId: 1,
-  Passport: 2,
-  ResidencePermit: 3,
+  NationalId:           1,
+  Passport:             2,
+  ResidencePermit:      3,
+  // ── Legal KYC ─────────────────────────────────
+  ResponsiblePersonId:  10,
+  AuthorityDocument:    11,
+  CompanyRegistration:  12,
 } as const
 export type KycDocumentType = typeof KycDocumentType[keyof typeof KycDocumentType]
 
@@ -502,6 +564,20 @@ export interface KycDocumentSummaryDto {
   reviewedAt: string | null
 }
 
+export type KycSubmissionKindStr = 'Individual' | 'Legal'
+export type KycSubmissionStatusStr =
+  | 'Pending' | 'AiApproved' | 'AiRejected' | 'ManualReview' | 'Approved' | 'Rejected'
+
+export interface KycSubmissionSummaryDto {
+  id: string
+  kind: KycSubmissionKindStr
+  status: KycSubmissionStatusStr
+  aiDecision: 'approve' | 'reject' | 'manual' | null
+  createdAt: string
+  reviewedAt: string | null
+  rejectionReason: string | null
+}
+
 export interface KycStatusDto {
   status: KycStatusValue
   isPhoneVerified: boolean
@@ -510,6 +586,59 @@ export interface KycStatusDto {
   iinMasked: string | null
   kycVerifiedAt: string | null
   latestDocument: KycDocumentSummaryDto | null
+  latestSubmission: KycSubmissionSummaryDto | null
+  /** "Individual" | "Company" | "Clan" — определяет ветку KYC-визарда. */
+  accountType: 'Individual' | 'Company' | 'Clan'
+}
+
+export interface LegalEntityLookupDto {
+  bin: string
+  legalForm: string
+  name: string
+  address: string | null
+  director: string | null
+  isActive: boolean
+  source: string
+}
+
+export type ResponsibleRoleStr = 'Owner' | 'Director' | 'Proxy' | 'Accountant'
+
+export interface LegalKycFields {
+  legalForm: 'ТОО' | 'АО' | 'ИП'
+  bin: string
+  legalName: string
+  legalAddress?: string | null
+  contactPhone?: string | null
+  responsibleRole: ResponsibleRoleStr
+  responsibleName: string
+}
+
+export interface SubmissionDocumentDto {
+  id: string
+  documentType: string
+  frontUrl: string
+  backUrl: string | null
+  selfieUrl: string
+}
+
+export interface PendingSubmissionDto {
+  id: string
+  userId: string
+  userEmail: string
+  kind: KycSubmissionKindStr
+  status: KycSubmissionStatusStr
+  legalForm: string | null
+  bin: string | null
+  legalName: string | null
+  legalAddress: string | null
+  contactPhone: string | null
+  responsibleRole: ResponsibleRoleStr | null
+  responsibleName: string | null
+  aiDecision: string | null
+  aiConfidence: number | null
+  aiReasoning: string | null
+  createdAt: string
+  documents: SubmissionDocumentDto[]
 }
 
 // ─── Wallet types ─────────────────────────────────────────────────────────────

@@ -105,6 +105,9 @@ public static class ServiceExtensions
         services.AddSingleton<IFileValidator,        FileValidator>();
         services.AddScoped<IKycService,              KycService>();
         services.AddScoped<IKycModerationService,    KycModerationService>();
+        services.AddSingleton<ILegalEntityRegistry,  StubLegalEntityRegistry>();
+        services.AddScoped<IKycAiReviewer,           RulesBasedKycAiReviewer>();
+        services.AddScoped<IKycSubmissionService,    KycSubmissionService>();
         // SMS / Email — dev-стабы. В prod заменить через DI override.
         services.AddSingleton<ISmsProvider,          ConsoleSmsProvider>();
         services.AddSingleton<IEmailProvider,        ConsoleEmailProvider>();
