@@ -20,3 +20,15 @@ Current production examples:
 - `https://frontend-fawn-eight-33.vercel.app`
 - `https://barnamaj.kz`
 - `https://www.barnamaj.kz`
+
+## Admin auth split
+
+Authentication is split by user type:
+
+- `POST /api/auth/login` for regular users
+- `POST /api/auth/admin/login` for `Moderator`, `SeniorAdmin`, `HeadAdmin`
+
+Frontend routes:
+
+- `/{lang}/auth` for regular users
+- `/{lang}/admin-auth` for administrators

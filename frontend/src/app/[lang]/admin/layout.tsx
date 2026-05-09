@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace('/auth?mode=login')
+      router.replace('/admin-auth')
       return
     }
     if (user) {

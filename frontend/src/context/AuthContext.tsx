@@ -33,6 +33,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>
+  adminLogin: (email: string, password: string) => Promise<void>
   register: (data: RegisterData) => Promise<void>
   logout: () => Promise<void>
   /** @alias logout — для совместимости с компонентами, которые используют signOut */
@@ -160,6 +161,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: toAuthUser(dto), isLoading: false, isAuthenticated: true })
   }, [])
 
+  // ── Admin Login ───────────────────────────────────────────
+  const adminLogin = useCallback(async (email: string, password: string) => {
+    const res = await apiFetch('/api/auth/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error ?? 'Ошибка входа администратора')
+    }
+    const dto = await res.json()
+    setState({ user: toAuthUser(dto), isLoading: false, isAuthenticated: true })
+  }, [])
+
   // ── Register ───────────────────────────────────────────────
   const register = useCallback(async (data: RegisterData) => {
     const res = await apiFetch('/api/auth/register', {
@@ -226,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.user])
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, signOut, updateUser, updateProfile, isAtLeast: isAtLeastFn, hasSpecialty: hasSpecialtyFn }}>
+    <AuthContext.Provider value={{ ...state, login, adminLogin, register, logout, signOut, updateUser, updateProfile, isAtLeast: isAtLeastFn, hasSpecialty: hasSpecialtyFn }}>
       {children}
     </AuthContext.Provider>
   )

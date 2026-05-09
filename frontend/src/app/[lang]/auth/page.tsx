@@ -533,6 +533,14 @@ export default function AuthPage() {
                 ? 'Введите email и пароль для входа в Barnamaj'
                 : 'Выберите тип аккаунта и заполните данные'}
             </p>
+            {mode === 'login' && (
+              <p className="mt-2 text-xs text-text-faint">
+                Вход для администраторов:{' '}
+                <Link href="/admin-auth" className="text-[#b5b3ff] hover:text-accent-bright">
+                  отдельная admin-страница
+                </Link>
+              </p>
+            )}
           </div>
 
           <AuthForm mode={mode} acct={acct} onAcctChange={setAcct} />

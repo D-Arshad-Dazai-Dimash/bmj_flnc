@@ -8,13 +8,17 @@ Backend на **ASP.NET Core 8** + **PostgreSQL** + **Docker**.
     вместо legacy-строки ролей.
 - `appsettings.json` (production):
     - убран `Include Error Detail=true` из `ConnectionStrings:DefaultConnection`
-    - `AllowedHosts` больше не wildcard (`*`), задан явный список хостов.
+    - `AllowedHosts` переведён на явный allowlist host'ов (формат `;`) для работы за Fly proxy без wildcard.
 - Добавлены regression-тесты в `backend/Barnamaj.Tests`:
     - `Controllers/KycModerationAuthorizationTests.cs`
     - `Config/ProductionSecurityConfigTests.cs`
 - Исправлен cross-domain auth (Vercel frontend -> Fly backend):
     - cookies вынесены в конфиг `Cookie:SameSite` и в production выставлены как `SameSite=None; Secure`;
     - `AllowedOrigins` расширен актуальными frontend-доменами (`vercel.app`, `barnamaj.kz`, `www.barnamaj.kz`).
+- Разделён вход для обычных пользователей и админов:
+    - `/api/auth/login` теперь только для non-admin пользователей;
+    - `/api/auth/admin/login` — отдельный endpoint для `Moderator/SeniorAdmin/HeadAdmin`;
+    - на фронтенде добавлена отдельная страница `/[lang]/admin-auth`.
 
 ### Продакшн заметка (Vercel + Fly)
 

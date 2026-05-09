@@ -1,4 +1,5 @@
 using Barnamaj.API.DTOs.Auth;
+using Barnamaj.API.Entities;
 using Barnamaj.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -79,6 +80,12 @@ public sealed class AuthController : ControllerBase
             : fallback;
     }
 
+    private static bool IsAdminRole(string role)
+    {
+        return Enum.TryParse<UserRole>(role, ignoreCase: true, out var parsed)
+               && parsed >= UserRole.Moderator;
+    }
+
     // ── Регистрация ─────────────────────────────────────────────────────
 
     /// <summary>
@@ -122,6 +129,44 @@ public sealed class AuthController : ControllerBase
         try
         {
             var response = await _authService.LoginAsync(dto, ct);
+            if (IsAdminRole(response.User.Role))
+            {
+                ClearAuthCookies();
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { error = "Для администраторов используйте отдельный вход: /admin-auth" });
+            }
+
+            SetAuthCookies(response);
+            return Ok(response.User);
+        }
+        catch (AuthException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Отдельный вход для администраторов (Moderator+).
+    /// </summary>
+    [HttpPost("admin/login")]
+    [EnableRateLimiting("login")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> AdminLogin(
+        [FromBody] LoginDto dto,
+        CancellationToken ct)
+    {
+        try
+        {
+            var response = await _authService.LoginAsync(dto, ct);
+            if (!IsAdminRole(response.User.Role))
+            {
+                ClearAuthCookies();
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { error = "Доступ разрешён только для Moderator/SeniorAdmin/HeadAdmin." });
+            }
+
             SetAuthCookies(response);
             return Ok(response.User);
         }
