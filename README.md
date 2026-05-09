@@ -12,6 +12,9 @@ Backend на **ASP.NET Core 8** + **PostgreSQL** + **Docker**.
 - Добавлены regression-тесты в `backend/Barnamaj.Tests`:
     - `Controllers/KycModerationAuthorizationTests.cs`
     - `Config/ProductionSecurityConfigTests.cs`
+- Исправлен cross-domain auth (Vercel frontend -> Fly backend):
+    - cookies вынесены в конфиг `Cookie:SameSite` и в production выставлены как `SameSite=None; Secure`;
+    - `AllowedOrigins` расширен актуальными frontend-доменами (`vercel.app`, `barnamaj.kz`, `www.barnamaj.kz`).
 
 ### Продакшн заметка (Vercel + Fly)
 

@@ -36,12 +36,16 @@ public sealed class AuthController : ControllerBase
     {
         // В dev (appsettings.Development.json: "Cookie": { "Secure": false }) — HTTP-совместимо
         var secureCookie = _config.GetValue("Cookie:Secure", true);
+        var configuredSameSite = _config.GetValue<string>("Cookie:SameSite");
+        var sameSite = ParseSameSite(configuredSameSite, secureCookie ? SameSiteMode.None : SameSiteMode.Lax);
+        if (!secureCookie && sameSite == SameSiteMode.None)
+            sameSite = SameSiteMode.Lax;
 
         var accessOptions = new CookieOptions
         {
             HttpOnly  = true,
             Secure    = secureCookie,
-            SameSite  = secureCookie ? SameSiteMode.Strict : SameSiteMode.Lax,
+            SameSite  = sameSite,
             Expires   = response.ExpiresAt,
             Path      = "/"
         };
@@ -50,7 +54,7 @@ public sealed class AuthController : ControllerBase
         {
             HttpOnly  = true,
             Secure    = secureCookie,
-            SameSite  = secureCookie ? SameSiteMode.Strict : SameSiteMode.Lax,
+            SameSite  = sameSite,
             Expires   = response.RefreshExpiresAt,
             Path      = "/api/auth/refresh"  // только для эндпоинта обновления
         };
@@ -63,6 +67,16 @@ public sealed class AuthController : ControllerBase
     {
         Response.Cookies.Delete(AccessTokenCookie,  new CookieOptions { Path = "/" });
         Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions { Path = "/api/auth/refresh" });
+    }
+
+    private static SameSiteMode ParseSameSite(string? value, SameSiteMode fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return fallback;
+
+        return Enum.TryParse<SameSiteMode>(value, ignoreCase: true, out var parsed)
+            ? parsed
+            : fallback;
     }
 
     // ── Регистрация ─────────────────────────────────────────────────────
