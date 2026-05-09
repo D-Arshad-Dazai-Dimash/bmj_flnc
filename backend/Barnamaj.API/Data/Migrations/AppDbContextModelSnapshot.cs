@@ -370,6 +370,10 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("account_type");
 
+                    b.Property<decimal?>("AvgRating")
+                        .HasColumnType("numeric(3,2)")
+                        .HasColumnName("avg_rating");
+
                     b.Property<string>("Bin")
                         .HasColumnType("text")
                         .HasColumnName("bin");
@@ -429,6 +433,12 @@ namespace Barnamaj.API.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("name");
+
+                    b.Property<int>("RatingsCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ratings_count");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAddOrUpdate()
@@ -618,6 +628,95 @@ namespace Barnamaj.API.Data.Migrations
                         .HasDatabaseName("ix_project_applications_project_status");
 
                     b.ToTable("project_applications", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ProjectReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("AuthorProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_profile_id");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("comment");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<byte>("Direction")
+                        .HasColumnType("smallint")
+                        .HasColumnName("direction");
+
+                    b.Property<DateTime?>("HiddenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("hidden_at");
+
+                    b.Property<Guid?>("HiddenByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("hidden_by_user_id");
+
+                    b.Property<string>("HiddenReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("hidden_reason");
+
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_hidden");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<byte>("Stars")
+                        .HasColumnType("smallint")
+                        .HasColumnName("stars");
+
+                    b.Property<string>("TagsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("tags_json");
+
+                    b.Property<Guid>("TargetProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_profile_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.HasKey("Id")
+                        .HasName("pk_project_reviews");
+
+                    b.HasIndex("AuthorProfileId")
+                        .HasDatabaseName("ix_project_reviews_author_profile_id");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("ix_project_reviews_author_user_id");
+
+                    b.HasIndex("ProjectId", "Direction")
+                        .IsUnique()
+                        .HasDatabaseName("ux_project_reviews_project_direction");
+
+                    b.HasIndex("TargetProfileId", "IsHidden", "CreatedAt")
+                        .HasDatabaseName("ix_project_reviews_target");
+
+                    b.ToTable("project_reviews", (string)null);
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.ProjectRoleGrant", b =>
@@ -1326,6 +1425,45 @@ namespace Barnamaj.API.Data.Migrations
                     b.Navigation("ApplicantProfile");
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ProjectReview", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.Profile", "AuthorProfile")
+                        .WithMany()
+                        .HasForeignKey("AuthorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_reviews_profiles_author_profile_id");
+
+                    b.HasOne("Barnamaj.API.Entities.User", "AuthorUser")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_reviews_user_author_user_id");
+
+                    b.HasOne("Barnamaj.API.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_reviews_projects_project_id");
+
+                    b.HasOne("Barnamaj.API.Entities.Profile", "TargetProfile")
+                        .WithMany()
+                        .HasForeignKey("TargetProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_reviews_profiles_target_profile_id");
+
+                    b.Navigation("AuthorProfile");
+
+                    b.Navigation("AuthorUser");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("TargetProfile");
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.ProjectRoleGrant", b =>

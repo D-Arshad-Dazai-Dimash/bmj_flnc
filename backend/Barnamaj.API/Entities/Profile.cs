@@ -35,6 +35,12 @@ public class Profile
     /// <summary>Профиль подтверждён командой Barnamaj (галочка)</summary>
     public bool IsVerified { get; set; } = false;
 
+    // ── Рейтинг (денормализация: пересчитывается RatingService) ──
+    /// <summary>Средняя оценка по последним 50 не-скрытым отзывам. Null = ещё нет.</summary>
+    public decimal? AvgRating    { get; set; }
+    /// <summary>Кол-во не-скрытых отзывов в окне (≤ 50).</summary>
+    public int      RatingsCount { get; set; }
+
     // ── Временные метки (UTC) ────────────────────────────────
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

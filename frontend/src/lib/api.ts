@@ -536,6 +536,72 @@ export const api = {
     revoke: (projectId: string, grantId: string) =>
       request<void>(`/api/projects/${projectId}/roles/${grantId}`, { method: 'DELETE' }),
   },
+
+  // ── Reviews / Ratings ───────────────────────────────────────────────────────
+  reviews: {
+    create: (projectId: string, dto: CreateReviewRequest) =>
+      request<ReviewDto>(`/api/projects/${projectId}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      }),
+    forProject: (projectId: string) =>
+      request<ReviewDto[]>(`/api/projects/${projectId}/reviews`),
+    forProfile: (profileId: string, page = 1, pageSize = 10) =>
+      request<ReviewsPageDto>(
+        `/api/profiles/${profileId}/reviews?page=${page}&pageSize=${pageSize}`,
+      ),
+    summary: (profileId: string) =>
+      request<RatingSummaryDto>(`/api/profiles/${profileId}/rating`),
+    tags: () => request<string[]>(`/api/reviews/tags`),
+  },
+
+  adminReviews: {
+    hide: (reviewId: string, reason: string) =>
+      request<{ ok: true }>(`/api/admin/reviews/${reviewId}/hide`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+    restore: (reviewId: string) =>
+      request<{ ok: true }>(`/api/admin/reviews/${reviewId}/restore`, { method: 'POST' }),
+  },
+}
+
+// ─── Reviews types ────────────────────────────────────────────────────────────
+export type ReviewDirectionStr = 'ClientToExecutor' | 'ExecutorToClient'
+
+export interface ReviewDto {
+  id: string
+  projectId: string
+  projectTitle: string
+  direction: ReviewDirectionStr
+  authorProfileId: string
+  authorName: string
+  authorLogoUrl?: string | null
+  targetProfileId: string
+  stars: number
+  comment?: string | null
+  tags: string[]
+  isHidden: boolean
+  createdAt: string
+}
+
+export interface RatingSummaryDto {
+  avgRating: number | null
+  ratingsCount: number
+  breakdown: Record<string, number>
+}
+
+export interface ReviewsPageDto {
+  total: number
+  page: number
+  pageSize: number
+  items: ReviewDto[]
+}
+
+export interface CreateReviewRequest {
+  stars: number
+  comment?: string | null
+  tags?: string[] | null
 }
 
 // ─── KYC types ────────────────────────────────────────────────────────────────

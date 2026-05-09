@@ -90,6 +90,7 @@ public static class ServiceExtensions
         services.AddScoped<IAuthService,       AuthService>();
         services.AddScoped<IProfileService,    ProfileService>();
         services.AddScoped<IProjectService,    ProjectService>();
+        services.AddScoped<IRatingService,     RatingService>();
         services.AddScoped<IAssessmentService, AssessmentService>();
         services.AddScoped<IWalletService,      WalletService>();
         services.AddScoped<ISpecialtyService,   SpecialtyService>();

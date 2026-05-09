@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<Membership>         Memberships         => Set<Membership>();
     public DbSet<Project>            Projects            => Set<Project>();
     public DbSet<ProjectApplication> ProjectApplications => Set<ProjectApplication>();
+    public DbSet<ProjectReview>      ProjectReviews      => Set<ProjectReview>();
 
     // ── Skills & Assessments ────────────────────────────────
     public DbSet<Skill>              Skills              => Set<Skill>();

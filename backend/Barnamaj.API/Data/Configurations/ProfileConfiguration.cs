@@ -46,6 +46,12 @@ public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
         builder.Property(p => p.IsVerified)
             .HasDefaultValue(false);
 
+        // ── Рейтинг (денормализация) ─────────────────────────
+        builder.Property(p => p.AvgRating)
+            .HasColumnType("numeric(3,2)");
+        builder.Property(p => p.RatingsCount)
+            .HasDefaultValue(0);
+
         // ── Временные метки ──────────────────────────────────
         builder.Property(p => p.CreatedAt)
             .HasDefaultValueSql("NOW()")

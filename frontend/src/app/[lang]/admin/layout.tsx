@@ -7,13 +7,14 @@ import { useAuth } from '@/context/AuthContext'
 import { isAtLeast } from '@/context/AuthContext'
 import Link from '@/components/ui/LocaleLink'
 import { cn } from '@/lib/utils'
-import { Loader2, Shield, LayoutDashboard, Megaphone, Users, ClipboardList, MessageSquare, ToggleRight, Eye, Wallet, FileText, ChevronLeft, Sparkles, ShieldCheck } from 'lucide-react'
+import { Loader2, Shield, LayoutDashboard, Megaphone, Users, ClipboardList, MessageSquare, ToggleRight, Eye, Wallet, FileText, ChevronLeft, Sparkles, ShieldCheck, Star } from 'lucide-react'
 
 const NAV = [
   { href: '/admin',               icon: LayoutDashboard, label: 'Обзор',          minRole: null },
   { href: '/admin/announcements', icon: Megaphone,       label: 'Объявления',     minRole: null },
   { href: '/admin/users',         icon: Users,           label: 'Пользователи',   minRole: null },
   { href: '/admin/kyc',           icon: ShieldCheck,     label: 'KYC',            minRole: null },
+  { href: '/admin/reviews',       icon: Star,            label: 'Отзывы',         minRole: null },
   { href: '/admin/orders',        icon: ClipboardList,   label: 'Заказы',         minRole: null },
   { href: '/admin/chats',         icon: MessageSquare,   label: 'Чаты',           minRole: null },
   { href: '/admin/features',      icon: ToggleRight,     label: 'Фичи',           minRole: 'SeniorAdmin' },
