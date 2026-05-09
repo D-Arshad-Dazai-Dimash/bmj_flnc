@@ -59,6 +59,21 @@ public sealed class ProfilesController : ControllerBase
     }
 
     // ════════════════════════════════════════════════════════════
+    // GET /api/profiles/{id}
+    // ════════════════════════════════════════════════════════════
+
+    /// <summary>Публичная карточка профиля по Id.</summary>
+    [HttpGet("{id:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ProfileSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var dto = await _profileService.GetByIdAsync(id, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
+
+    // ════════════════════════════════════════════════════════════
     // POST /api/profiles/create
     // ════════════════════════════════════════════════════════════
 

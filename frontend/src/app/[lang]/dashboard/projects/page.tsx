@@ -1,11 +1,12 @@
 ﻿'use client'
 import { motion } from 'framer-motion'
-import { FolderKanban, Plus, Banknote, Calendar, XCircle, CheckCircle2, Users } from 'lucide-react'
+import { FolderKanban, Plus, Banknote, Calendar, XCircle, CheckCircle2, Users, Star } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { api, type ProjectSummaryDto } from '@/lib/api'
 import Link from '@/components/ui/LocaleLink'
 import { Button } from '@/components/ui/button'
+import { ReviewForm } from '@/components/reviews/ReviewForm'
 
 // Статусы от бэкенда приходят в PascalCase
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -25,8 +26,10 @@ const ProjectCard = memo(function ProjectCard({
   onStatusChange: (id: string, status: string) => void
 }) {
   const st       = STATUS_MAP[p.status] ?? STATUS_MAP['Open']
-  const canCancel   = p.status === 'Open' || p.status === 'InProgress'
-  const canComplete = p.status === 'InProgress'
+  const canCancel    = p.status === 'Open' || p.status === 'InProgress'
+  const canComplete  = p.status === 'InProgress'
+  const canReview    = p.status === 'Completed'
+  const [reviewOpen, setReviewOpen] = useState(false)
 
   return (
     <div data-testid="project-card" className="rounded-[14px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-5 space-y-3 shadow-[0_1px_0_rgba(255,255,255,0.03)] transition-all duration-200 hover:border-border-bright hover:bg-bg-elevated hover:shadow-[0_20px_48px_rgba(5,8,48,0.28)]">
@@ -67,7 +70,7 @@ const ProjectCard = memo(function ProjectCard({
         )}
       </div>
       {/* Action buttons — optimistic */}
-      {(canCancel || canComplete) && (
+      {(canCancel || canComplete || canReview) && (
         <div className="flex items-center gap-2 pt-1">
           {canComplete && (
             <button
@@ -75,6 +78,14 @@ const ProjectCard = memo(function ProjectCard({
               className="flex items-center gap-1.5 rounded-[8px] border border-[rgba(72,152,188,0.24)] bg-[rgba(72,152,188,0.08)] px-3 py-1.5 text-xs font-[510] tracking-caption text-[#a8e0ef] transition-colors hover:bg-[rgba(72,152,188,0.12)]"
             >
               <CheckCircle2 className="w-3.5 h-3.5" /> Завершить
+            </button>
+          )}
+          {canReview && (
+            <button
+              onClick={() => setReviewOpen(true)}
+              className="flex items-center gap-1.5 rounded-[8px] border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-[510] tracking-caption text-amber-200 transition-colors hover:bg-amber-400/15"
+            >
+              <Star className="w-3.5 h-3.5" /> Оставить отзыв
             </button>
           )}
           {canCancel && (
@@ -86,6 +97,9 @@ const ProjectCard = memo(function ProjectCard({
             </button>
           )}
         </div>
+      )}
+      {reviewOpen && (
+        <ReviewForm projectId={p.id} onClose={() => setReviewOpen(false)} />
       )}
     </div>
   )

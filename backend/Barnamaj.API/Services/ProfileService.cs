@@ -44,6 +44,14 @@ public interface IProfileService
     Task<IReadOnlyList<ProfileSummaryDto>> SearchAsync(
         string? query,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Публичный просмотр профиля по Id.
+    /// Возвращает null, если не найден.
+    /// </summary>
+    Task<ProfileSummaryDto?> GetByIdAsync(
+        Guid profileId,
+        CancellationToken ct = default);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -319,6 +327,21 @@ public sealed class ProfileService : IProfileService
         return profiles
             .Select(p => ToSummaryDto(p, memberCounts.GetValueOrDefault(p.Id, 0)))
             .ToList();
+    }
+
+    // ── GET BY ID ─────────────────────────────────────────
+    public async Task<ProfileSummaryDto?> GetByIdAsync(Guid profileId, CancellationToken ct = default)
+    {
+        var profile = await _db.Profiles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == profileId, ct);
+        if (profile is null) return null;
+
+        var memberCount = await _db.Memberships
+            .AsNoTracking()
+            .CountAsync(m => m.ProfileId == profileId && m.Status == MembershipStatus.Active, ct);
+
+        return ToSummaryDto(profile, memberCount);
     }
 
     // ── HELPERS ───────────────────────────────────────────────

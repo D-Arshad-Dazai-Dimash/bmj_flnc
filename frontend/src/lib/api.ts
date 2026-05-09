@@ -291,6 +291,8 @@ export const api = {
 
   // ── Profiles (Clan / Company) ──────────────────────────────────────────────
   profiles: {
+    /** Публичная карточка профиля по Id. */
+    get: (id: string) => request<ProfileSummaryDto>(`/api/profiles/${id}`),
     /** Мои кланы и компании (активные + pending приглашения) */
     myTeams: () =>
       request<MyTeamDto[]>('/api/profiles/my-teams'),
@@ -556,6 +558,12 @@ export const api = {
   },
 
   adminReviews: {
+    /** Лента последних отзывов для модерации. */
+    listRecent: (page = 1, pageSize = 20, hidden?: boolean) => {
+      const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+      if (hidden !== undefined) qs.set('hidden', String(hidden))
+      return request<ReviewsPageDto>(`/api/admin/reviews?${qs.toString()}`)
+    },
     hide: (reviewId: string, reason: string) =>
       request<{ ok: true }>(`/api/admin/reviews/${reviewId}/hide`, {
         method: 'POST',

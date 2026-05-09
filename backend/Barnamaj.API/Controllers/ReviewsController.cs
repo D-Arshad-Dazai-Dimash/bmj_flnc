@@ -112,6 +112,18 @@ public sealed class AdminReviewsController : ControllerBase
         Guid.Parse(User.FindFirstValue("sub")
             ?? throw new InvalidOperationException("JWT: claim 'sub' missing."));
 
+    [HttpGet]
+    [ProducesResponseType(typeof(ReviewsPageDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListRecent(
+        [FromQuery] int  page = 1,
+        [FromQuery] int  pageSize = 20,
+        [FromQuery] bool? hidden = null,
+        CancellationToken ct = default)
+    {
+        var p = await _rating.ListRecentAsync(page, pageSize, hidden, ct);
+        return Ok(p);
+    }
+
     [HttpPost("{reviewId:guid}/hide")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Hide(Guid reviewId, [FromBody] HideReviewDto dto, CancellationToken ct)

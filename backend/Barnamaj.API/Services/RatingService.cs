@@ -20,6 +20,7 @@ public interface IRatingService
     Task<ReviewsPageDto>   GetForProfileAsync(Guid profileId, int page, int pageSize, CancellationToken ct);
     Task<RatingSummaryDto> GetSummaryAsync(Guid profileId, CancellationToken ct);
     Task<IReadOnlyList<ReviewDto>> GetForProjectAsync(Guid projectId, Guid currentUserId, CancellationToken ct);
+    Task<ReviewsPageDto>   ListRecentAsync(int page, int pageSize, bool? hidden, CancellationToken ct);
     Task                   HideAsync(Guid reviewId, Guid moderatorUserId, string reason, CancellationToken ct);
     Task                   RestoreAsync(Guid reviewId, Guid moderatorUserId, CancellationToken ct);
 
@@ -176,6 +177,29 @@ public sealed class RatingService : IRatingService
             .ToListAsync(ct);
 
         return raw.Select(x => MapToDto(x.r, x.AuthorName, x.AuthorLogo, x.ProjectTitle)).ToList();
+    }
+
+    public async Task<ReviewsPageDto> ListRecentAsync(int page, int pageSize, bool? hidden, CancellationToken ct)
+    {
+        page     = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var q = _db.ProjectReviews.AsNoTracking().AsQueryable();
+        if (hidden.HasValue) q = q.Where(r => r.IsHidden == hidden.Value);
+
+        var total = await q.CountAsync(ct);
+        var rows = await q
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Join(_db.Profiles.AsNoTracking(), r => r.AuthorProfileId, p => p.Id,
+                  (r, p) => new { r, AuthorName = p.Name, AuthorLogo = p.LogoUrl })
+            .Join(_db.Projects.AsNoTracking(), x => x.r.ProjectId, p => p.Id,
+                  (x, p) => new { x.r, x.AuthorName, x.AuthorLogo, ProjectTitle = p.Title })
+            .ToListAsync(ct);
+
+        var items = rows.Select(x => MapToDto(x.r, x.AuthorName, x.AuthorLogo, x.ProjectTitle)).ToList();
+        return new ReviewsPageDto(total, page, pageSize, items);
     }
 
     public async Task HideAsync(Guid reviewId, Guid moderatorUserId, string reason, CancellationToken ct)
