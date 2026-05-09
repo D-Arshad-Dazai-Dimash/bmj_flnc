@@ -75,3 +75,10 @@ src/
 - Auto Deploy on Push: `enabled`.
 - Для корректной интеграции с API задайте в Vercel Environment Variables:
     - `NEXT_PUBLIC_API_URL=https://barnamaj-api.fly.dev`
+
+### Фолбэк через GitHub Actions (Deploy Hook)
+
+- Если Vercel Git Integration не триггерится, используется workflow `.github/workflows/deploy-frontend-vercel.yml`.
+- Добавьте в GitHub Secrets:
+    - `VERCEL_DEPLOY_HOOK_URL` (Deploy Hook URL из Vercel проекта)
+- Workflow запускается на push в `main` при изменениях в `frontend/**` и вызывает Vercel deploy принудительно.

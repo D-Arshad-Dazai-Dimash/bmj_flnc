@@ -304,6 +304,9 @@ Escrow с абстракцией шлюза и HMAC-верификацией.
 - Workflow: `.github/workflows/deploy-backend-fly.yml`.
 - Для работы workflow добавьте GitHub Secret: `FLY_API_TOKEN`.
 - Frontend обновляется через Vercel Auto Deploy из ветки `main` (на стороне Vercel-проекта).
+- Дополнительно настроен принудительный запуск Vercel Deploy Hook через GitHub Actions при изменениях во `frontend/**`.
+- Workflow: `.github/workflows/deploy-frontend-vercel.yml`.
+- Для работы frontend workflow добавьте GitHub Secret: `VERCEL_DEPLOY_HOOK_URL`.
 
 ---
 
