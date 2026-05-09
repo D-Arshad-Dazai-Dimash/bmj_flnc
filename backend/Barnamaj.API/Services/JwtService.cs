@@ -65,8 +65,10 @@ public sealed class JwtService : IJwtService
 
         try
         {
-            var principal = new JwtSecurityTokenHandler()
-                .ValidateToken(token, parameters, out var securityToken);
+            // MapInboundClaims=false — чтобы "sub" остался "sub", а не превратился в NameIdentifier.
+            // (Глобальный JwtBearer уже так настроен, но локальный handler — отдельный экземпляр.)
+            var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
+            var principal = handler.ValidateToken(token, parameters, out var securityToken);
 
             // Убедиться что это именно refresh-токен
             var tokenType = principal.FindFirstValue("token_type");

@@ -209,7 +209,12 @@ public sealed class AuthService : IAuthService
         var principal = _jwt.ValidateRefreshToken(refreshToken)
             ?? throw new AuthException("Токен недействителен или истёк.");
 
-        var userId = Guid.Parse(principal.FindFirst("sub")!.Value);
+        // "sub" — стандартный claim. На всякий случай fallback на NameIdentifier
+        // (если когда-то токен выдавался при включённом mapping).
+        var sub = principal.FindFirst("sub")?.Value
+                  ?? principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(sub) || !Guid.TryParse(sub, out var userId))
+            throw new AuthException("Токен повреждён.");
 
         var user = await _db.Users
             .Include(u => u.Profile)
