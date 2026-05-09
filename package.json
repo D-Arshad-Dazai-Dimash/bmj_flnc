@@ -1,7 +1,5 @@
 {
   "name": "barnamaj-monorepo",
   "private": true,
-  "scripts": {
-    "vercel-build": "npm --prefix frontend ci && npm --prefix frontend run build && node -e \"const fs=require('fs');const src='frontend/.next';if(!fs.existsSync(src)){throw new Error('frontend/.next not found after build')}fs.rmSync('.next',{recursive:true,force:true});fs.cpSync(src,'.next',{recursive:true});console.log('Copied frontend/.next -> .next')\""
-  }
+  "comment": "Vercel use vercel.json (installCommand/buildCommand/outputDirectory -> frontend)"
 }
