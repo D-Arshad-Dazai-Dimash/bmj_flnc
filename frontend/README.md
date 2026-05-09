@@ -68,3 +68,10 @@ src/
 - В production фронтенд и backend находятся на разных доменах.
 - `access_token` / `refresh_token` выставляются backend-доменом и недоступны в Next middleware на frontend-домене.
 - Поэтому проверка сессии выполняется на клиенте через `GET /api/auth/me` в `AuthContext`, а не через middleware cookie-check.
+
+## Автодеплой Frontend (Vercel)
+
+- Production Branch в Vercel: `main`.
+- Auto Deploy on Push: `enabled`.
+- Для корректной интеграции с API задайте в Vercel Environment Variables:
+    - `NEXT_PUBLIC_API_URL=https://barnamaj-api.fly.dev`

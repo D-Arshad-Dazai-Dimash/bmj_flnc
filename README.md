@@ -298,9 +298,18 @@ Escrow с абстракцией шлюза и HMAC-верификацией.
 
 ---
 
+## CI/CD (GitHub Actions + Fly + Vercel)
+
+- Backend автодеплоится на Fly при push в `main` (если изменены файлы в `backend/Barnamaj.API/**`).
+- Workflow: `.github/workflows/deploy-backend-fly.yml`.
+- Для работы workflow добавьте GitHub Secret: `FLY_API_TOKEN`.
+- Frontend обновляется через Vercel Auto Deploy из ветки `main` (на стороне Vercel-проекта).
+
+---
+
 ## Следующие шаги
 
 - [ ] Добавить Redis для распределённого кэша (заменить `AddMemoryCache`)
-- [ ] Настроить CI/CD (GitHub Actions / GitLab CI)
+- [x] Настроить CI/CD (GitHub Actions / Fly для backend, Vercel Auto Deploy для frontend)
 - [ ] Добавить Nginx как reverse proxy перед API
 - [ ] Настроить мониторинг (Prometheus + Grafana)
