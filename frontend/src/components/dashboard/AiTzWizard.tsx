@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Sparkles, CheckCircle2, RefreshCw, Save, RotateCcw } from 'lucide-react'
+import { X, Send, Sparkles, CheckCircle2, RefreshCw, Save } from 'lucide-react'
 import type { OrderType } from '@/lib/database.types'
-import { useTzDraft } from '@/hooks/useTzDraft'
+import { useTzDraft, type TzMessage } from '@/hooks/useTzDraft'
 
 interface TzResult {
   ready: boolean
@@ -14,14 +14,15 @@ interface TzResult {
   order_type: OrderType
 }
 
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-}
+type Message = TzMessage
 
 interface Props {
-  onApply: (result: TzResult) => void
-  onClose: () => void
+  onApply:          (result: TzResult) => void
+  onClose:          () => void
+  /** Опциональное восстановление конкретного черновика (id из panel). */
+  initialDraftId?:  string | null
+  initialMessages?: Message[]
+  initialTitle?:    string
 }
 
 const STARTER = 'Привет! Я помогу вам составить техническое задание. Расскажите — что вы хотите создать? Опишите идею своими словами, без технических деталей.'
@@ -36,38 +37,35 @@ function extractJson(text: string): TzResult | null {
   return null
 }
 
-export default function AiTzWizard({ onApply, onClose }: Props) {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: STARTER },
-  ])
-  const [input, setInput]     = useState('')
-  const [loading, setLoading] = useState(false)
-  const [result, setResult]   = useState<TzResult | null>(null)
-  const [error, setError]     = useState<string | null>(null)
-  const [title, setTitle]     = useState('')
-  const [showRestore, setShowRestore] = useState(false)
+export default function AiTzWizard({
+  onApply,
+  onClose,
+  initialDraftId   = null,
+  initialMessages,
+  initialTitle     = '',
+}: Props) {
+  const [messages, setMessages] = useState<Message[]>(
+    initialMessages && initialMessages.length > 0
+      ? initialMessages
+      : [{ role: 'assistant', content: STARTER }],
+  )
+  const [input, setInput]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [result, setResult]     = useState<TzResult | null>(null)
+  const [error, setError]       = useState<string | null>(null)
+  const [title, setTitle]       = useState(initialTitle)
   const [savedNotice, setSavedNotice] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const bottomRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const { savedDraft, hasDraft, saveDraft, clearDraft } = useTzDraft(title, messages)
+  const { saveDraft, clearDraft } = useTzDraft(initialDraftId, title, messages)
 
-  // Show restore dialog if there's an existing draft
+  // Заголовок берём из первой реплики юзера, если ещё не задан явно
   useEffect(() => {
-    if (hasDraft) setShowRestore(true)
-  }, [hasDraft])
-
-  function restoreDraft() {
-    if (!savedDraft) return
-    setTitle(savedDraft.title)
-    setMessages(savedDraft.messages)
-    setShowRestore(false)
-  }
-
-  function dismissDraft() {
-    clearDraft()
-    setShowRestore(false)
-  }
+    if (title) return
+    const firstUser = messages.find(m => m.role === 'user')
+    if (firstUser) setTitle(firstUser.content.slice(0, 60))
+  }, [messages, title])
 
   function handleSave() {
     saveDraft()
@@ -151,37 +149,6 @@ export default function AiTzWizard({ onApply, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      {/* Restore draft modal */}
-      <AnimatePresence>
-        {showRestore && savedDraft && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute z-10 bg-bg-card border border-border rounded-xl p-5 w-80 shadow-xl"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <RotateCcw className="w-4 h-4 text-accent" />
-              <p className="font-semibold text-text-base text-sm">Восстановить черновик?</p>
-            </div>
-            <p className="text-xs text-text-muted mb-1">
-              Найден незавершённый черновик ТЗ
-              {savedDraft.title && <span className="font-medium text-text-base"> «{savedDraft.title}»</span>}
-            </p>
-            <p className="text-xs text-text-faint mb-4">
-              Сохранён {new Date(savedDraft.savedAt).toLocaleString('ru-KZ')}
-            </p>
-            <div className="flex gap-2">
-              <button onClick={dismissDraft} className="flex-1 py-2 rounded-lg border border-border text-xs text-text-muted hover:text-text-base hover:bg-bg-hover transition-colors">
-                Начать заново
-              </button>
-              <button onClick={restoreDraft} className="flex-1 py-2 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent/90 transition-colors">
-                Восстановить
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 16 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}

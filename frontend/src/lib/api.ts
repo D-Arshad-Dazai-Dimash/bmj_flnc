@@ -82,6 +82,31 @@ export interface ProfileSummaryDto {
   isVerified: boolean
   memberCount: number
   createdAt: string
+  coverPresetId?: number
+  status?: string | null
+  pinnedProjectIds?: string[] | null
+  avgRating?: number | null
+  ratingsCount?: number
+}
+
+export interface ProfileProjectDto {
+  id: string
+  title: string
+  description: string | null
+  budget: number | null
+  status: string
+  createdAt: string
+  isClient: boolean
+  isExecutor: boolean
+  isPinned: boolean
+}
+
+export interface UpdateProfileSocialRequest {
+  name?:          string
+  bio?:           string
+  status?:        string
+  logoUrl?:       string
+  coverPresetId?: number
 }
 
 export interface CreateProfileRequest {
@@ -293,6 +318,21 @@ export const api = {
   profiles: {
     /** Публичная карточка профиля по Id. */
     get: (id: string) => request<ProfileSummaryDto>(`/api/profiles/${id}`),
+
+    /** Проекты-«postы» для ленты профиля. */
+    projects: (id: string, page = 1, pageSize = 12) =>
+      request<ProfileProjectDto[]>(`/api/profiles/${id}/projects?page=${page}&pageSize=${pageSize}`),
+
+    /** Обновить социальные поля профиля (владелец). */
+    updateSocial: (id: string, dto: UpdateProfileSocialRequest) =>
+      request<ProfileSummaryDto>(`/api/profiles/${id}/social`, {
+        method: 'PATCH',
+        body:   JSON.stringify(dto),
+      }),
+
+    /** Тогглнуть закрепление проекта (max 6). */
+    togglePin: (id: string, projectId: string) =>
+      request<string[]>(`/api/profiles/${id}/pin/${projectId}`, { method: 'POST' }),
     /** Мои кланы и компании (активные + pending приглашения) */
     myTeams: () =>
       request<MyTeamDto[]>('/api/profiles/my-teams'),

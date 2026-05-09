@@ -2,9 +2,9 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Rocket, Users, Search, ShieldCheck, Lightbulb,
-  ArrowLeft, CheckCircle2, Sparkles,
+  ArrowLeft, CheckCircle2, Sparkles, FileText,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
@@ -12,8 +12,10 @@ import { api } from '@/lib/api'
 import type { OrderType } from '@/lib/database.types'
 import { calculateCommission, tengeToTiyn, tiynToTenge, formatTenge } from '@/lib/pricing'
 import dynamic from 'next/dynamic'
+import { listDrafts, type TzDraft, type TzMessage } from '@/hooks/useTzDraft'
 
-const AiTzWizard = dynamic(() => import('@/components/dashboard/AiTzWizard'), { ssr: false })
+const AiTzWizard   = dynamic(() => import('@/components/dashboard/AiTzWizard'),   { ssr: false })
+const DraftsPanel  = dynamic(() => import('@/components/dashboard/DraftsPanel'),  { ssr: false })
 
 // ── Service catalog ─────────────────────────────────────────────────────────
 const SERVICE_TYPES = [
@@ -255,6 +257,12 @@ export default function CreateProjectPage() {
   const [success, setSuccess] = useState(false)
   const [errMsg,  setErrMsg]  = useState<string | null>(null)
   const [showAi,  setShowAi]  = useState(false)
+  const [showDrafts, setShowDrafts] = useState(false)
+  const [draftsCount, setDraftsCount] = useState(0)
+  const [aiInit, setAiInit] = useState<{ id: string | null; messages?: TzMessage[]; title?: string }>({ id: null })
+
+  // Обновляем счётчик черновиков при маунте и после закрытия панелей
+  useEffect(() => { setDraftsCount(listDrafts().length) }, [showAi, showDrafts])
 
   const handleBase = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setBase(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -331,8 +339,18 @@ export default function CreateProjectPage() {
     })
     setExtras({})
     setSelectedType(result.order_type)
-    setShowAi(false)
+    setShowAi(false); setAiInit({ id: null })
   }
+
+  function openWizardForDraft(d: TzDraft) {
+    setAiInit({ id: d.id, messages: d.messages, title: d.title })
+    setShowDrafts(false)
+    setShowAi(true)
+  }
+
+  function openWizardFresh() {
+    setAiInit({ id: null })
+    setShowAi(true)  }
 
   // ── Catalog ────────────────────────────────────────────────────────────────
   if (!selectedType) {
@@ -341,9 +359,17 @@ export default function CreateProjectPage() {
       {showAi && (
         <AiTzWizard
           onApply={applyAiResult}
-          onClose={() => setShowAi(false)}
+          onClose={() => { setShowAi(false); setAiInit({ id: null }) }}
+          initialDraftId={aiInit.id}
+          initialMessages={aiInit.messages}
+          initialTitle={aiInit.title}
         />
       )}
+      <DraftsPanel
+        open={showDrafts}
+        onClose={() => setShowDrafts(false)}
+        onPick={openWizardForDraft}
+      />
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} className="space-y-8 max-w-3xl">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -351,13 +377,27 @@ export default function CreateProjectPage() {
             <h1 className="text-[30px] font-semibold leading-[1.02] tracking-h1 text-text-base">Разместить заказ</h1>
             <p className="mt-2 text-[15px] text-text-secondary">Выберите тип услуги, чтобы разместить заказ</p>
           </div>
-          <button
-            onClick={() => setShowAi(true)}
-            className="flex items-center gap-2 rounded-[10px] border border-[rgba(201,143,177,0.24)] bg-[linear-gradient(135deg,rgba(201,143,177,0.10),rgba(122,88,172,0.12))] px-4 py-2.5 text-sm font-[510] tracking-caption text-[#f0d3e0] transition-all duration-200 hover:brightness-110"
-          >
-            <Sparkles className="w-4 h-4" />
-            Создать ТЗ с ИИ
-          </button>
+          <div className="flex items-center gap-2">
+            {draftsCount > 0 && (
+              <button
+                onClick={() => setShowDrafts(true)}
+                className="flex items-center gap-2 rounded-[10px] border border-border bg-bg-card px-4 py-2.5 text-sm font-[510] tracking-caption text-text-base transition-all duration-200 hover:bg-bg-elevated hover:border-accent/40"
+              >
+                <FileText className="w-4 h-4 text-accent-light" />
+                Черновики
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-semibold">
+                  {draftsCount}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={openWizardFresh}
+              className="flex items-center gap-2 rounded-[10px] border border-[rgba(201,143,177,0.24)] bg-[linear-gradient(135deg,rgba(201,143,177,0.10),rgba(122,88,172,0.12))] px-4 py-2.5 text-sm font-[510] tracking-caption text-[#f0d3e0] transition-all duration-200 hover:brightness-110"
+            >
+              <Sparkles className="w-4 h-4" />
+              Создать ТЗ с ИИ
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
