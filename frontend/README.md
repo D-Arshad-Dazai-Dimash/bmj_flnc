@@ -82,3 +82,8 @@ src/
 - Добавьте в GitHub Secrets:
     - `VERCEL_DEPLOY_HOOK_URL` (Deploy Hook URL из Vercel проекта)
 - Workflow запускается на push в `main` при изменениях в `frontend/**` и вызывает Vercel deploy принудительно.
+
+### Фолбэк сборки при неверном Root Directory
+
+- В корне репозитория добавлен `package.json` со скриптом `vercel-build`.
+- Скрипт выполняет `npm --prefix frontend ci && npm --prefix frontend run build`, чтобы сборка проходила через `frontend/`.

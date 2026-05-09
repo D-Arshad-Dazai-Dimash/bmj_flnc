@@ -307,6 +307,7 @@ Escrow с абстракцией шлюза и HMAC-верификацией.
 - Дополнительно настроен принудительный запуск Vercel Deploy Hook через GitHub Actions при изменениях во `frontend/**`.
 - Workflow: `.github/workflows/deploy-frontend-vercel.yml`.
 - Для работы frontend workflow добавьте GitHub Secret: `VERCEL_DEPLOY_HOOK_URL`.
+- Добавлен корневой `package.json` с `vercel-build`, который выполняет сборку из `frontend/` даже если в Vercel временно неверно выставлен Root Directory.
 
 ---
 
