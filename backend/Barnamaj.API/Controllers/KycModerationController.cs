@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Barnamaj.API.DTOs.Kyc;
 using Barnamaj.API.Entities;
+using Barnamaj.API.Filters;
 using Barnamaj.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,8 @@ namespace Barnamaj.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/kyc/moderation")]
-[Authorize(Roles = "Moderator,Admin")]
+[Authorize]
+[RequireRole(UserRole.Moderator)]
 [Produces("application/json")]
 public sealed class KycModerationController : ControllerBase
 {

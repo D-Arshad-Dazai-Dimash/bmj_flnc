@@ -135,6 +135,20 @@ try
                     QueueLimit = 0
                 }));
 
+        // Лимит для KYC document upload: 3 загрузки в 10 минут на пользователя
+        options.AddPolicy("kyc-upload", ctx =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ctx.User.FindFirst("sub")?.Value
+                              ?? ctx.Connection.RemoteIpAddress?.ToString()
+                              ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 3,
+                    Window = TimeSpan.FromMinutes(10),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0
+                }));
+
         options.OnRejected = async (context, token) =>
         {
             context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;

@@ -23,17 +23,25 @@ const SYSTEM_PROMPT = `Ты ИИ-менеджер по разработке ПО
 
 export async function POST(req: NextRequest) {
   try {
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
+      return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 })
     }
 
     const { message, history, userId } = await req.json()
-    if (!message?.trim()) {
+    if (!message?.trim() || typeof message !== 'string' || message.length > 4000) {
       return NextResponse.json({ error: 'message required' }, { status: 400 })
     }
-    if (!userId) {
+    if (!userId || typeof userId !== 'string' || userId.length > 128) {
       return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    }
+    if (history && (!Array.isArray(history) || history.length > 40)) {
+      return NextResponse.json({ error: 'history is invalid' }, { status: 400 })
     }
 
     // Check feature flag

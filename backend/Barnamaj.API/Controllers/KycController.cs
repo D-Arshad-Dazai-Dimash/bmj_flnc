@@ -4,6 +4,7 @@ using Barnamaj.API.Entities;
 using Barnamaj.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Barnamaj.API.Controllers;
 
@@ -82,6 +83,7 @@ public sealed class KycController : ControllerBase
     // ── 3. Документ ───────────────────────────────────────────────────
 
     [HttpPost("document")]
+    [EnableRateLimiting("kyc-upload")]
     [RequestSizeLimit(40 * 1024 * 1024)] // 3 файла × ~10 МБ
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

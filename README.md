@@ -2,6 +2,17 @@
 
 Backend на **ASP.NET Core 8** + **PostgreSQL** + **Docker**.
 
+## Security Hardening (май 2026)
+
+- KYC moderation доступ переведён на иерархию ролей через `RequireRole(UserRole.Moderator)`
+    вместо legacy-строки ролей.
+- `appsettings.json` (production):
+    - убран `Include Error Detail=true` из `ConnectionStrings:DefaultConnection`
+    - `AllowedHosts` больше не wildcard (`*`), задан явный список хостов.
+- Добавлены regression-тесты в `backend/Barnamaj.Tests`:
+    - `Controllers/KycModerationAuthorizationTests.cs`
+    - `Config/ProductionSecurityConfigTests.cs`
+
 ### Продакшн заметка (Vercel + Fly)
 
 - При раздельном домене frontend/backend auth cookies (`access_token`, `refresh_token`) принадлежат backend-домену.
