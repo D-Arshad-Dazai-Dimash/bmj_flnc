@@ -32,33 +32,32 @@ public sealed class AuthController : ControllerBase
         _config      = config;
     }
 
-    // ── Вспомогательный метод: установить httpOnly cookies ──────────────
-    private void SetAuthCookies(AuthResponseDto response)
+    // ── Вспомогательный метод: получить CookieOptions с конфигом ────────
+    private CookieOptions GetAuthCookieOptions(string path)
     {
-        // В dev (appsettings.Development.json: "Cookie": { "Secure": false }) — HTTP-совместимо
         var secureCookie = _config.GetValue("Cookie:Secure", true);
         var configuredSameSite = _config.GetValue<string>("Cookie:SameSite");
         var sameSite = ParseSameSite(configuredSameSite, secureCookie ? SameSiteMode.None : SameSiteMode.Lax);
         if (!secureCookie && sameSite == SameSiteMode.None)
             sameSite = SameSiteMode.Lax;
 
-        var accessOptions = new CookieOptions
+        return new CookieOptions
         {
-            HttpOnly  = true,
-            Secure    = secureCookie,
-            SameSite  = sameSite,
-            Expires   = response.ExpiresAt,
-            Path      = "/"
+            HttpOnly = true,
+            Secure   = secureCookie,
+            SameSite = sameSite,
+            Path     = path
         };
+    }
 
-        var refreshOptions = new CookieOptions
-        {
-            HttpOnly  = true,
-            Secure    = secureCookie,
-            SameSite  = sameSite,
-            Expires   = response.RefreshExpiresAt,
-            Path      = "/api/auth/refresh"  // только для эндпоинта обновления
-        };
+    // ── Вспомогательный метод: установить httpOnly cookies ──────────────
+    private void SetAuthCookies(AuthResponseDto response)
+    {
+        var accessOptions = GetAuthCookieOptions("/");
+        accessOptions.Expires = response.ExpiresAt;
+
+        var refreshOptions = GetAuthCookieOptions("/api/auth/refresh");
+        refreshOptions.Expires = response.RefreshExpiresAt;
 
         Response.Cookies.Append(AccessTokenCookie,  response.AccessToken,  accessOptions);
         Response.Cookies.Append(RefreshTokenCookie, response.RefreshToken, refreshOptions);
@@ -66,8 +65,9 @@ public sealed class AuthController : ControllerBase
 
     private void ClearAuthCookies()
     {
-        Response.Cookies.Delete(AccessTokenCookie,  new CookieOptions { Path = "/" });
-        Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions { Path = "/api/auth/refresh" });
+        // Удаляем cookies с теми же свойствами что и при создании (важно для правильной очистки)
+        Response.Cookies.Delete(AccessTokenCookie,  GetAuthCookieOptions("/"));
+        Response.Cookies.Delete(RefreshTokenCookie, GetAuthCookieOptions("/api/auth/refresh"));
     }
 
     private static SameSiteMode ParseSameSite(string? value, SameSiteMode fallback)
