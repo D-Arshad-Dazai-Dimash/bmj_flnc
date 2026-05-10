@@ -26,7 +26,8 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy API
-        run: flyctl deploy --remote-only --config backend/Barnamaj.API/fly.toml
+        working-directory: backend/Barnamaj.API
+        run: flyctl deploy --remote-only --config fly.toml
 
       - name: Verify health
         run: curl --fail --retry 10 --retry-delay 5 --retry-connrefused https://barnamaj-api.fly.dev/api/health/live
