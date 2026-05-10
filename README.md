@@ -30,6 +30,7 @@ Backend на **ASP.NET Core 8** + **PostgreSQL** + **Docker**.
 
 - **Post-Logout Redirect**: `logout()` теперь перенаправляет на `/[lang]/auth?mode=login` вместо оставления на текущей странице. Исправлены `Sidebar.tsx` и `Navbar.tsx` handlers.
 - **Admin Dashboard Access Guard**: Админы (`Moderator`, `SeniorAdmin`, `HeadAdmin`) теперь надёжно перенаправляются на `/admin` при попытке доступа к `/dashboard`. Улучшена логика в `dashboard/layout.tsx` — убрана race condition путём исключения `isAtLeast` из `useEffect` зависимостей (проверка `user.role` напрямую).
+- **Cookie Deletion on Logout** (backend fix): `ClearAuthCookies()` теперь использует те же `HttpOnly`, `Secure`, `SameSite` свойства что и `SetAuthCookies()`. Исправлена критическая ошибка где cookies не удалялись, позволяя пользователям оставаться залогиненными после logout.
 
 ---
 
