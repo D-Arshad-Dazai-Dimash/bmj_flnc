@@ -18,16 +18,19 @@ public sealed class ProjectsController : ControllerBase
 {
     private readonly IProjectService             _projectService;
     private readonly IContentFilterService       _contentFilter;
+    private readonly IApplicationService         _applicationService;
     private readonly ILogger<ProjectsController> _logger;
 
     public ProjectsController(
         IProjectService projectService,
         IContentFilterService contentFilter,
+        IApplicationService applicationService,
         ILogger<ProjectsController> logger)
     {
-        _projectService = projectService;
-        _contentFilter  = contentFilter;
-        _logger         = logger;
+        _projectService     = projectService;
+        _contentFilter      = contentFilter;
+        _applicationService = applicationService;
+        _logger             = logger;
     }
 
     // ── Утилита: UserId из JWT ────────────────────────────────
@@ -228,6 +231,66 @@ public sealed class ProjectsController : ControllerBase
             return StatusCode(StatusCodes.Status201Created, result);
         }
         catch (ProjectException ex)
+        {
+            return StatusCode(ex.StatusCode, new { error = ex.Message });
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // GET /api/projects/{id}/applications
+    // ════════════════════════════════════════════════════════════
+
+    /// <summary>Список откликов на проект (только владелец).</summary>
+    [HttpGet("{id:guid}/applications")]
+    [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<ApplicationListItemDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListApplications(Guid id, CancellationToken ct)
+    {
+        try
+        {
+            var list = await _applicationService.ListForProjectAsync(id, CurrentUserId, ct);
+            return Ok(list);
+        }
+        catch (ApplicationServiceException ex)
+        {
+            return StatusCode(ex.StatusCode, new { error = ex.Message });
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // POST /api/projects/applications/{applicationId}/accept
+    // POST /api/projects/applications/{applicationId}/reject
+    // ════════════════════════════════════════════════════════════
+
+    /// <summary>Принять отклик (только владелец проекта).</summary>
+    [HttpPost("applications/{applicationId:guid}/accept")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApplicationListItemDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> AcceptApplication(Guid applicationId, CancellationToken ct)
+    {
+        try
+        {
+            var dto = await _applicationService.AcceptAsync(applicationId, CurrentUserId, ct);
+            return Ok(dto);
+        }
+        catch (ApplicationServiceException ex)
+        {
+            return StatusCode(ex.StatusCode, new { error = ex.Message });
+        }
+    }
+
+    /// <summary>Отклонить отклик (только владелец проекта).</summary>
+    [HttpPost("applications/{applicationId:guid}/reject")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApplicationListItemDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RejectApplication(Guid applicationId, CancellationToken ct)
+    {
+        try
+        {
+            var dto = await _applicationService.RejectAsync(applicationId, CurrentUserId, ct);
+            return Ok(dto);
+        }
+        catch (ApplicationServiceException ex)
         {
             return StatusCode(ex.StatusCode, new { error = ex.Message });
         }

@@ -55,6 +55,15 @@ public class AppDbContext : DbContext
     // ── Auth ─────────────────────────────────────────────────
     public DbSet<RefreshToken>       RefreshTokens       => Set<RefreshToken>();
 
+    // ── Chat ─────────────────────────────────────────────────
+    public DbSet<ChatThread>         ChatThreads         => Set<ChatThread>();
+    public DbSet<ChatMessage>        ChatMessages        => Set<ChatMessage>();
+
+    // ── Contracts ────────────────────────────────────────────
+    public DbSet<Contract>           Contracts           => Set<Contract>();
+    public DbSet<ContractMilestone>  ContractMilestones  => Set<ContractMilestone>();
+    public DbSet<ContractEvent>      ContractEvents      => Set<ContractEvent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

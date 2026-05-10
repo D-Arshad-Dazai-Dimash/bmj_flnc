@@ -18,7 +18,6 @@ import LocaleLink from '@/components/ui/LocaleLink'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getLikedIds, toggleLike } from '@/lib/socialStore'
 import { getAppliedIds, markApplied } from '@/lib/appliedStore'
-import { ensureThread, sendMessage } from '@/lib/chatStore'
 
 type SortValue = 'newest' | 'budget_asc' | 'budget_desc' | 'deadline_asc'
 type ClientType = 'Individual' | 'Company' | 'Clan' | ''
@@ -227,21 +226,7 @@ export default function OrdersPage() {
         })
         markApplied(user.id, project.id)
         setAppliedSet((prev) => new Set(prev).add(project.id))
-        // Уведомляем заказчика в чате
-        try {
-          ensureThread(
-            user.profileId,
-            user.profileName ?? 'Я',
-            project.clientProfileId,
-            project.clientProfileName,
-          )
-          sendMessage({
-            threadId: [user.profileId, project.clientProfileId].sort().join('::'),
-            fromProfileId: user.profileId,
-            text: `Здравствуйте! Откликнулся на ваш заказ «${project.title}».`,
-            projectId: project.id,
-          })
-        } catch { /* чат — best-effort */ }
+        // Бэкенд автоматически создаёт чат с заказчиком и шлёт системное сообщение.
       } catch (e) {
         // если сервер вернул 409 (уже подавал) — тоже отмечаем
         if (e instanceof ApiError && e.statusCode === 409) {

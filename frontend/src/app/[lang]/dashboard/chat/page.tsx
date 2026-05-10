@@ -15,19 +15,21 @@ export default function ChatListPage() {
 
   useEffect(() => {
     if (!user?.profileId) return
-    const tick = () => setThreads(listThreadsFor(user.profileId))
+    let cancelled = false
+    const tick = async () => {
+      const list = await listThreadsFor(user.profileId)
+      if (!cancelled) setThreads(list)
+    }
     tick()
-    const t = setInterval(tick, 3000)
-    const onStorage = () => tick()
-    window.addEventListener('storage', onStorage)
-    return () => { clearInterval(t); window.removeEventListener('storage', onStorage) }
+    const t = setInterval(tick, 5000)
+    return () => { cancelled = true; clearInterval(t) }
   }, [user?.profileId])
 
   const filtered = useMemo(() => {
     if (!q.trim()) return threads
     const needle = q.trim().toLowerCase()
     return threads.filter(t =>
-      Object.values(t.participantNames).some(n => n.toLowerCase().includes(needle)) ||
+      t.otherProfileName.toLowerCase().includes(needle) ||
       (t.lastMessage ?? '').toLowerCase().includes(needle),
     )
   }, [q, threads])
@@ -43,7 +45,7 @@ export default function ChatListPage() {
         <div>
           <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-text-base">Чат</h1>
           <p className="mt-1 text-sm text-text-muted">
-            Общение с заказчиками и исполнителями. Сообщения сохраняются локально на этом устройстве.
+            Общение с заказчиками и исполнителями. Сообщения синхронизируются между всеми вашими устройствами.
           </p>
         </div>
       </header>
@@ -71,10 +73,8 @@ export default function ChatListPage() {
           ) : (
             <ul className="space-y-1.5">
               {filtered.map(t => {
-                const otherId = t.participants.find(p => p !== user?.profileId) ?? t.participants[0]
-                const otherName = t.participantNames[otherId] ?? 'Собеседник'
-                const lastRead = user?.profileId ? t.readAt?.[user.profileId] : null
-                const isUnread = !!t.lastAt && (!lastRead || t.lastAt > lastRead)
+                const otherName = t.otherProfileName
+                const isUnread = t.hasUnread
                 return (
                   <li key={t.id}>
                     <LocaleLink
@@ -83,7 +83,7 @@ export default function ChatListPage() {
                     >
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border bg-bg-elevated">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={DEFAULT_AVATAR_URL} alt="" className="h-full w-full object-cover" />
+                        <img src={t.otherProfileLogoUrl ?? DEFAULT_AVATAR_URL} alt="" className="h-full w-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">

@@ -652,7 +652,167 @@ export const api = {
     restore: (reviewId: string) =>
       request<{ ok: true }>(`/api/admin/reviews/${reviewId}/restore`, { method: 'POST' }),
   },
+
+  // ── Chat ────────────────────────────────────────────────────────────────────
+  chat: {
+    listThreads: () =>
+      request<ChatThreadDto[]>('/api/chat/threads'),
+    start: (data: { otherProfileId: string; projectId?: string | null }) =>
+      request<ChatThreadDto>('/api/chat/threads', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getMessages: (threadId: string, afterUtc?: string) => {
+      const qs = afterUtc ? `?afterUtc=${encodeURIComponent(afterUtc)}` : ''
+      return request<ChatMessageDto[]>(`/api/chat/threads/${threadId}/messages${qs}`)
+    },
+    sendMessage: (threadId: string, body: string, projectId?: string | null) =>
+      request<ChatMessageDto>(`/api/chat/threads/${threadId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ body, projectId: projectId ?? null }),
+      }),
+    markRead: (threadId: string) =>
+      request<void>(`/api/chat/threads/${threadId}/read`, { method: 'POST' }),
+    unreadCount: () =>
+      request<{ count: number }>('/api/chat/unread-count'),
+  },
+
+  // ── Project applications (для заказчика) ────────────────────────────────────
+  applications: {
+    listForProject: (projectId: string) =>
+      request<ApplicationListItemDto[]>(`/api/projects/${projectId}/applications`),
+    accept: (applicationId: string) =>
+      request<ApplicationListItemDto>(`/api/projects/applications/${applicationId}/accept`, {
+        method: 'POST',
+      }),
+    reject: (applicationId: string) =>
+      request<ApplicationListItemDto>(`/api/projects/applications/${applicationId}/reject`, {
+        method: 'POST',
+      }),
+  },
+
+  // ── Contracts ───────────────────────────────────────────────────────────────
+  contracts: {
+    listMine: () =>
+      request<ContractSummaryDto[]>('/api/contracts'),
+    get: (id: string) =>
+      request<ContractDetailDto>(`/api/contracts/${id}`),
+    create: (data: CreateContractRequest) =>
+      request<ContractDetailDto>('/api/contracts', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    transition: (id: string, status: string, reason?: string) =>
+      request<ContractDetailDto>(`/api/contracts/${id}/transition`, {
+        method: 'POST',
+        body: JSON.stringify({ status, reason }),
+      }),
+    submitMilestone: (id: string, milestoneId: string, notes?: string) =>
+      request<ContractDetailDto>(`/api/contracts/${id}/milestones/${milestoneId}/submit`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      }),
+    approveMilestone: (id: string, milestoneId: string, notes?: string) =>
+      request<ContractDetailDto>(`/api/contracts/${id}/milestones/${milestoneId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      }),
+    rejectMilestone: (id: string, milestoneId: string, notes?: string) =>
+      request<ContractDetailDto>(`/api/contracts/${id}/milestones/${milestoneId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      }),
+  },
 }
+
+// ─── Chat / Applications / Contracts types ────────────────────────────────────
+
+export interface ChatThreadDto {
+  id: string
+  otherProfileId: string
+  otherProfileName: string
+  otherProfileLogoUrl: string | null
+  projectId: string | null
+  projectTitle: string | null
+  lastMessageBody: string | null
+  updatedAt: string
+  hasUnread: boolean
+}
+
+export interface ChatMessageDto {
+  id: string
+  threadId: string
+  senderProfileId: string
+  senderProfileName: string
+  body: string
+  isSystem: boolean
+  projectId: string | null
+  createdAt: string
+}
+
+export interface ApplicationListItemDto {
+  id: string
+  projectId: string
+  applicantProfileId: string
+  applicantProfileName: string
+  applicantProfileLogoUrl: string | null
+  coverLetter: string | null
+  proposedBudget: number | null
+  status: 'Pending' | 'Accepted' | 'Rejected' | 'Withdrawn'
+  createdAt: string
+  chatThreadId: string | null
+}
+
+export interface MilestoneDto {
+  id: string
+  orderIndex: number
+  title: string
+  amount: number
+  dueDate: string | null
+  status: 'Pending' | 'Submitted' | 'Approved' | 'Rejected'
+  notes: string | null
+  updatedAt: string
+}
+
+export interface ContractEventDto {
+  id: string
+  actorProfileId: string
+  actorProfileName: string
+  action: string
+  details: string | null
+  createdAt: string
+}
+
+export type ContractStatusStr = 'Draft' | 'Active' | 'InReview' | 'Released' | 'Disputed' | 'Cancelled'
+
+export interface ContractSummaryDto {
+  id: string
+  projectId: string
+  projectTitle: string
+  clientProfileId: string
+  clientProfileName: string
+  executorProfileId: string
+  executorProfileName: string
+  totalAmount: number
+  status: ContractStatusStr
+  milestonesTotal: number
+  milestonesApproved: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ContractDetailDto extends ContractSummaryDto {
+  milestones: MilestoneDto[]
+  events: ContractEventDto[]
+}
+
+export interface CreateContractRequest {
+  projectId: string
+  executorProfileId: string
+  totalAmount: number
+  milestones: Array<{ title: string; amount: number; dueDate?: string | null }>
+}
+
 
 // ─── Reviews types ────────────────────────────────────────────────────────────
 export type ReviewDirectionStr = 'ClientToExecutor' | 'ExecutorToClient'

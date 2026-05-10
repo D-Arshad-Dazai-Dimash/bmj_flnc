@@ -1,19 +1,27 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import { Shield, Inbox, Wallet, ArrowRight } from 'lucide-react'
 
 import { useAuth } from '@/context/AuthContext'
 import LocaleLink from '@/components/ui/LocaleLink'
-import { listContractsFor, STATUS_LABELS, type Contract, type ContractStatus } from '@/lib/contractsStore'
+import { api, type ContractSummaryDto, type ContractStatusStr } from '@/lib/api'
 import { formatTenge } from '@/lib/pricing'
 
 type FilterRole = 'all' | 'as-client' | 'as-executor'
 
-const STATUS_TONE: Record<ContractStatus, string> = {
+const STATUS_LABELS: Record<ContractStatusStr, string> = {
+  Draft:     'Черновик',
+  Active:    'Активен',
+  InReview:  'На проверке',
+  Released:  'Завершён',
+  Disputed:  'Спор',
+  Cancelled: 'Отменён',
+}
+
+const STATUS_TONE: Record<ContractStatusStr, string> = {
   Draft:     'border-text-faint/30 bg-bg-elevated text-text-secondary',
   Active:    'border-emerald-400/30 bg-emerald-400/10 text-emerald-300',
-  Funded:    'border-cyan-400/30 bg-cyan-400/10 text-cyan-300',
   InReview:  'border-amber-400/30 bg-amber-400/10 text-amber-300',
   Released:  'border-violet-400/30 bg-violet-400/10 text-violet-300',
   Disputed:  'border-red-400/30 bg-red-400/10 text-red-300',
@@ -22,23 +30,21 @@ const STATUS_TONE: Record<ContractStatus, string> = {
 
 export default function ContractsPage() {
   const { user } = useAuth()
-  const [contracts, setContracts] = useState<Contract[]>([])
+  const [contracts, setContracts] = useState<ContractSummaryDto[]>([])
   const [filter, setFilter] = useState<FilterRole>('all')
 
-  // подгружаем + слушаем storage (мульти-таб)
   useEffect(() => {
     if (!user?.profileId) return
-    const reload = () => setContracts(listContractsFor(user.profileId))
-    reload()
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key === 'bj.contracts.v1') reload()
+    let cancelled = false
+    const reload = async () => {
+      try {
+        const list = await api.contracts.listMine()
+        if (!cancelled) setContracts(list)
+      } catch { /* noop */ }
     }
-    window.addEventListener('storage', onStorage)
-    const t = setInterval(reload, 4000)
-    return () => {
-      window.removeEventListener('storage', onStorage)
-      clearInterval(t)
-    }
+    void reload()
+    const t = setInterval(reload, 8000)
+    return () => { cancelled = true; clearInterval(t) }
   }, [user?.profileId])
 
   const visible = useMemo(() => {
@@ -50,7 +56,6 @@ export default function ContractsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      {/* шапка */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[rgba(72,152,188,0.18)] bg-[linear-gradient(180deg,rgba(72,152,188,0.16),rgba(73,71,171,0.08))]">
@@ -83,7 +88,6 @@ export default function ContractsPage() {
         </div>
       </div>
 
-      {/* список */}
       {!user?.profileId ? (
         <EmptyCard title="Войдите в аккаунт" hint="Контракты доступны только авторизованным пользователям." />
       ) : visible.length === 0 ? (
@@ -95,9 +99,7 @@ export default function ContractsPage() {
         <div className="space-y-3">
           {visible.map(c => {
             const role: 'client' | 'executor' = c.clientProfileId === user.profileId ? 'client' : 'executor'
-            const otherName = role === 'client' ? c.executorName : c.clientName
-            const approved = c.milestones.filter(m => m.status === 'Approved').length
-            const total = c.milestones.length
+            const otherName = role === 'client' ? c.executorProfileName : c.clientProfileName
             return (
               <LocaleLink
                 key={c.id}
@@ -124,7 +126,7 @@ export default function ContractsPage() {
                         {formatTenge(c.totalAmount)}
                       </span>
                       <span>·</span>
-                      <span>Этапы: {approved}/{total}</span>
+                      <span>Этапы: {c.milestonesApproved}/{c.milestonesTotal}</span>
                       <span>·</span>
                       <span>Обновлён: {new Date(c.updatedAt).toLocaleDateString('ru-RU')}</span>
                     </div>
@@ -151,3 +153,4 @@ function EmptyCard({ title, hint }: { title: string; hint: string }) {
     </div>
   )
 }
+

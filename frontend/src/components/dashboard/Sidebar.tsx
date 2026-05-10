@@ -103,16 +103,18 @@ export default function Sidebar() {
   const roleItems = user?.accountType === 'Developer' ? developerItems : clientItems
   const roleLabel = user?.accountType === 'Developer' ? '👨‍💻 Разработчик' : '💼 Заказчик'
 
-  // Бейдж непрочитанных для "Чат" (поллинг 1раз/5с из localStorage)
+  // Бейдж непрочитанных для "Чат" — поллинг API раз в 10с
   const [unread, setUnread] = useState(0)
   useEffect(() => {
     if (!user?.profileId) return
-    const tick = () => setUnread(unreadCountFor(user.profileId))
+    let cancelled = false
+    const tick = async () => {
+      const n = await unreadCountFor(user.profileId)
+      if (!cancelled) setUnread(n)
+    }
     tick()
-    const t = setInterval(tick, 5000)
-    const onStorage = () => tick()
-    window.addEventListener('storage', onStorage)
-    return () => { clearInterval(t); window.removeEventListener('storage', onStorage) }
+    const t = setInterval(tick, 10000)
+    return () => { cancelled = true; clearInterval(t) }
   }, [user?.profileId])
 
   const commonItemsWithBadge = commonItems.map(it =>

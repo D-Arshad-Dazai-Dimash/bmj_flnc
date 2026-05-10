@@ -82,11 +82,13 @@ public sealed class ProjectService : IProjectService
 {
     private readonly AppDbContext           _db;
     private readonly ILogger<ProjectService> _logger;
+    private readonly IChatService           _chat;
 
-    public ProjectService(AppDbContext db, ILogger<ProjectService> logger)
+    public ProjectService(AppDbContext db, ILogger<ProjectService> logger, IChatService chat)
     {
         _db     = db;
         _logger = logger;
+        _chat   = chat;
     }
 
     // ── CREATE PROJECT ────────────────────────────────────────
@@ -443,6 +445,26 @@ public sealed class ProjectService : IProjectService
         _logger.LogInformation(
             "Application submitted: {ApplicationId} by Profile {ProfileId} on Project {ProjectId}",
             application.Id, dto.ApplicantProfileId, projectId);
+
+        // ── Auto-chat: создаём диалог между заказчиком и исполнителем ──
+        try
+        {
+            var thread = await _chat.EnsureThreadAsync(
+                dto.ApplicantProfileId, project.ClientProfileId, projectId, ct);
+
+            var coverLetter = dto.CoverLetter?.Trim();
+            var sysBody = string.IsNullOrEmpty(coverLetter)
+                ? $"Откликнулся(-ась) на проект «{project.Title}»."
+                : $"Откликнулся(-ась) на проект «{project.Title}».\n\n{coverLetter}";
+
+            await _chat.SendSystemMessageAsync(
+                thread.Id, dto.ApplicantProfileId, sysBody, projectId, ct);
+        }
+        catch (Exception chatEx)
+        {
+            // Чат не должен ломать отправку отклика.
+            _logger.LogWarning(chatEx, "Auto-chat creation failed for application {AppId}", application.Id);
+        }
 
         return new ApplicationResponseDto(
             ApplicationId:       application.Id,

@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useMemo, useRef, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Send, Sparkles } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -8,10 +8,11 @@ import LocaleLink from '@/components/ui/LocaleLink'
 import { BackButton } from '@/components/ui/back-button'
 import {
   getMessages,
-  getThread,
+  listThreadsFor,
   markRead,
   sendMessage,
   type ChatMessage,
+  type ChatThreadMeta,
 } from '@/lib/chatStore'
 import { DEFAULT_AVATAR_URL } from '@/lib/avatar'
 
@@ -25,48 +26,50 @@ export default function ChatThreadPage({
   const { user } = useAuth()
   const meId = user?.profileId ?? null
 
-  const [meta, setMeta] = useState(() => getThread(threadId))
-  const [messages, setMessages] = useState<ChatMessage[]>(() => getMessages(threadId))
+  const [meta, setMeta] = useState<ChatThreadMeta | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [text, setText] = useState('')
+  const [loaded, setLoaded] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // refresh каждые 2 сек (мульти-вкладка)
   useEffect(() => {
-    const tick = () => {
-      setMeta(getThread(threadId))
-      setMessages(getMessages(threadId))
+    let cancelled = false
+    const tick = async () => {
+      const [threads, msgs] = await Promise.all([
+        listThreadsFor(meId),
+        getMessages(threadId),
+      ])
+      if (cancelled) return
+      setMeta(threads.find(t => t.id === threadId) ?? null)
+      setMessages(msgs)
+      setLoaded(true)
     }
     tick()
-    const t = setInterval(tick, 2000)
-    const onStorage = () => tick()
-    window.addEventListener('storage', onStorage)
-    return () => { clearInterval(t); window.removeEventListener('storage', onStorage) }
-  }, [threadId])
+    const t = setInterval(tick, 3000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [threadId, meId])
 
   useEffect(() => {
-    if (meId) markRead(threadId, meId)
-  }, [threadId, meId, messages.length])
+    if (loaded && meta) void markRead(threadId)
+  }, [threadId, loaded, meta, messages.length])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [messages.length])
 
-  const otherId = useMemo(
-    () => meta?.participants.find(p => p !== meId) ?? null,
-    [meta, meId],
-  )
-  const otherName = otherId ? meta?.participantNames[otherId] ?? 'Собеседник' : 'Диалог'
+  const otherId = meta?.otherProfileId ?? null
+  const otherName = meta?.otherProfileName ?? 'Диалог'
 
-  function handleSend() {
+  async function handleSend() {
     const t = text.trim()
-    if (!t || !meId || !meta) return
-    sendMessage({ threadId, fromProfileId: meId, text: t })
+    if (!t || !meta) return
     setText('')
-    setMessages(getMessages(threadId))
-    setMeta(getThread(threadId))
+    await sendMessage({ threadId, text: t, projectId: meta.projectId ?? null })
+    const msgs = await getMessages(threadId)
+    setMessages(msgs)
   }
 
-  if (!meta) {
+  if (loaded && !meta) {
     return (
       <div className="space-y-4">
         <BackButton fallbackHref="/dashboard/chat" />
@@ -84,7 +87,6 @@ export default function ChatThreadPage({
       transition={{ duration: 0.18 }}
       className="flex h-[calc(100vh-7rem)] flex-col gap-3"
     >
-      {/* шапка */}
       <header className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-card px-4 py-3">
         <div className="flex items-center gap-3">
           <LocaleLink
@@ -95,11 +97,13 @@ export default function ChatThreadPage({
           </LocaleLink>
           <div className="h-9 w-9 overflow-hidden rounded-full border border-border bg-bg-elevated">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={DEFAULT_AVATAR_URL} alt="" className="h-full w-full object-cover" />
+            <img src={meta?.otherProfileLogoUrl ?? DEFAULT_AVATAR_URL} alt="" className="h-full w-full object-cover" />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-text-base">{otherName}</p>
-            <p className="text-[11px] text-text-faint">Локальный MVP-чат</p>
+            {meta?.projectTitle && (
+              <p className="truncate text-[11px] text-text-faint">по проекту «{meta.projectTitle}»</p>
+            )}
           </div>
         </div>
         {otherId && (
@@ -112,7 +116,6 @@ export default function ChatThreadPage({
         )}
       </header>
 
-      {/* лента сообщений */}
       <div
         ref={scrollRef}
         className="flex-1 space-y-2 overflow-y-auto rounded-xl border border-border bg-bg-card p-4"
@@ -150,7 +153,6 @@ export default function ChatThreadPage({
         )}
       </div>
 
-      {/* поле ввода */}
       <div className="flex items-end gap-2 rounded-xl border border-border bg-bg-card p-3">
         <textarea
           value={text}
@@ -158,7 +160,7 @@ export default function ChatThreadPage({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
-              handleSend()
+              void handleSend()
             }
           }}
           rows={2}
@@ -166,7 +168,7 @@ export default function ChatThreadPage({
           className="min-h-[44px] flex-1 resize-none rounded-md border border-border bg-bg-base px-3 py-2 text-sm text-text-base placeholder:text-text-faint focus:border-white/30 focus:outline-none"
         />
         <button
-          onClick={handleSend}
+          onClick={() => void handleSend()}
           disabled={!text.trim()}
           className="inline-flex h-10 items-center gap-1.5 rounded-md bg-white px-4 text-sm font-medium text-black hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
         >

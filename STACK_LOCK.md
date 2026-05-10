@@ -97,7 +97,23 @@
 | GET | /api/projects/my | [Authorize] | Мои проекты (клиент) |
 | GET | /api/projects/feed | - | Лента проектов (публичная) |
 | PATCH | /api/projects/{id}/status | [Authorize] | Изменить статус (Cancelled/Completed) |
-| POST | /api/projects/{id}/apply | [Authorize] | Подать заявку на проект |
+| POST | /api/projects/{id}/apply | [Authorize] | Подать заявку на проект (авто-создаёт чат-тред с заказчиком + system message) |
+| GET | /api/projects/{id}/applications | [Authorize] | Список откликов (только владелец проекта) |
+| POST | /api/projects/applications/{id}/accept | [Authorize] | Принять отклик: project → InProgress, executor назначен, прочие Pending → Rejected, system-сообщения всем |
+| POST | /api/projects/applications/{id}/reject | [Authorize] | Отклонить один отклик + system-сообщение |
+| GET | /api/chat/threads | [Authorize] | Список чат-тредов с последним сообщением и unread-флагом |
+| POST | /api/chat/threads | [Authorize] | Создать/найти тред с другим профилем (нормализованная пара) |
+| GET | /api/chat/threads/{id}/messages | [Authorize] | Сообщения треда (?afterUtc= для инкремента) |
+| POST | /api/chat/threads/{id}/messages | [Authorize] | Отправить сообщение (макс 5000 симв) |
+| POST | /api/chat/threads/{id}/read | [Authorize] | Пометить тред прочитанным |
+| GET | /api/chat/unread-count | [Authorize] | Глобальный счётчик непрочитанных тредов |
+| GET | /api/contracts | [Authorize] | Мои контракты (клиент или исполнитель) |
+| GET | /api/contracts/{id} | [Authorize] | Детали контракта с milestones + events (только участник) |
+| POST | /api/contracts | [Authorize] | Создать контракт (только клиент после Accepted-заявки) |
+| POST | /api/contracts/{id}/transition | [Authorize] | Сменить статус: Active↔Disputed, →Cancelled |
+| POST | /api/contracts/{id}/milestones/{mid}/submit | [Authorize] | Сдать этап (executor) |
+| POST | /api/contracts/{id}/milestones/{mid}/approve | [Authorize] | Принять этап (client). Все Approved → Released |
+| POST | /api/contracts/{id}/milestones/{mid}/reject | [Authorize] | Отклонить этап (client) |
 | GET | /api/profiles | - | Поиск профилей |
 | POST | /api/profiles/create | [Authorize] | Создать клан/компанию |
 | POST | /api/profiles/{id}/invite | [Authorize] | Пригласить в команду |

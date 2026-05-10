@@ -20,6 +20,7 @@ import {
   ApiError,
   type ProjectDetailDto,
   type ReviewDto,
+  type ApplicationListItemDto,
 } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { formatTenge } from '@/lib/pricing'
@@ -29,8 +30,6 @@ import { BackButton } from '@/components/ui/back-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ReviewForm } from '@/components/reviews/ReviewForm'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
-import { listThreadsFor, getMessages, type ChatThreadMeta } from '@/lib/chatStore'
-import { createContract } from '@/lib/contractsStore'
 
 // ─────────────────────────────────────────────────────────────────────
 // Workroom — детальная страница проекта для участников.
@@ -74,7 +73,6 @@ export default function ProjectWorkroomPage({
   const [statusBusy, setStatusBusy] = useState<string | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [contractOpen, setContractOpen] = useState<{ executorProfileId: string; executorName: string } | null>(null)
-  const [threads, setThreads] = useState<ChatThreadMeta[]>([])
   const router = useLocaleRouter()
 
   const reload = useCallback(async () => {
@@ -95,22 +93,6 @@ export default function ProjectWorkroomPage({
   }, [id])
 
   useEffect(() => { reload() }, [reload])
-
-  // подтянем чаты заказчика, чтобы найти откликнувшихся по этому проекту
-  useEffect(() => {
-    if (!user?.profileId) return
-    const refresh = () => setThreads(listThreadsFor(user.profileId))
-    refresh()
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key.startsWith('bj.chat.')) refresh()
-    }
-    window.addEventListener('storage', onStorage)
-    const t = setInterval(refresh, 5000)
-    return () => {
-      window.removeEventListener('storage', onStorage)
-      clearInterval(t)
-    }
-  }, [user?.profileId])
 
   const isOwner    = !!(user?.profileId && project?.clientProfileId === user.profileId)
   const isExecutor = !!(user?.profileId && project?.executorProfileId === user.profileId)
@@ -256,15 +238,12 @@ export default function ProjectWorkroomPage({
           {isOwner && (
             <ApplicantsSection
               project={project}
-              threads={threads}
               myProfileId={user!.profileId!}
-              onChat={(otherId) => {
-                const tid = [user!.profileId!, otherId].sort().join('::')
-                router.push(`/dashboard/chat/${encodeURIComponent(tid)}`)
-              }}
+              onChat={(threadId) => router.push(`/dashboard/chat/${encodeURIComponent(threadId)}`)}
               onApprove={(executorProfileId, executorName) =>
                 setContractOpen({ executorProfileId, executorName })
               }
+              onChanged={reload}
             />
           )}
 
@@ -512,40 +491,64 @@ function WorkroomSkeleton() {
 
 function ApplicantsSection({
   project,
-  threads,
   myProfileId,
   onChat,
   onApprove,
+  onChanged,
 }: {
   project: ProjectDetailDto
-  threads: ChatThreadMeta[]
   myProfileId: string
-  onChat: (otherProfileId: string) => void
+  onChat: (threadId: string) => void
   onApprove: (executorProfileId: string, executorName: string) => void
+  onChanged: () => void
 }) {
-  // отбираем тех, кто прислал сообщение по этому проекту
-  const applicants = useMemo(() => {
-    const out: Array<{ profileId: string; name: string; lastAt?: string; lastMessage?: string }> = []
-    for (const t of threads) {
-      const msgs = getMessages(t.id)
-      const matched = msgs.find(m => m.projectId === project.id && m.fromProfileId !== myProfileId)
-      if (!matched) continue
-      const otherId = t.participants.find(p => p !== myProfileId) ?? matched.fromProfileId
-      const name = t.participantNames?.[otherId] ?? 'Исполнитель'
-      const last = msgs[msgs.length - 1]
-      out.push({
-        profileId: otherId,
-        name,
-        lastAt: last?.createdAt,
-        lastMessage: last?.text,
-      })
-    }
-    // дедуп по profileId
-    const seen = new Set<string>()
-    return out.filter(a => (seen.has(a.profileId) ? false : (seen.add(a.profileId), true)))
-  }, [threads, project.id, myProfileId])
+  const [apps, setApps] = useState<ApplicationListItemDto[] | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [err, setErr] = useState<string | null>(null)
 
-  if (applicants.length === 0 && project.applicationCount === 0) return null
+  const reload = useCallback(async () => {
+    try {
+      const list = await api.applications.listForProject(project.id)
+      setApps(list)
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Не удалось загрузить отклики')
+    }
+  }, [project.id])
+
+  useEffect(() => {
+    void reload()
+    const t = setInterval(() => void reload(), 8000)
+    return () => clearInterval(t)
+  }, [reload])
+
+  async function handleAccept(appId: string, executorProfileId: string, executorName: string) {
+    setBusyId(appId)
+    try {
+      await api.applications.accept(appId)
+      await reload()
+      onChanged()
+      onApprove(executorProfileId, executorName)
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : 'Не удалось одобрить отклик')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function handleReject(appId: string) {
+    setBusyId(appId)
+    try {
+      await api.applications.reject(appId)
+      await reload()
+      onChanged()
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : 'Не удалось отклонить отклик')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  if (apps && apps.length === 0 && project.applicationCount === 0) return null
 
   return (
     <section className="rounded-xl border border-border bg-bg-card p-6">
@@ -560,43 +563,93 @@ function ApplicantsSection({
         </h2>
       </div>
 
-      {applicants.length === 0 ? (
-        <p className="text-sm text-text-muted">
-          Получено откликов: {project.applicationCount}. Подробности появятся, когда исполнитель напишет вам.
-        </p>
+      {err && (
+        <div className="mb-2 rounded-md border border-red-500/20 bg-red-500/[0.06] p-2 text-xs text-red-300">
+          {err}
+        </div>
+      )}
+
+      {apps == null ? (
+        <p className="text-sm text-text-muted">Загрузка откликов…</p>
+      ) : apps.length === 0 ? (
+        <p className="text-sm text-text-muted">Откликов пока нет.</p>
       ) : (
         <ul className="space-y-2">
-          {applicants.map(a => (
-            <li key={a.profileId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-bg-base p-3">
-              <div className="min-w-0">
-                <LocaleLink
-                  href={`/profiles/${a.profileId}`}
-                  className="text-sm font-medium text-text-base hover:underline"
-                >
-                  {a.name}
-                </LocaleLink>
-                {a.lastMessage && (
-                  <p className="mt-0.5 line-clamp-1 text-[12px] text-text-muted">{a.lastMessage}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onChat(a.profileId)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-[11.5px] text-text-secondary hover:bg-bg-elevated hover:text-text-base"
-                >
-                  <MessageSquare className="h-3 w-3" />
-                  Написать
-                </button>
-                <button
-                  onClick={() => onApprove(a.profileId, a.name)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/90 px-2.5 py-1.5 text-[11.5px] font-medium text-white hover:bg-emerald-500"
-                >
-                  <CheckCircle2 className="h-3 w-3" />
-                  Одобрить → контракт
-                </button>
-              </div>
-            </li>
-          ))}
+          {apps.map(a => {
+            const statusLabel =
+              a.status === 'Pending' ? 'Ожидает' :
+              a.status === 'Accepted' ? 'Принят' :
+              a.status === 'Rejected' ? 'Отклонён' :
+              a.status === 'Withdrawn' ? 'Отозван' : a.status
+            const statusCls =
+              a.status === 'Accepted' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' :
+              a.status === 'Rejected' ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' :
+              a.status === 'Withdrawn' ? 'border-border bg-bg-elevated text-text-faint' :
+              'border-amber-400/30 bg-amber-400/10 text-amber-200'
+            return (
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-bg-base p-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <LocaleLink
+                      href={`/profiles/${a.applicantProfileId}`}
+                      className="text-sm font-medium text-text-base hover:underline"
+                    >
+                      {a.applicantProfileName}
+                    </LocaleLink>
+                    <span className={`rounded-full border px-1.5 py-0.5 text-[10px] ${statusCls}`}>
+                      {statusLabel}
+                    </span>
+                    {a.proposedBudget != null && (
+                      <span className="text-[11px] text-text-muted">{formatTenge(a.proposedBudget)}</span>
+                    )}
+                  </div>
+                  {a.coverLetter && (
+                    <p className="mt-0.5 line-clamp-2 text-[12px] text-text-muted">{a.coverLetter}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {a.chatThreadId && (
+                    <button
+                      onClick={() => onChat(a.chatThreadId!)}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-[11.5px] text-text-secondary hover:bg-bg-elevated hover:text-text-base"
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      Чат
+                    </button>
+                  )}
+                  {a.status === 'Pending' && (
+                    <>
+                      <button
+                        disabled={busyId === a.id}
+                        onClick={() => handleReject(a.id)}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[11.5px] text-rose-300 hover:bg-rose-500/15 disabled:opacity-50"
+                      >
+                        <XCircle className="h-3 w-3" />
+                        Отклонить
+                      </button>
+                      <button
+                        disabled={busyId === a.id}
+                        onClick={() => handleAccept(a.id, a.applicantProfileId, a.applicantProfileName)}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/90 px-2.5 py-1.5 text-[11.5px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        Принять
+                      </button>
+                    </>
+                  )}
+                  {a.status === 'Accepted' && (
+                    <button
+                      onClick={() => onApprove(a.applicantProfileId, a.applicantProfileName)}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[11.5px] text-emerald-200 hover:bg-emerald-500/15"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      Создать контракт
+                    </button>
+                  )}
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
     </section>
@@ -665,17 +718,15 @@ function CreateContractModal({
     }
     setSubmitting(true)
     try {
-      const c = createContract({
-        projectId:         project.id,
-        projectTitle:      project.title,
-        clientProfileId:   project.clientProfileId,
-        clientName:        project.clientProfileName,
+      const c = await api.contracts.create({
+        projectId: project.id,
         executorProfileId,
-        executorName,
-        totalAmount:       totalNum,
-        milestones:        parsed,
-        initiatorProfileId: meId,
-        initiatorName:     meName,
+        totalAmount: totalNum,
+        milestones: parsed.map(m => ({
+          title: m.title,
+          amount: m.amount,
+          dueDate: m.dueDate ?? null,
+        })),
       })
       onCreated(c.id)
     } catch (e2) {

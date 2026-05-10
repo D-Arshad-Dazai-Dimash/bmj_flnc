@@ -1,172 +1,121 @@
 /**
- * MVP-чат на localStorage.
+ * Chat store — обёртка над API /api/chat/*.
  *
- * Бекенд (C# / EF Core) пока не содержит сущность сообщений
- * (см. STACK_LOCK). Это локальный shim, чтобы UX чата работал
- * end-to-end в одном браузере. Когда появится реальный backend —
- * замените реализацию методов, не трогая компоненты.
+ * Бэкенд (C# / EF Core) хранит сущности ChatThread/ChatMessage в Postgres.
+ * См. backend/Barnamaj.API/Entities/ChatThread.cs.
  *
- * Модель:
- *   • Тред идентифицируется парой profileId, отсортированной
- *     лексикографически: `${a}::${b}` — гарантирует один тред на
- *     пару, кто бы ни писал первым.
- *   • Сообщение принадлежит автору-профилю.
+ * Все функции — асинхронные и идемпотентные для UI:
+ *  - сетевые ошибки молча возвращают пустые значения, чтобы UI не падал.
  */
 
-const THREADS_KEY  = 'bj.chat.threads.v1'   // ChatThreadMeta[]
-const MESSAGES_KEY = 'bj.chat.messages.v1'  // { [threadId]: ChatMessage[] }
+import { api, type ChatThreadDto, type ChatMessageDto } from './api'
+
+// ── Public UI-типы ────────────────────────────────────────────────
 
 export interface ChatThreadMeta {
-  id:           string             // 'a::b'
-  participants: [string, string]   // profileIds
-  participantNames: Record<string, string>
+  /** Guid треда. */
+  id: string
+  /** Profile id собеседника. */
+  otherProfileId: string
+  otherProfileName: string
+  otherProfileLogoUrl: string | null
   lastMessage?: string
-  lastAt?:      string
-  /** ISO-время последнего прочтения каждым участником */
-  readAt?: Record<string, string>
+  lastAt?: string
+  hasUnread: boolean
+  projectId?: string | null
+  projectTitle?: string | null
 }
 
 export interface ChatMessage {
-  id:        string
-  threadId:  string
+  id: string
+  threadId: string
   fromProfileId: string
-  text:      string
+  fromProfileName: string
+  text: string
   createdAt: string
-  /** Системное (приглашение к работе, оффер, статус) */
-  system?:   boolean
-  /** Опциональная привязка к проекту (предложения / отклики) */
-  projectId?: string
+  system?: boolean
+  projectId?: string | null
 }
 
-// ── helpers ────────────────────────────────────────────────────────
+// ── Mappers ───────────────────────────────────────────────────────
 
-function readThreads(): ChatThreadMeta[] {
-  if (typeof window === 'undefined') return []
+function toMeta(t: ChatThreadDto): ChatThreadMeta {
+  return {
+    id: t.id,
+    otherProfileId: t.otherProfileId,
+    otherProfileName: t.otherProfileName,
+    otherProfileLogoUrl: t.otherProfileLogoUrl,
+    lastMessage: t.lastMessageBody ?? undefined,
+    lastAt: t.updatedAt,
+    hasUnread: t.hasUnread,
+    projectId: t.projectId,
+    projectTitle: t.projectTitle,
+  }
+}
+
+function toMessage(m: ChatMessageDto): ChatMessage {
+  return {
+    id: m.id,
+    threadId: m.threadId,
+    fromProfileId: m.senderProfileId,
+    fromProfileName: m.senderProfileName,
+    text: m.body,
+    createdAt: m.createdAt,
+    system: m.isSystem,
+    projectId: m.projectId,
+  }
+}
+
+// ── Public API (async) ────────────────────────────────────────────
+
+/** Список тредов текущего пользователя. */
+export async function listThreadsFor(_myProfileId?: string | null): Promise<ChatThreadMeta[]> {
   try {
-    const raw = window.localStorage.getItem(THREADS_KEY)
-    const arr = raw ? (JSON.parse(raw) as ChatThreadMeta[]) : []
-    return Array.isArray(arr) ? arr : []
+    const dtos = await api.chat.listThreads()
+    return dtos.map(toMeta)
   } catch { return [] }
 }
 
-function writeThreads(arr: ChatThreadMeta[]): void {
-  if (typeof window === 'undefined') return
-  try { window.localStorage.setItem(THREADS_KEY, JSON.stringify(arr)) } catch { /* ignore */ }
-}
-
-function readMessages(): Record<string, ChatMessage[]> {
-  if (typeof window === 'undefined') return {}
+/** Открыть/создать тред с другим профилем (опционально привязан к проекту). */
+export async function ensureThread(
+  otherProfileId: string,
+  projectId?: string | null,
+): Promise<ChatThreadMeta | null> {
   try {
-    const raw = window.localStorage.getItem(MESSAGES_KEY)
-    return raw ? (JSON.parse(raw) as Record<string, ChatMessage[]>) : {}
-  } catch { return {} }
+    const dto = await api.chat.start({ otherProfileId, projectId: projectId ?? null })
+    return toMeta(dto)
+  } catch { return null }
 }
 
-function writeMessages(m: Record<string, ChatMessage[]>): void {
-  if (typeof window === 'undefined') return
-  try { window.localStorage.setItem(MESSAGES_KEY, JSON.stringify(m)) } catch { /* ignore */ }
+/** Сообщения в треде. */
+export async function getMessages(threadId: string): Promise<ChatMessage[]> {
+  try {
+    const msgs = await api.chat.getMessages(threadId)
+    return msgs.map(toMessage)
+  } catch { return [] }
 }
 
-export function threadIdFor(a: string, b: string): string {
-  return [a, b].sort().join('::')
+/** Отправить сообщение. */
+export async function sendMessage(input: {
+  threadId: string
+  text: string
+  projectId?: string | null
+}): Promise<ChatMessage | null> {
+  try {
+    const m = await api.chat.sendMessage(input.threadId, input.text, input.projectId ?? null)
+    return toMessage(m)
+  } catch { return null }
 }
 
-// ── public API ────────────────────────────────────────────────────
-
-/** Все треды, в которых участвует profileId. Отсортированы по lastAt desc. */
-export function listThreadsFor(profileId: string | null | undefined): ChatThreadMeta[] {
-  if (!profileId) return []
-  return readThreads()
-    .filter(t => t.participants.includes(profileId))
-    .sort((x, y) => (y.lastAt ?? '').localeCompare(x.lastAt ?? ''))
+/** Пометить тред прочитанным. */
+export async function markRead(threadId: string): Promise<void> {
+  try { await api.chat.markRead(threadId) } catch { /* ignore */ }
 }
 
-export function getThread(threadId: string): ChatThreadMeta | null {
-  return readThreads().find(t => t.id === threadId) ?? null
-}
-
-/**
- * Гарантирует существование треда между двумя профилями. Возвращает meta.
- * Если треда нет — создаёт.
- */
-export function ensureThread(
-  meId: string,
-  meName: string,
-  otherId: string,
-  otherName: string,
-): ChatThreadMeta {
-  const id = threadIdFor(meId, otherId)
-  const all = readThreads()
-  const existing = all.find(t => t.id === id)
-  if (existing) {
-    // обновим имена, если поменялись
-    existing.participantNames = { ...existing.participantNames, [meId]: meName, [otherId]: otherName }
-    writeThreads(all)
-    return existing
-  }
-  const meta: ChatThreadMeta = {
-    id,
-    participants: [meId, otherId],
-    participantNames: { [meId]: meName, [otherId]: otherName },
-  }
-  all.push(meta)
-  writeThreads(all)
-  return meta
-}
-
-export function getMessages(threadId: string): ChatMessage[] {
-  return (readMessages()[threadId] ?? [])
-    .slice()
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-}
-
-export function sendMessage(input: {
-  threadId:      string
-  fromProfileId: string
-  text:          string
-  system?:       boolean
-  projectId?:    string
-}): ChatMessage {
-  const msg: ChatMessage = {
-    id:            'm_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
-    threadId:      input.threadId,
-    fromProfileId: input.fromProfileId,
-    text:          input.text.trim(),
-    createdAt:     new Date().toISOString(),
-    system:        input.system,
-    projectId:     input.projectId,
-  }
-  const map = readMessages()
-  map[input.threadId] = [...(map[input.threadId] ?? []), msg]
-  writeMessages(map)
-
-  // обновим мету треда
-  const threads = readThreads()
-  const meta = threads.find(t => t.id === input.threadId)
-  if (meta) {
-    meta.lastMessage = msg.text
-    meta.lastAt = msg.createdAt
-    meta.readAt = { ...(meta.readAt ?? {}), [input.fromProfileId]: msg.createdAt }
-    writeThreads(threads)
-  }
-  return msg
-}
-
-export function markRead(threadId: string, profileId: string): void {
-  const all = readThreads()
-  const m = all.find(t => t.id === threadId)
-  if (!m) return
-  m.readAt = { ...(m.readAt ?? {}), [profileId]: new Date().toISOString() }
-  writeThreads(all)
-}
-
-export function unreadCountFor(profileId: string | null | undefined): number {
-  if (!profileId) return 0
-  const threads = listThreadsFor(profileId)
-  let n = 0
-  for (const t of threads) {
-    const lastRead = t.readAt?.[profileId]
-    if (t.lastAt && (!lastRead || t.lastAt > lastRead)) n++
-  }
-  return n
+/** Общее количество непрочитанных тредов. */
+export async function unreadCountFor(_profileId?: string | null): Promise<number> {
+  try {
+    const r = await api.chat.unreadCount()
+    return r.count
+  } catch { return 0 }
 }

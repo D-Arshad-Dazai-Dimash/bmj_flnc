@@ -2,6 +2,33 @@
 
 Backend на **ASP.NET Core 8** + **PostgreSQL** + **Docker**.
 
+## Chat / Applications / Contracts (май 2026)
+
+Полный backend-цикл сделки: отклик → одобрение/отклонение → контракт с этапами → платёж.
+
+### Чат (cross-browser sync)
+- Сообщения хранятся в БД (`chat_threads`, `chat_messages`). Поллинг 3-5 секунд для синхронизации между браузерами/устройствами.
+- Пара профилей нормализуется (меньший GUID первым) → уникальный индекс на паре. Один тред на связку (опционально привязан к проекту).
+- API: `GET/POST /api/chat/threads`, `GET/POST /api/chat/threads/{id}/messages`, `POST /api/chat/threads/{id}/read`, `GET /api/chat/unread-count`.
+
+### Отклики на проекты
+- При `POST /api/projects/{id}/apply` бэкенд автоматически создаёт чат-тред с заказчиком и отправляет system-сообщение с cover letter — заказчик мгновенно видит отклик.
+- Владелец проекта видит откликнувшихся в карточке проекта: список через `GET /api/projects/{id}/applications`.
+- Одобрение: `POST /api/projects/applications/{id}/accept` → проект переходит в `InProgress`, остальные `Pending`-заявки помечаются `Rejected`, всем участникам уходят system-сообщения.
+- Отклонение: `POST /api/projects/applications/{id}/reject` + system-сообщение.
+
+### Контракты
+- Сущности: `contracts`, `contract_milestones`, `contract_events`.
+- Создаёт клиент через `POST /api/contracts` (после `Accepted`-заявки). Сумма этапов == TotalAmount, минимум 1 этап.
+- Машина состояний: `Active` → `InReview` (когда все этапы Submitted) → `Released` (когда все Approved); параллельно `Active ↔ Disputed`, `→ Cancelled`.
+- Этапы:
+    - executor: `submit` (последовательно, требует предыдущий Approved);
+    - client: `approve` / `reject`.
+- Каждое действие пишется в `contract_events` (история) и отправляется в общий чат-тред как system-сообщение.
+
+### Миграция
+`backend/Barnamaj.API/Data/Migrations/20260510195025_AddChatAndContracts.cs` — применяется автоматически при старте API (`dotnet ef database update` если запускать вручную).
+
 ## Security Hardening (май 2026)
 
 - KYC moderation доступ переведён на иерархию ролей через `RequireRole(UserRole.Moderator)`

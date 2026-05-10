@@ -98,6 +98,9 @@ public static class ServiceExtensions
         services.AddScoped<IAuditService,       AuditService>();
         services.AddScoped<IRoleGrantService,   RoleGrantService>();
         services.AddScoped<IProjectRoleService, ProjectRoleService>();
+        services.AddScoped<IChatService,        ChatService>();
+        services.AddScoped<IContractService,    ContractService>();
+        services.AddScoped<IApplicationService, ApplicationService>();
         services.AddSingleton<IContentFilterService, ContentFilterService>();
         services.AddHttpContextAccessor();
 

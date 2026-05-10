@@ -133,6 +133,274 @@ namespace Barnamaj.API.Data.Migrations
                     b.ToTable("assessment_attempts", (string)null);
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.ChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("body");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<bool>("IsSystem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_system");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid>("SenderProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sender_profile_id");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("thread_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_chat_messages");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_chat_messages_project_id");
+
+                    b.HasIndex("SenderProfileId")
+                        .HasDatabaseName("ix_chat_messages_sender_profile_id");
+
+                    b.HasIndex("ThreadId", "CreatedAt")
+                        .HasDatabaseName("ix_chat_messages_thread_created");
+
+                    b.ToTable("chat_messages", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ChatThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("Profile1Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("profile1id");
+
+                    b.Property<DateTime?>("Profile1ReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("profile1read_at");
+
+                    b.Property<Guid>("Profile2Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("profile2id");
+
+                    b.Property<DateTime?>("Profile2ReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("profile2read_at");
+
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.HasKey("Id")
+                        .HasName("pk_chat_threads");
+
+                    b.HasIndex("Profile2Id")
+                        .HasDatabaseName("ix_chat_threads_profile2id");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_chat_threads_project_id");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("ix_chat_threads_updated_at");
+
+                    b.HasIndex("Profile1Id", "Profile2Id")
+                        .IsUnique()
+                        .HasDatabaseName("ix_chat_threads_pair_unique");
+
+                    b.ToTable("chat_threads", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.Contract", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("ClientProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("client_profile_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("ExecutorProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("executor_profile_id");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total_amount");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.HasKey("Id")
+                        .HasName("pk_contracts");
+
+                    b.HasIndex("ClientProfileId")
+                        .HasDatabaseName("ix_contracts_client");
+
+                    b.HasIndex("ExecutorProfileId")
+                        .HasDatabaseName("ix_contracts_executor");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("ix_contracts_project");
+
+                    b.ToTable("contracts", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ContractEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid>("ActorProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_profile_id");
+
+                    b.Property<Guid>("ContractId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contract_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("details");
+
+                    b.HasKey("Id")
+                        .HasName("pk_contract_events");
+
+                    b.HasIndex("ActorProfileId")
+                        .HasDatabaseName("ix_contract_events_actor_profile_id");
+
+                    b.HasIndex("ContractId", "CreatedAt")
+                        .HasDatabaseName("ix_contract_events_contract_created");
+
+                    b.ToTable("contract_events", (string)null);
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ContractMilestone", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("ContractId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contract_id");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("order_index");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.HasKey("Id")
+                        .HasName("pk_contract_milestones");
+
+                    b.HasIndex("ContractId", "OrderIndex")
+                        .HasDatabaseName("ix_contract_milestones_contract_order");
+
+                    b.ToTable("contract_milestones", (string)null);
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.KycEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1404,6 +1672,127 @@ namespace Barnamaj.API.Data.Migrations
                     b.Navigation("Skill");
                 });
 
+            modelBuilder.Entity("Barnamaj.API.Entities.ChatMessage", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_chat_messages_project_project_id");
+
+                    b.HasOne("Barnamaj.API.Entities.Profile", "SenderProfile")
+                        .WithMany()
+                        .HasForeignKey("SenderProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_chat_messages_profile_sender_profile_id");
+
+                    b.HasOne("Barnamaj.API.Entities.ChatThread", "Thread")
+                        .WithMany("Messages")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_chat_messages_chat_thread_thread_id");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("SenderProfile");
+
+                    b.Navigation("Thread");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ChatThread", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.Profile", "Profile1")
+                        .WithMany()
+                        .HasForeignKey("Profile1Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_chat_threads_profile_profile1id");
+
+                    b.HasOne("Barnamaj.API.Entities.Profile", "Profile2")
+                        .WithMany()
+                        .HasForeignKey("Profile2Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_chat_threads_profile_profile2id");
+
+                    b.HasOne("Barnamaj.API.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_chat_threads_project_project_id");
+
+                    b.Navigation("Profile1");
+
+                    b.Navigation("Profile2");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.Contract", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.Profile", "ClientProfile")
+                        .WithMany()
+                        .HasForeignKey("ClientProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_contracts_profile_client_profile_id");
+
+                    b.HasOne("Barnamaj.API.Entities.Profile", "ExecutorProfile")
+                        .WithMany()
+                        .HasForeignKey("ExecutorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_contracts_profile_executor_profile_id");
+
+                    b.HasOne("Barnamaj.API.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_contracts_project_project_id");
+
+                    b.Navigation("ClientProfile");
+
+                    b.Navigation("ExecutorProfile");
+
+                    b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ContractEvent", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.Profile", "ActorProfile")
+                        .WithMany()
+                        .HasForeignKey("ActorProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_contract_events_profile_actor_profile_id");
+
+                    b.HasOne("Barnamaj.API.Entities.Contract", "Contract")
+                        .WithMany("Events")
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_contract_events_contracts_contract_id");
+
+                    b.Navigation("ActorProfile");
+
+                    b.Navigation("Contract");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ContractMilestone", b =>
+                {
+                    b.HasOne("Barnamaj.API.Entities.Contract", "Contract")
+                        .WithMany("Milestones")
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_contract_milestones_contracts_contract_id");
+
+                    b.Navigation("Contract");
+                });
+
             modelBuilder.Entity("Barnamaj.API.Entities.KycEvent", b =>
                 {
                     b.HasOne("Barnamaj.API.Entities.User", "User")
@@ -1681,6 +2070,18 @@ namespace Barnamaj.API.Data.Migrations
                         .HasConstraintName("fk_wallets_users_user_id");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.ChatThread", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("Barnamaj.API.Entities.Contract", b =>
+                {
+                    b.Navigation("Events");
+
+                    b.Navigation("Milestones");
                 });
 
             modelBuilder.Entity("Barnamaj.API.Entities.KycSubmission", b =>

@@ -21,7 +21,8 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getLikedIds, toggleLike } from '@/lib/socialStore'
 import { isApplied, markApplied } from '@/lib/appliedStore'
-import { ensureThread, sendMessage } from '@/lib/chatStore'
+import { ensureThread } from '@/lib/chatStore'
+import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 
 function ProposalModal({
   project,
@@ -151,6 +152,7 @@ export default function OrderDetailsPage({
 }) {
   const { id } = use(params)
   const { user, isAuthenticated } = useAuth()
+  const router = useLocaleRouter()
 
   const [project, setProject] = useState<ProjectDetailDto | null>(null)
   const [loading, setLoading] = useState(true)
@@ -214,26 +216,7 @@ export default function OrderDetailsPage({
         })
         setProposalSent(true)
         setProposalOpen(false)
-        // Уведомляем заказчика в чате
-        try {
-          if (user.profileId) {
-            ensureThread(
-              user.profileId,
-              user.profileName ?? 'Я',
-              project.clientProfileId,
-              project.clientProfileName,
-            )
-            sendMessage({
-              threadId: [user.profileId, project.clientProfileId].sort().join('::'),
-              fromProfileId: user.profileId,
-              text:
-                `Здравствуйте! Откликнулся на ваш заказ «${project.title}».` +
-                (data.proposedBudget ? `\nПредлагаю бюджет: ${data.proposedBudget.toLocaleString('ru-RU')} ₸.` : '') +
-                (data.coverLetter ? `\n\n${data.coverLetter}` : ''),
-              projectId: project.id,
-            })
-          }
-        } catch { /* чат — best-effort */ }
+        // Бэкенд автоматически создаёт чат с заказчиком и шлёт системное сообщение.
       } catch (e) {
         if (e instanceof ApiError && e.statusCode === 409 && user.id) {
           markApplied(user.id, project.id)
@@ -426,16 +409,15 @@ export default function OrderDetailsPage({
         <div className="flex items-center gap-2">
           {!isOwnProject && isAuthenticated && user?.profileId && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (!user.profileId) return
-                ensureThread(
-                  user.profileId,
-                  user.profileName ?? 'Я',
-                  project.clientProfileId,
-                  project.clientProfileName,
-                )
-                const tid = [user.profileId, project.clientProfileId].sort().join('::')
-                window.location.href = window.location.pathname.replace(/\/dashboard\/orders\/.*$/, `/dashboard/chat/${encodeURIComponent(tid)}`)
+                try {
+                  const thread = await ensureThread(project.clientProfileId, project.id)
+                  if (!thread) throw new Error('Чат недоступен')
+                  router.push(`/dashboard/chat/${encodeURIComponent(thread.id)}`)
+                } catch (e) {
+                  alert(e instanceof Error ? e.message : 'Не удалось открыть чат')
+                }
               }}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-2 text-xs font-medium text-text-base transition-colors hover:bg-bg-elevated"
             >

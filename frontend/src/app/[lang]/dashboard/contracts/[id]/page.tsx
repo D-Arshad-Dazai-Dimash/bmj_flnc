@@ -18,28 +18,41 @@ import LocaleLink from '@/components/ui/LocaleLink'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { formatTenge } from '@/lib/pricing'
 import {
-  getContract,
-  transitionStatus,
-  updateMilestoneStatus,
-  STATUS_LABELS,
-  MILESTONE_LABELS,
-  type Contract,
-  type ContractStatus,
-  type Milestone,
-  type MilestoneStatus,
-} from '@/lib/contractsStore'
+  api,
+  ApiError,
+  type ContractDetailDto,
+  type ContractStatusStr,
+  type MilestoneDto,
+} from '@/lib/api'
 
-const STATUS_TONE: Record<ContractStatus, string> = {
+const STATUS_LABELS: Record<ContractStatusStr, string> = {
+  Draft: 'Черновик',
+  Active: 'Активен',
+  InReview: 'На проверке',
+  Released: 'Завершён',
+  Disputed: 'Спор',
+  Cancelled: 'Отменён',
+}
+
+const STATUS_TONE: Record<ContractStatusStr, string> = {
   Draft:     'border-text-faint/30 bg-bg-elevated text-text-secondary',
   Active:    'border-emerald-400/30 bg-emerald-400/10 text-emerald-300',
-  Funded:    'border-cyan-400/30 bg-cyan-400/10 text-cyan-300',
   InReview:  'border-amber-400/30 bg-amber-400/10 text-amber-300',
   Released:  'border-violet-400/30 bg-violet-400/10 text-violet-300',
   Disputed:  'border-red-400/30 bg-red-400/10 text-red-300',
   Cancelled: 'border-text-faint/30 bg-bg-elevated text-text-faint',
 }
 
-const MS_TONE: Record<MilestoneStatus, string> = {
+type MilestoneStatusStr = 'Pending' | 'Submitted' | 'Approved' | 'Rejected'
+
+const MS_LABELS: Record<MilestoneStatusStr, string> = {
+  Pending: 'Ожидает',
+  Submitted: 'На проверке',
+  Approved: 'Принят',
+  Rejected: 'Отклонён',
+}
+
+const MS_TONE: Record<MilestoneStatusStr, string> = {
   Pending:   'border-text-faint/30 bg-bg-elevated text-text-secondary',
   Submitted: 'border-amber-400/30 bg-amber-400/10 text-amber-300',
   Approved:  'border-emerald-400/30 bg-emerald-400/10 text-emerald-300',
@@ -55,21 +68,30 @@ export default function ContractDetailPage({
   const { user } = useAuth()
   const router = useLocaleRouter()
 
-  const [contract, setContract] = useState<Contract | null>(null)
+  const [contract, setContract] = useState<ContractDetailDto | null>(null)
+  const [loadErr, setLoadErr] = useState<string | null>(null)
   const [actionErr, setActionErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const reload = useCallback(() => {
-    setContract(getContract(id))
+  const reload = useCallback(async () => {
+    try {
+      const c = await api.contracts.get(id)
+      setContract(c)
+      setLoadErr(null)
+    } catch (e) {
+      if (e instanceof ApiError && e.statusCode === 404) {
+        setContract(null)
+        setLoadErr('Контракт не найден.')
+      } else {
+        setLoadErr(e instanceof ApiError ? e.message : 'Не удалось загрузить контракт')
+      }
+    }
   }, [id])
 
   useEffect(() => {
-    reload()
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key === 'bj.contracts.v1') reload()
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    void reload()
+    const t = setInterval(() => void reload(), 8000)
+    return () => clearInterval(t)
   }, [reload])
 
   const role: 'client' | 'executor' | null = useMemo(() => {
@@ -90,13 +112,12 @@ export default function ContractDetailPage({
           К списку
         </button>
         <div className="rounded-xl border border-border bg-bg-card p-8 text-center text-text-muted">
-          Контракт не найден.
+          {loadErr ?? 'Загрузка…'}
         </div>
       </div>
     )
   }
 
-  // только участник может что-то делать
   if (!role) {
     return (
       <div className="space-y-4 max-w-3xl">
@@ -114,41 +135,39 @@ export default function ContractDetailPage({
     )
   }
 
-  const otherName = role === 'client' ? contract.executorName : contract.clientName
+  const otherName = role === 'client' ? contract.executorProfileName : contract.clientProfileName
   const otherId   = role === 'client' ? contract.executorProfileId : contract.clientProfileId
 
-  const approvedCount = contract.milestones.filter(m => m.status === 'Approved').length
-  const totalCount    = contract.milestones.length
+  const approvedCount = contract.milestonesApproved
+  const totalCount    = contract.milestonesTotal
   const progressPct   = totalCount === 0 ? 0 : Math.round((approvedCount / totalCount) * 100)
 
-  // действия
-  const safeRun = async (fn: () => void) => {
+  const safeRun = async (fn: () => Promise<unknown>) => {
     setActionErr(null)
     setBusy(true)
-    try { fn(); reload() } catch (e) {
-      setActionErr(e instanceof Error ? e.message : 'Не удалось выполнить действие')
+    try { await fn(); await reload() } catch (e) {
+      setActionErr(e instanceof ApiError ? e.message : (e instanceof Error ? e.message : 'Не удалось выполнить действие'))
     } finally { setBusy(false) }
   }
 
-  const onActivate = () => safeRun(() => {
-    transitionStatus(contract.id, 'Active', { profileId: user!.profileId!, name: user!.profileName ?? 'Я' })
-  })
   const onCancel = () => {
-    if (!confirm('Отменить контракт? Это действие нельзя отменить, если уже были сданные этапы.')) return
-    safeRun(() => {
-      transitionStatus(contract.id, 'Cancelled', { profileId: user!.profileId!, name: user!.profileName ?? 'Я' })
-    })
+    if (!confirm('Отменить контракт?')) return
+    void safeRun(() => api.contracts.transition(contract.id, 'Cancelled'))
   }
   const onDispute = () => {
     if (!confirm('Открыть спор по контракту?')) return
-    safeRun(() => {
-      transitionStatus(contract.id, 'Disputed', { profileId: user!.profileId!, name: user!.profileName ?? 'Я' })
-    })
+    void safeRun(() => api.contracts.transition(contract.id, 'Disputed'))
+  }
+  const onResolveDispute = () => {
+    void safeRun(() => api.contracts.transition(contract.id, 'Active'))
   }
 
-  const onMilestone = (m: Milestone, next: MilestoneStatus) => safeRun(() => {
-    updateMilestoneStatus(contract.id, m.id, next, { profileId: user!.profileId!, name: user!.profileName ?? 'Я' })
-  })
+  const onSubmit = (m: MilestoneDto) =>
+    void safeRun(() => api.contracts.submitMilestone(contract.id, m.id))
+  const onApprove = (m: MilestoneDto) =>
+    void safeRun(() => api.contracts.approveMilestone(contract.id, m.id))
+  const onReject = (m: MilestoneDto) =>
+    void safeRun(() => api.contracts.rejectMilestone(contract.id, m.id))
 
   const isFinal = contract.status === 'Released' || contract.status === 'Cancelled'
 
@@ -200,7 +219,6 @@ export default function ContractDetailPage({
           </div>
         </div>
 
-        {/* progress */}
         <div className="mt-4">
           <div className="mb-1.5 flex items-center justify-between text-[12px] text-text-muted">
             <span>Принято этапов: {approvedCount}/{totalCount}</span>
@@ -214,19 +232,8 @@ export default function ContractDetailPage({
           </div>
         </div>
 
-        {/* действия по статусу */}
         {!isFinal && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {contract.status === 'Draft' && (
-              <button
-                onClick={onActivate}
-                disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-md bg-[#7170ff] px-3 py-2 text-xs font-medium text-white hover:bg-[#5f5eff] disabled:opacity-50"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Активировать контракт
-              </button>
-            )}
             <button
               onClick={onCancel}
               disabled={busy}
@@ -235,7 +242,16 @@ export default function ContractDetailPage({
               <XCircle className="h-3.5 w-3.5" />
               Отменить
             </button>
-            {contract.status !== 'Disputed' && (
+            {contract.status === 'Disputed' ? (
+              <button
+                onClick={onResolveDispute}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-md border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-400/15 disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Снять спор
+              </button>
+            ) : (
               <button
                 onClick={onDispute}
                 disabled={busy}
@@ -264,17 +280,16 @@ export default function ContractDetailPage({
 
         <ol className="space-y-3">
           {contract.milestones.map((m, idx) => {
+            const status = m.status as MilestoneStatusStr
             const prev = idx > 0 ? contract.milestones[idx - 1] : null
             const blockedBecausePrev = prev && prev.status !== 'Approved'
 
-            // действия для исполнителя
             const canSubmit = role === 'executor' &&
-              (m.status === 'Pending' || m.status === 'Rejected') &&
+              (status === 'Pending' || status === 'Rejected') &&
               !blockedBecausePrev &&
               !isFinal
-            // действия для клиента
-            const canApprove = role === 'client' && m.status === 'Submitted' && !isFinal
-            const canReject  = role === 'client' && m.status === 'Submitted' && !isFinal
+            const canApprove = role === 'client' && status === 'Submitted' && !isFinal
+            const canReject  = role === 'client' && status === 'Submitted' && !isFinal
 
             return (
               <li
@@ -285,8 +300,8 @@ export default function ContractDetailPage({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-[12px] text-text-faint">#{idx + 1}</span>
-                      <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10.5px] font-medium ${MS_TONE[m.status]}`}>
-                        {MILESTONE_LABELS[m.status]}
+                      <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10.5px] font-medium ${MS_TONE[status]}`}>
+                        {MS_LABELS[status]}
                       </span>
                     </div>
                     <h3 className="mt-1.5 text-[14px] font-medium text-text-base">{m.title}</h3>
@@ -306,7 +321,7 @@ export default function ContractDetailPage({
                     <div className="mt-2 flex flex-col items-end gap-1">
                       {canSubmit && (
                         <button
-                          onClick={() => onMilestone(m, 'Submitted')}
+                          onClick={() => onSubmit(m)}
                           disabled={busy}
                           className="inline-flex items-center gap-1.5 rounded-md bg-[#7170ff] px-2.5 py-1.5 text-[11.5px] font-medium text-white hover:bg-[#5f5eff] disabled:opacity-50"
                         >
@@ -316,7 +331,7 @@ export default function ContractDetailPage({
                       )}
                       {canApprove && (
                         <button
-                          onClick={() => onMilestone(m, 'Approved')}
+                          onClick={() => onApprove(m)}
                           disabled={busy}
                           className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/90 px-2.5 py-1.5 text-[11.5px] font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
                         >
@@ -326,7 +341,7 @@ export default function ContractDetailPage({
                       )}
                       {canReject && (
                         <button
-                          onClick={() => onMilestone(m, 'Rejected')}
+                          onClick={() => onReject(m)}
                           disabled={busy}
                           className="inline-flex items-center gap-1.5 rounded-md border border-red-400/30 bg-red-400/10 px-2.5 py-1.5 text-[11.5px] text-red-300 hover:bg-red-400/15 disabled:opacity-50"
                         >
@@ -334,7 +349,7 @@ export default function ContractDetailPage({
                           Отклонить
                         </button>
                       )}
-                      {blockedBecausePrev && role === 'executor' && (m.status === 'Pending' || m.status === 'Rejected') && (
+                      {blockedBecausePrev && role === 'executor' && (status === 'Pending' || status === 'Rejected') && (
                         <span className="text-[11px] text-text-faint">Сначала завершите предыдущий этап</span>
                       )}
                     </div>
@@ -353,17 +368,17 @@ export default function ContractDetailPage({
           <h2 className="text-[15px] font-medium text-text-base">История</h2>
         </div>
         <ul className="space-y-2">
-          {[...contract.history].reverse().map(ev => (
+          {[...contract.events].reverse().map(ev => (
             <li key={ev.id} className="flex items-start gap-3 rounded-lg border border-border bg-bg-base p-2.5 text-[12.5px]">
               <div className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7170ff]" />
               <div className="min-w-0 flex-1">
                 <div className="text-text-base">
-                  <span className="font-medium">{ev.actorName}</span>
+                  <span className="font-medium">{ev.actorProfileName}</span>
                   <span className="text-text-muted"> · {ev.action}</span>
                   {ev.details && <span className="text-text-secondary"> — {ev.details}</span>}
                 </div>
                 <div className="text-[11px] text-text-faint">
-                  {new Date(ev.ts).toLocaleString('ru-RU')}
+                  {new Date(ev.createdAt).toLocaleString('ru-RU')}
                 </div>
               </div>
             </li>
