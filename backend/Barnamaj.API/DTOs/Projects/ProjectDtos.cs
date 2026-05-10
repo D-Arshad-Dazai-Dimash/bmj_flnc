@@ -41,6 +41,22 @@ public sealed record ApplyToProjectDto(
     decimal? ProposedBudget
 );
 
+/// <summary>
+/// Query-параметры для ленты заказов (HH-подобный поиск).
+/// Все поля опциональны; значения валидируются и клампятся на сервисном слое.
+/// </summary>
+public sealed record ProjectFeedQueryDto(
+    string?   Q,
+    decimal?  MinBudget,
+    decimal?  MaxBudget,
+    DateTime? DeadlineFrom,
+    DateTime? DeadlineTo,
+    string?   ClientType,
+    string?   Sort,
+    int       Page     = 1,
+    int       PageSize = 20
+);
+
 // ═══════════════════════════════════════════════════════════════════════════
 // OUTPUT DTOs
 // ═══════════════════════════════════════════════════════════════════════════

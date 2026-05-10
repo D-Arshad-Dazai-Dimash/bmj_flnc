@@ -23,11 +23,10 @@ public interface IProjectService
 
     /// <summary>
     /// Публичная лента открытых проектов (Status = Open).
-    /// Поддерживает пагинацию.
+    /// Поддерживает пагинацию, поиск и фильтрацию.
     /// </summary>
     Task<IReadOnlyList<ProjectSummaryDto>> GetFeedAsync(
-        int page,
-        int pageSize,
+        ProjectFeedQueryDto query,
         CancellationToken ct = default);
 
     /// <summary>
@@ -132,19 +131,67 @@ public sealed class ProjectService : IProjectService
 
     // ── GET FEED ──────────────────────────────────────────────
     public async Task<IReadOnlyList<ProjectSummaryDto>> GetFeedAsync(
-        int page,
-        int pageSize,
+        ProjectFeedQueryDto query,
         CancellationToken ct = default)
     {
-        // Клампируем размер и номер страницы во избежание злоупотреблений
-        pageSize = Math.Clamp(pageSize, 1, 50);
-        page     = Math.Clamp(page, 1, 1000);
+        // Клампы/нормализация, чтобы защититься от слишком тяжёлых запросов.
+        var pageSize = Math.Clamp(query.PageSize, 1, 50);
+        var page     = Math.Clamp(query.Page, 1, 1000);
+        var q        = string.IsNullOrWhiteSpace(query.Q) ? null : query.Q.Trim();
+        if (q is not null && q.Length > 120) q = q[..120];
 
-        var projects = await _db.Projects
+        var minBudget = query.MinBudget is > 0 ? query.MinBudget : null;
+        var maxBudget = query.MaxBudget is > 0 ? query.MaxBudget : null;
+        if (minBudget is not null && maxBudget is not null && minBudget > maxBudget)
+        {
+            var temp = minBudget;
+            minBudget = maxBudget;
+            maxBudget = temp;
+        }
+
+        var clientType = query.ClientType?.Trim();
+        var sort = query.Sort?.Trim().ToLowerInvariant();
+
+        var feed = _db.Projects
             .AsNoTracking()
             .Include(p => p.ClientProfile)
-            .Where(p => p.Status == ProjectStatus.Open)
-            .OrderByDescending(p => p.CreatedAt)
+            .Where(p => p.Status == ProjectStatus.Open);
+
+        if (q is not null)
+        {
+            var qLower = q.ToLower();
+            feed = feed.Where(p =>
+                p.Title.ToLower().Contains(qLower) ||
+                (p.Description != null && p.Description.ToLower().Contains(qLower)));
+        }
+
+        if (minBudget is not null)
+            feed = feed.Where(p => p.Budget != null && p.Budget >= minBudget);
+
+        if (maxBudget is not null)
+            feed = feed.Where(p => p.Budget != null && p.Budget <= maxBudget);
+
+        if (query.DeadlineFrom is not null)
+            feed = feed.Where(p => p.Deadline != null && p.Deadline >= query.DeadlineFrom);
+
+        if (query.DeadlineTo is not null)
+            feed = feed.Where(p => p.Deadline != null && p.Deadline <= query.DeadlineTo);
+
+        if (!string.IsNullOrWhiteSpace(clientType)
+            && Enum.TryParse<AccountType>(clientType, true, out var parsedType))
+        {
+            feed = feed.Where(p => p.ClientProfile.AccountType == parsedType);
+        }
+
+        feed = sort switch
+        {
+            "budget_asc"  => feed.OrderBy(p => p.Budget ?? decimal.MaxValue).ThenByDescending(p => p.CreatedAt),
+            "budget_desc" => feed.OrderByDescending(p => p.Budget ?? 0m).ThenByDescending(p => p.CreatedAt),
+            "deadline_asc"=> feed.OrderBy(p => p.Deadline ?? DateTime.MaxValue).ThenByDescending(p => p.CreatedAt),
+            _              => feed.OrderByDescending(p => p.CreatedAt),
+        };
+
+        var projects = await feed
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new

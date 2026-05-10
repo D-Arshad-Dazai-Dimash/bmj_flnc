@@ -65,6 +65,8 @@ export default function PublicProfilePage() {
   pinned.sort((a, b) =>
     [...pinnedIds].indexOf(a.id) - [...pinnedIds].indexOf(b.id))
   const others = projects.filter(p => !pinnedIds.has(p.id))
+  const completed = others.filter(p => p.status === 'Completed')
+  const active = others.filter(p => p.status !== 'Completed')
 
   async function handleTogglePin(projectId: string) {
     if (!profile) return
@@ -168,6 +170,22 @@ export default function PublicProfilePage() {
         </section>
       )}
 
+      {/* ── Быстрые метрики профиля ────────────────────── */}
+      <section className="mt-6 grid grid-cols-3 gap-3 px-6">
+        <div className="rounded-xl border border-border bg-bg-card p-3 text-center">
+          <p className="text-xl font-semibold text-text-base">{projects.length}</p>
+          <p className="text-[11px] tracking-caption text-text-faint">Публикации</p>
+        </div>
+        <div className="rounded-xl border border-border bg-bg-card p-3 text-center">
+          <p className="text-xl font-semibold text-emerald-300">{projects.filter(p => p.status === 'Completed').length}</p>
+          <p className="text-[11px] tracking-caption text-text-faint">Выполнено</p>
+        </div>
+        <div className="rounded-xl border border-border bg-bg-card p-3 text-center">
+          <p className="text-xl font-semibold text-[#9fdcec]">{projects.filter(p => p.status !== 'Completed').length}</p>
+          <p className="text-[11px] tracking-caption text-text-faint">В работе</p>
+        </div>
+      </section>
+
       {/* ── Закреплённые ───────────────────────────────── */}
       {pinned.length > 0 && (
         <section className="mt-8 px-6">
@@ -178,15 +196,29 @@ export default function PublicProfilePage() {
         </section>
       )}
 
-      {/* ── Все проекты ────────────────────────────────── */}
+      {/* ── Публикации профиля ─────────────────────────── */}
       <section className="mt-8 px-6">
         <h2 className="mb-3 text-sm font-semibold text-text-muted uppercase tracking-wider">
-          {pinned.length > 0 ? 'Все проекты' : 'Проекты'}
+          {pinned.length > 0 ? 'Публикации' : 'Лента публикаций'}
         </h2>
         {others.length === 0 && pinned.length === 0 ? (
           <p className="text-sm text-text-muted">Здесь пока ничего нет.</p>
         ) : (
-          <ProjectsGrid items={others} canPin={isOwner} onTogglePin={handleTogglePin} />
+          <div className="space-y-6">
+            {active.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs uppercase tracking-[0.08em] text-text-faint">Активные</p>
+                <ProjectsGrid items={active} canPin={isOwner} onTogglePin={handleTogglePin} />
+              </div>
+            )}
+
+            {completed.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs uppercase tracking-[0.08em] text-text-faint">Завершённые публикации</p>
+                <ProjectsGrid items={completed} canPin={isOwner} onTogglePin={handleTogglePin} />
+              </div>
+            )}
+          </div>
         )}
       </section>
 

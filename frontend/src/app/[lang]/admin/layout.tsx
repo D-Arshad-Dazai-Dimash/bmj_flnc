@@ -96,9 +96,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             Метрики, модерация и контроль критических потоков платформы.
           </div>
-          <Link href="/dashboard" className="inline-flex items-center gap-2 text-xs text-text-faint transition-colors hover:text-text-secondary">
+          <Link href="/admin-auth" className="inline-flex items-center gap-2 text-xs text-text-faint transition-colors hover:text-text-secondary">
             <ChevronLeft className="h-3.5 w-3.5" />
-            Назад в дашборд
+            Выйти в админ-логин
           </Link>
         </div>
       </aside>

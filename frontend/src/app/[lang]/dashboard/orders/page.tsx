@@ -1,12 +1,15 @@
 'use client'
 
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardList, Calendar, Banknote, X, Send, Clock } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { useAuth } from '@/context/AuthContext'
+import { Search, SlidersHorizontal, Calendar, Banknote, Clock3, Send, X } from 'lucide-react'
 import { api, ApiError, type ProjectSummaryDto } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
+import Link from '@/components/ui/LocaleLink'
 
-// ── Proposal modal ──────────────────────────────────────────────────────────
+type SortValue = 'newest' | 'budget_asc' | 'budget_desc' | 'deadline_asc'
+type ClientType = 'Individual' | 'Company' | 'Clan' | ''
+
 function ProposalModal({
   project,
   onClose,
@@ -22,74 +25,67 @@ function ProposalModal({
   const [budget, setBudget] = useState('')
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-lg space-y-4 rounded-[18px] border border-border bg-[linear-gradient(180deg,rgba(6,9,30,0.96),rgba(7,9,45,0.92))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+        className="w-full max-w-lg rounded-[18px] border border-border bg-bg-card p-6 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold tracking-h3 text-text-base">Подать предложение</h3>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-text-base">Отклик на заказ</h3>
           <button
             onClick={onClose}
-            className="rounded-[8px] border border-transparent p-1.5 transition-colors hover:border-border hover:bg-bg-hover"
             aria-label="Закрыть"
+            className="rounded-[8px] border border-transparent p-1.5 text-text-faint transition-colors hover:border-border hover:bg-bg-hover"
           >
-            <X className="w-5 h-5 text-text-faint" />
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <p className="text-sm text-text-secondary truncate">{project.title}</p>
+
+        <p className="mb-4 truncate text-sm text-text-secondary">{project.title}</p>
 
         <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-[11px] font-[510] tracking-caption text-text-secondary">
-              Сопроводительное письмо
-            </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-text-secondary">Сопроводительное письмо</span>
             <textarea
               value={coverLetter}
               onChange={e => setCoverLetter(e.target.value.slice(0, 500))}
-              placeholder="Расскажите почему вы подходите..."
               rows={4}
-              className="w-full resize-none rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
+              className="w-full resize-none rounded-[10px] border border-border bg-bg-elevated px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint focus:border-border-focus focus:outline-none"
+              placeholder="Опишите релевантный опыт и подход к задаче"
             />
             <span className="text-xs text-text-faint">{coverLetter.length}/500</span>
-          </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-[510] tracking-caption text-text-secondary">Ваша цена (₸)</label>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs text-text-secondary">Предложенная цена (₸)</span>
             <input
               type="number"
+              min={0}
               value={budget}
               onChange={e => setBudget(e.target.value)}
-              placeholder={project.budget ? String(project.budget) : '—'}
-              className="w-full rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
+              className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint focus:border-border-focus focus:outline-none"
+              placeholder={project.budget != null ? String(project.budget) : 'Например 200000'}
             />
-          </div>
+          </label>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-[8px] border border-border bg-bg-card px-4 py-2 text-sm font-[510] tracking-caption text-text-secondary transition-colors hover:bg-bg-elevated"
+            className="rounded-[8px] border border-border bg-bg-elevated px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover"
           >
             Отмена
           </button>
           <button
-            onClick={() =>
-              onSubmit({
-                coverLetter: coverLetter.trim(),
-                proposedBudget: budget ? Number(budget) : null,
-              })
-            }
+            onClick={() => onSubmit({ coverLetter: coverLetter.trim(), proposedBudget: budget ? Number(budget) : null })}
             disabled={sending}
-            className="flex items-center gap-2 rounded-[8px] border border-[rgba(73,71,171,0.28)] bg-[linear-gradient(135deg,rgba(55,111,177,0.22),rgba(73,71,171,0.26),rgba(122,88,172,0.22))] px-4 py-2 text-sm font-[510] tracking-caption text-[#dcdcff] transition-all duration-200 hover:brightness-110 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-[8px] border border-[rgba(73,71,171,0.28)] bg-[linear-gradient(135deg,rgba(55,111,177,0.22),rgba(73,71,171,0.26),rgba(122,88,172,0.22))] px-4 py-2 text-sm font-[510] text-[#dcdcff] transition-all duration-200 hover:brightness-110 disabled:opacity-50"
           >
-            <Send className="w-3.5 h-3.5" />
-            {sending ? 'Отправляем...' : 'Отправить'}
+            <Send className="h-3.5 w-3.5" />
+            {sending ? 'Отправляем...' : 'Отправить отклик'}
           </button>
         </div>
       </motion.div>
@@ -97,174 +93,285 @@ function ProposalModal({
   )
 }
 
-// ── Memoized order card ─────────────────────────────────────────────────────
-const OrderCard = memo(function OrderCard({
-  project: p,
-  onPropose,
+function ProjectCard({
+  project,
   hasProposal,
+  onPropose,
 }: {
   project: ProjectSummaryDto
-  onPropose: (p: ProjectSummaryDto) => void
   hasProposal: boolean
+  onPropose: (project: ProjectSummaryDto) => void
 }) {
   return (
-    <div data-testid="order-card" className="rounded-[14px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-5 shadow-[0_1px_0_rgba(255,255,255,0.03)] transition-all duration-200 hover:border-border-bright hover:bg-bg-elevated hover:shadow-[0_20px_48px_rgba(5,8,48,0.28)]">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1 min-w-0">
-          <h3 className="truncate text-[17px] font-semibold tracking-h3 text-text-base">{p.title}</h3>
-          {p.description && <p className="line-clamp-2 text-sm leading-6 text-text-secondary">{p.description}</p>}
+    <article className="rounded-[14px] border border-border bg-bg-card p-5 shadow-[0_1px_0_rgba(255,255,255,0.03)] transition-all duration-200 hover:border-border-bright hover:bg-bg-elevated">
+      <div className="mb-2 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="line-clamp-2 text-[17px] font-semibold text-text-base">{project.title}</h3>
+          <p className="mt-1 text-xs text-text-faint">Опубликовано {new Date(project.createdAt).toLocaleDateString('ru-RU')}</p>
         </div>
-        <span className="chip shrink-0 border-[rgba(72,152,188,0.26)] bg-[rgba(72,152,188,0.08)] text-[#9fdcec]">
-          Открыт
-        </span>
+        <span className="chip border-[rgba(72,152,188,0.26)] bg-[rgba(72,152,188,0.08)] text-[#9fdcec]">Открыт</span>
       </div>
-      <div className="flex flex-wrap items-center gap-4 text-xs text-text-faint">
-        {p.budget != null && (
-          <span className="flex items-center gap-1.5">
-            <Banknote className="w-3.5 h-3.5" />
-            {p.budget.toLocaleString('ru-RU')} ₸
-          </span>
+
+      {project.description && <p className="mb-3 line-clamp-3 text-sm leading-6 text-text-secondary">{project.description}</p>}
+
+      <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-text-faint">
+        {project.budget != null && (
+          <span className="inline-flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5" />{project.budget.toLocaleString('ru-RU')} ₸</span>
         )}
-        {p.deadline && (
-          <span className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5" />
-            {new Date(p.deadline).toLocaleDateString('ru-RU')}
-          </span>
+        {project.deadline && (
+          <span className="inline-flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />до {new Date(project.deadline).toLocaleDateString('ru-RU')}</span>
         )}
-        {p.clientProfileName && (
-          <span className="text-text-faint">
-            от <span className="text-text-muted">{p.clientProfileName}</span>
-          </span>
-        )}
-        {p.applicationCount > 0 && (
-          <span className="text-text-faint">{p.applicationCount} заявок</span>
-        )}
+        <span>{project.applicationCount} откликов</span>
       </div>
-      <div className="pt-1">
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+        <Link
+          href={`/profiles/${project.clientProfileId}`}
+          className="text-sm text-[#c7d8ff] underline-offset-4 transition-colors hover:text-[#dbe6ff] hover:underline"
+        >
+          Профиль заказчика: {project.clientProfileName}
+        </Link>
+
         {hasProposal ? (
-          <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(201,143,177,0.28)] bg-[rgba(201,143,177,0.08)] px-3 py-1.5 text-xs font-[510] tracking-caption text-[#efc7d9]">
-            <Clock className="w-3 h-3" /> Предложение отправлено
+          <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(201,143,177,0.28)] bg-[rgba(201,143,177,0.08)] px-3 py-1.5 text-xs font-[510] text-[#efc7d9]">
+            <Clock3 className="h-3 w-3" /> Отклик отправлен
           </span>
         ) : (
           <button
-            data-testid="apply-btn"
-            onClick={() => onPropose(p)}
-            className="rounded-[8px] border border-[rgba(73,71,171,0.25)] bg-[linear-gradient(135deg,rgba(55,111,177,0.18),rgba(73,71,171,0.22),rgba(122,88,172,0.18))] px-3 py-1.5 text-xs font-[510] tracking-caption text-[#dcdcff] transition-all duration-200 hover:brightness-110"
+            onClick={() => onPropose(project)}
+            className="rounded-[8px] border border-[rgba(73,71,171,0.25)] bg-[linear-gradient(135deg,rgba(55,111,177,0.18),rgba(73,71,171,0.22),rgba(122,88,172,0.18))] px-3 py-1.5 text-xs font-[510] text-[#dcdcff] transition-all duration-200 hover:brightness-110"
           >
-            Подать предложение
+            Откликнуться
           </button>
         )}
       </div>
-    </div>
+    </article>
   )
-})
+}
 
 export default function OrdersPage() {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
 
-  const [projects, setProjects] = useState<ProjectSummaryDto[]>([])
-  const [loading, setLoading] = useState(true)
+  const [qInput, setQInput] = useState('')
+  const [qDebounced, setQDebounced] = useState('')
+  const [minBudget, setMinBudget] = useState('')
+  const [maxBudget, setMaxBudget] = useState('')
+  const [deadlineTo, setDeadlineTo] = useState('')
+  const [clientType, setClientType] = useState<ClientType>('')
+  const [sort, setSort] = useState<SortValue>('newest')
+
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [errMsg, setErrMsg] = useState<string | null>(null)
+  const [items, setItems] = useState<ProjectSummaryDto[]>([])
+  const [hasMore, setHasMore] = useState(true)
 
   const [proposalTarget, setProposalTarget] = useState<ProjectSummaryDto | null>(null)
   const [sending, setSending] = useState(false)
   const [proposalIds, setProposalIds] = useState<Set<string>>(new Set())
 
-  // ── Load feed ────────────────────────────────────────────────
   useEffect(() => {
-    let aborted = false
-    api.projects
-      .feed(1, 50)
-      .then(data => {
-        if (!aborted) setProjects(data)
-      })
-      .catch((e: unknown) => {
-        if (!aborted) setErrMsg(e instanceof ApiError ? e.message : 'Ошибка загрузки')
-      })
-      .finally(() => {
-        if (!aborted) setLoading(false)
-      })
-    return () => {
-      aborted = true
+    const t = setTimeout(() => setQDebounced(qInput.trim()), 350)
+    return () => clearTimeout(t)
+  }, [qInput])
+
+  const feedQuery = useMemo(() => ({
+    q: qDebounced || undefined,
+    minBudget: minBudget ? Number(minBudget) : undefined,
+    maxBudget: maxBudget ? Number(maxBudget) : undefined,
+    deadlineTo: deadlineTo || undefined,
+    clientType: clientType || undefined,
+    sort,
+  }), [qDebounced, minBudget, maxBudget, deadlineTo, clientType, sort])
+
+  const load = useCallback(async (targetPage: number, append: boolean) => {
+    setErrMsg(null)
+    if (append) setLoadingMore(true)
+    else setLoading(true)
+
+    try {
+      const data = await api.projects.feed({ ...feedQuery, page: targetPage, pageSize: 20 })
+      setItems(prev => (append ? [...prev, ...data] : data))
+      setHasMore(data.length === 20)
+    } catch (e) {
+      setErrMsg(e instanceof ApiError ? e.message : 'Ошибка загрузки ленты заказов')
+      if (!append) setItems([])
+    } finally {
+      if (append) setLoadingMore(false)
+      else setLoading(false)
     }
-  }, [])
+  }, [feedQuery])
 
-  // ── Submit proposal ─────────────────────────────────────────
-  const handleProposalSubmit = useCallback(
-    async (data: { coverLetter: string; proposedBudget: number | null }) => {
-      if (!user?.profileId || !proposalTarget) {
-        setErrMsg('Профиль не найден. Перезайдите в аккаунт.')
-        return
-      }
-      setSending(true)
-      try {
-        await api.projects.apply(proposalTarget.id, {
-          applicantProfileId: user.profileId,
-          coverLetter: data.coverLetter || undefined,
-          proposedBudget: data.proposedBudget ?? undefined,
-        })
-        setProposalIds(prev => new Set(prev).add(proposalTarget.id))
-        setProposalTarget(null)
-      } catch (e) {
-        setErrMsg(e instanceof ApiError ? e.message : 'Не удалось отправить заявку')
-      } finally {
-        setSending(false)
-      }
-    },
-    [user?.profileId, proposalTarget],
-  )
+  useEffect(() => {
+    setPage(1)
+    load(1, false)
+  }, [load])
 
-  const visibleProjects = useMemo(
-    () => projects.filter(p => p.status === 'Open' || p.status === 'open'),
-    [projects],
-  )
+  const onLoadMore = async () => {
+    const next = page + 1
+    setPage(next)
+    await load(next, true)
+  }
+
+  const resetFilters = () => {
+    setQInput('')
+    setMinBudget('')
+    setMaxBudget('')
+    setDeadlineTo('')
+    setClientType('')
+    setSort('newest')
+  }
+
+  const handleProposalSubmit = useCallback(async (data: { coverLetter: string; proposedBudget: number | null }) => {
+    if (!isAuthenticated || !user?.profileId || !proposalTarget) {
+      setErrMsg('Войдите в аккаунт исполнителя, чтобы отправлять отклики.')
+      return
+    }
+
+    setSending(true)
+    try {
+      await api.projects.apply(proposalTarget.id, {
+        applicantProfileId: user.profileId,
+        coverLetter: data.coverLetter || undefined,
+        proposedBudget: data.proposedBudget ?? undefined,
+      })
+      setProposalIds(prev => new Set(prev).add(proposalTarget.id))
+      setProposalTarget(null)
+    } catch (e) {
+      setErrMsg(e instanceof ApiError ? e.message : 'Не удалось отправить отклик')
+    } finally {
+      setSending(false)
+    }
+  }, [isAuthenticated, proposalTarget, user?.profileId])
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, ease: 'easeOut' }}
-      className="space-y-6"
-    >
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[rgba(72,152,188,0.18)] bg-[linear-gradient(180deg,rgba(72,152,188,0.16),rgba(73,71,171,0.08))]">
-          <ClipboardList className="w-5 h-5 text-[#8fd7ed]" />
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-semibold tracking-h2 text-text-base">Лента заказов</h1>
-          <p className="text-[15px] text-text-secondary">Актуальные открытые проекты от заказчиков</p>
+          <p className="text-[15px] text-text-secondary">Поиск задач в стиле job-board: фильтруйте, сравнивайте, откликайтесь</p>
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-7 h-7 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : errMsg ? (
-        <div className="rounded-[14px] border border-red-500/30 bg-red-500/10 p-6 text-center text-sm text-red-300">
-          {errMsg}
-        </div>
-      ) : visibleProjects.length === 0 ? (
-        <div className="rounded-[14px] border border-border bg-bg-card p-12 text-center shadow-[0_1px_0_rgba(255,255,255,0.03)] flex flex-col items-center gap-3">
-          <ClipboardList className="w-10 h-10 text-text-faint" />
-          <p className="text-text-secondary">Открытых заказов пока нет</p>
-          <p className="text-xs text-text-faint max-w-xs">
-            Возвращайтесь позже — здесь появятся актуальные проекты от клиентов.
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {visibleProjects.map(p => (
-            <OrderCard
-              key={p.id}
-              project={p}
-              onPropose={setProposalTarget}
-              hasProposal={proposalIds.has(p.id)}
+      <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <aside className="h-fit space-y-4 rounded-[14px] border border-border bg-bg-card p-4 lg:sticky lg:top-5">
+          <div className="flex items-center justify-between">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-text-base"><SlidersHorizontal className="h-4 w-4" /> Фильтры</p>
+            <button onClick={resetFilters} className="text-xs text-text-faint hover:text-text-secondary">Сбросить</button>
+          </div>
+
+          <label className="block">
+            <span className="mb-1 block text-xs text-text-secondary">Поиск</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-text-faint" />
+              <input
+                value={qInput}
+                onChange={e => setQInput(e.target.value)}
+                placeholder="Например: React, API, mobile"
+                className="w-full rounded-[10px] border border-border bg-bg-elevated py-2 pl-8 pr-3 text-sm text-text-base placeholder:text-text-faint focus:border-border-focus focus:outline-none"
+              />
+            </div>
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label>
+              <span className="mb-1 block text-xs text-text-secondary">Бюджет от</span>
+              <input
+                type="number"
+                min={0}
+                value={minBudget}
+                onChange={e => setMinBudget(e.target.value)}
+                className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-xs text-text-secondary">Бюджет до</span>
+              <input
+                type="number"
+                min={0}
+                value={maxBudget}
+                onChange={e => setMaxBudget(e.target.value)}
+                className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+              />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="mb-1 block text-xs text-text-secondary">Тип заказчика</span>
+            <select
+              value={clientType}
+              onChange={e => setClientType(e.target.value as ClientType)}
+              className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+            >
+              <option value="">Любой</option>
+              <option value="Individual">Частный</option>
+              <option value="Company">Компания</option>
+              <option value="Clan">Команда</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs text-text-secondary">Дедлайн до</span>
+            <input
+              type="date"
+              value={deadlineTo}
+              onChange={e => setDeadlineTo(e.target.value)}
+              className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
             />
-          ))}
-        </div>
-      )}
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs text-text-secondary">Сортировка</span>
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value as SortValue)}
+              className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+            >
+              <option value="newest">Сначала новые</option>
+              <option value="budget_desc">Бюджет по убыванию</option>
+              <option value="budget_asc">Бюджет по возрастанию</option>
+              <option value="deadline_asc">Ближайший дедлайн</option>
+            </select>
+          </label>
+        </aside>
+
+        <section className="space-y-4">
+          {loading ? (
+            <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" /></div>
+          ) : errMsg ? (
+            <div className="rounded-[14px] border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-300">{errMsg}</div>
+          ) : items.length === 0 ? (
+            <div className="rounded-[14px] border border-border bg-bg-card p-10 text-center text-sm text-text-secondary">По этим фильтрам заказов пока нет</div>
+          ) : (
+            <>
+              <div className="text-sm text-text-faint">Найдено: {items.length}{hasMore ? '+' : ''}</div>
+              <div className="space-y-4">
+                {items.map(item => (
+                  <ProjectCard
+                    key={item.id}
+                    project={item}
+                    hasProposal={proposalIds.has(item.id)}
+                    onPropose={setProposalTarget}
+                  />
+                ))}
+              </div>
+
+              {hasMore && (
+                <div className="pt-2">
+                  <button
+                    onClick={onLoadMore}
+                    disabled={loadingMore}
+                    className="rounded-[10px] border border-border bg-bg-elevated px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover disabled:opacity-50"
+                  >
+                    {loadingMore ? 'Загрузка...' : 'Показать ещё'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      </div>
 
       <AnimatePresence>
         {proposalTarget && (
@@ -276,6 +383,6 @@ export default function OrdersPage() {
           />
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   )
 }

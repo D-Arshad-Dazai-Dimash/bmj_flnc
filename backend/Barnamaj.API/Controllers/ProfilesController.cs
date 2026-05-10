@@ -58,9 +58,12 @@ public sealed class ProfilesController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<ProfileSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Search(
         [FromQuery] string? q,
-        CancellationToken ct)
+        [FromQuery] string? accountType,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
     {
-        var result = await _profileService.SearchAsync(q, ct);
+        var result = await _profileService.SearchAsync(q, accountType, page, pageSize, ct);
         return Ok(result);
     }
 

@@ -113,23 +113,21 @@ public sealed class ProjectsController : ControllerBase
     /// Публичная лента открытых проектов (без авторизации).
     /// </summary>
     /// <remarks>
-    /// Возвращает проекты со статусом **Open**, сортировка: новые первыми.
+    /// Возвращает проекты со статусом **Open**.
+    /// Поддерживает фильтры в стиле job-search (HH-like):
     ///
-    ///     GET /api/projects/feed?page=1&amp;pageSize=20
+    ///     GET /api/projects/feed?q=react&amp;minBudget=100000&amp;sort=budget_desc&amp;page=1&amp;pageSize=20
     /// </remarks>
-    /// <param name="page">Номер страницы (от 1)</param>
-    /// <param name="pageSize">Размер страницы (1–50, по умолчанию 20)</param>
     /// <response code="200">Список проектов.</response>
     [HttpGet("feed")]
     [AllowAnonymous]
-    [ResponseCache(Duration = 30, VaryByQueryKeys = new[] { "page", "pageSize" })]
+    [ResponseCache(Duration = 30, VaryByQueryKeys = new[] { "q", "minBudget", "maxBudget", "deadlineFrom", "deadlineTo", "clientType", "sort", "page", "pageSize" })]
     [ProducesResponseType(typeof(IReadOnlyList<ProjectSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Feed(
-        [FromQuery] int page     = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] ProjectFeedQueryDto query,
         CancellationToken ct     = default)
     {
-        var result = await _projectService.GetFeedAsync(page, pageSize, ct);
+        var result = await _projectService.GetFeedAsync(query, ct);
         return Ok(result);
     }
 

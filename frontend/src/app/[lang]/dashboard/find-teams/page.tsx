@@ -14,7 +14,7 @@ export default function FindTeamsPage() {
   const load = useCallback((q: string) => {
     setLoading(true)
     setErrMsg(null)
-    api.profiles.search(q || undefined)
+    api.profiles.search({ q: q || undefined, page: 1, pageSize: 50 })
       .then(data => setProfiles(data ?? []))
       .catch(e => setErrMsg(e instanceof ApiError ? e.message : 'Ошибка загрузки'))
       .finally(() => setLoading(false))

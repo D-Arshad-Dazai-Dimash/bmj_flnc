@@ -109,6 +109,13 @@ export interface UpdateProfileSocialRequest {
   coverPresetId?: number
 }
 
+export interface ProfileSearchOptions {
+  q?: string
+  accountType?: 'Individual' | 'Company' | 'Clan'
+  page?: number
+  pageSize?: number
+}
+
 export interface CreateProfileRequest {
   name: string
   bio?: string
@@ -148,6 +155,18 @@ export interface ProjectDetailDto {
   applicationCount: number
   createdAt: string
   updatedAt: string
+}
+
+export interface ProjectFeedOptions {
+  q?: string
+  minBudget?: number
+  maxBudget?: number
+  deadlineFrom?: string
+  deadlineTo?: string
+  clientType?: 'Individual' | 'Company' | 'Clan'
+  sort?: 'newest' | 'budget_asc' | 'budget_desc' | 'deadline_asc'
+  page?: number
+  pageSize?: number
 }
 
 export interface CreateProjectRequest {
@@ -337,9 +356,15 @@ export const api = {
     myTeams: () =>
       request<MyTeamDto[]>('/api/profiles/my-teams'),
 
-    /** Публичный поиск профилей (кланы / компании) */
-    search: (q?: string) =>
-      request<ProfileSummaryDto[]>(`/api/profiles${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+    /** Публичный поиск профилей */
+    search: (opts: ProfileSearchOptions = {}) => {
+      const params = new URLSearchParams()
+      if (opts.q) params.set('q', opts.q)
+      if (opts.accountType) params.set('accountType', opts.accountType)
+      params.set('page', String(opts.page ?? 1))
+      params.set('pageSize', String(opts.pageSize ?? 20))
+      return request<ProfileSummaryDto[]>(`/api/profiles?${params.toString()}`)
+    },
 
     /** Создать клан (accountType: 3) или компанию (accountType: 2) */
     create: (data: CreateProfileRequest) =>
@@ -359,9 +384,20 @@ export const api = {
     list: () =>
       request<ProjectSummaryDto[]>('/api/projects/my'),
 
-    /** Публичная лента открытых проектов */
-    feed: (page = 1, pageSize = 20) =>
-      request<ProjectSummaryDto[]>(`/api/projects/feed?page=${page}&pageSize=${pageSize}`),
+    /** Публичная лента открытых проектов с фильтрами */
+    feed: (opts: ProjectFeedOptions = {}) => {
+      const params = new URLSearchParams()
+      if (opts.q) params.set('q', opts.q)
+      if (opts.minBudget != null) params.set('minBudget', String(opts.minBudget))
+      if (opts.maxBudget != null) params.set('maxBudget', String(opts.maxBudget))
+      if (opts.deadlineFrom) params.set('deadlineFrom', opts.deadlineFrom)
+      if (opts.deadlineTo) params.set('deadlineTo', opts.deadlineTo)
+      if (opts.clientType) params.set('clientType', opts.clientType)
+      if (opts.sort) params.set('sort', opts.sort)
+      params.set('page', String(opts.page ?? 1))
+      params.set('pageSize', String(opts.pageSize ?? 20))
+      return request<ProjectSummaryDto[]>(`/api/projects/feed?${params.toString()}`)
+    },
 
     /** Создать проект (clientProfileId — профиль-заказчик) */
     create: (data: CreateProjectRequest) =>

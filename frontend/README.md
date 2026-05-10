@@ -82,6 +82,20 @@ src/
     - `e2e/role-guard.spec.ts` — проверка redirect по ролям;
     - `e2e/refresh-rotation.spec.ts` — rotation + reuse detection на refresh cookies.
 
+## Orders & Profiles UX (май 2026)
+
+- `src/app/[lang]/dashboard/orders/page.tsx`:
+    - HH-like лента заказов с серверными фильтрами/поиском;
+    - быстрые фильтры: бюджет, дедлайн, тип заказчика, сортировка;
+    - безопасные карточки заказов + переход в публичный профиль заказчика.
+- `src/app/[lang]/profiles/page.tsx`:
+    - каталог публичных профилей (исполнители, компании, команды);
+    - поиск по имени/описанию + фильтр типа профиля.
+- `src/app/[lang]/profiles/[id]/page.tsx`:
+    - публикации профиля в формате social feed;
+    - разделение на активные и завершённые публикации;
+    - метрики активности (всего публикаций / выполнено / в работе).
+
 ## Автодеплой Frontend (Vercel)
 
 - Production Branch в Vercel: `main`.

@@ -39,10 +39,13 @@ public interface IProfileService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Публичный поиск профилей (кланы / компании).
+    /// Публичный поиск профилей пользователей/команд.
     /// </summary>
     Task<IReadOnlyList<ProfileSummaryDto>> SearchAsync(
         string? query,
+        string? accountType,
+        int page,
+        int pageSize,
         CancellationToken ct = default);
 
     /// <summary>
@@ -317,11 +320,21 @@ public sealed class ProfileService : IProfileService
     // ── SEARCH ────────────────────────────────────────────────
     public async Task<IReadOnlyList<ProfileSummaryDto>> SearchAsync(
         string? query,
+        string? accountType,
+        int page,
+        int pageSize,
         CancellationToken ct = default)
     {
-        var q = _db.Profiles
-            .AsNoTracking()
-            .Where(p => p.AccountType == AccountType.Clan || p.AccountType == AccountType.Company);
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 50 ? 20 : pageSize;
+
+        var q = _db.Profiles.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(accountType)
+            && Enum.TryParse<AccountType>(accountType, true, out var parsedType))
+        {
+            q = q.Where(p => p.AccountType == parsedType);
+        }
 
         if (!string.IsNullOrWhiteSpace(query))
         {
@@ -332,7 +345,8 @@ public sealed class ProfileService : IProfileService
 
         var profiles = await q
             .OrderByDescending(p => p.CreatedAt)
-            .Take(50)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
         var profileIds = profiles.Select(p => p.Id).ToList();
