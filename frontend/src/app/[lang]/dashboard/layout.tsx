@@ -7,7 +7,7 @@ import Sidebar from '@/components/dashboard/Sidebar'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, isAtLeast } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const router = useLocaleRouter()
   const [timedOut, setTimedOut] = useState(false)
 
@@ -24,10 +24,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return
     }
 
-    if (!isLoading && isAuthenticated && user && isAtLeast('Moderator')) {
-      router.replace('/admin')
+    if (!isLoading && isAuthenticated && user) {
+      // Если админ/модератор → переправить на /admin
+      if (user.role === 'Moderator' || user.role === 'SeniorAdmin' || user.role === 'HeadAdmin') {
+        router.replace('/admin')
+        return
+      }
     }
-  }, [isLoading, isAuthenticated, user, isAtLeast, router])
+  }, [isLoading, isAuthenticated, user?.role, router])
 
   if (isLoading) {
     if (timedOut) {
@@ -51,7 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  if (!isAuthenticated || (user && isAtLeast('Moderator'))) return null
+  if (!isAuthenticated || (user && (user.role === 'Moderator' || user.role === 'SeniorAdmin' || user.role === 'HeadAdmin'))) return null
 
   return (
     <div className="min-h-screen bg-bg-base flex">

@@ -191,7 +191,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Logout ─────────────────────────────────────────────────
   const logout = useCallback(async () => {
-    await apiFetch('/api/auth/logout', { method: 'POST' })
+    try {
+      await apiFetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      // Ignore network errors, clear state anyway
+    }
     setState({ user: null, isLoading: false, isAuthenticated: false })
   }, [])
 

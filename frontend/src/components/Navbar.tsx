@@ -53,10 +53,10 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     setUserMenu(false)
-    router.push('/')
+    router.push('/auth?mode=login')
   }
 
   return (

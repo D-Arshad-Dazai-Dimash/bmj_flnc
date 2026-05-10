@@ -95,9 +95,9 @@ export default function Sidebar() {
   const roleItems = user?.accountType === 'Developer' ? developerItems : clientItems
   const roleLabel = user?.accountType === 'Developer' ? '👨‍💻 Разработчик' : '💼 Заказчик'
 
-  const handleLogout = () => {
-    logout()
-    router.push('/')
+  const handleLogout = async () => {
+    await logout()
+    router.push('/auth?mode=login')
   }
 
   return (
