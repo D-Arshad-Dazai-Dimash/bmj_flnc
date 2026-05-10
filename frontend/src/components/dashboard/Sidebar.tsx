@@ -101,7 +101,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 shrink-0 min-h-screen bg-bg-panel border-r border-border flex flex-col">
+    <aside className="w-60 shrink-0 h-screen bg-bg-panel border-r border-border flex flex-col">
 
       {/* ── Logo ── */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-border">

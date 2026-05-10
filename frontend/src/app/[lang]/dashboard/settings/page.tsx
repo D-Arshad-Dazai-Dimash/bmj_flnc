@@ -1,16 +1,62 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Settings, Bell, Shield, Trash2, ChevronRight } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Settings, Bell, Shield, Trash2, ChevronRight, User as UserIcon, Save, Check } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { api } from '@/lib/api'
+import { COVER_PRESETS, coverBg } from '@/lib/coverPresets'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
   const router   = useLocaleRouter()
+
+  // ── Profile basic info (name, bio, status, avatar URL, cover) ──
+  const [pName, setPName] = useState('')
+  const [pBio, setPBio] = useState('')
+  const [pStatus, setPStatus] = useState('')
+  const [pLogo, setPLogo] = useState('')
+  const [pCover, setPCover] = useState<number>(0)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
+  const [profileErr, setProfileErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user?.profileId) return
+    api.profiles.get(user.profileId)
+      .then(p => {
+        setPName(p.name ?? '')
+        setPBio(p.bio ?? '')
+        setPStatus(p.status ?? '')
+        setPLogo(p.logoUrl ?? '')
+        setPCover(p.coverPresetId ?? 0)
+      })
+      .catch(() => {})
+  }, [user?.profileId])
+
+  async function saveProfile() {
+    if (!user?.profileId) return
+    setProfileSaving(true)
+    setProfileErr(null)
+    try {
+      await api.profiles.updateSocial(user.profileId, {
+        name: pName,
+        bio: pBio,
+        status: pStatus,
+        logoUrl: pLogo,
+        coverPresetId: pCover,
+      })
+      setProfileSaved(true)
+      setTimeout(() => setProfileSaved(false), 2000)
+    } catch (e) {
+      setProfileErr(e instanceof Error ? e.message : 'Не удалось сохранить')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
 
   // ── Password change ──
   const [curPwd,  setCurPwd]  = useState('')
@@ -85,7 +131,7 @@ export default function SettingsPage() {
 
   return (
     <motion.div
-      className="space-y-6 max-w-2xl"
+      className="space-y-6 max-w-3xl"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
@@ -98,6 +144,108 @@ export default function SettingsPage() {
           <div className="chip chip-accent mb-2">Workspace Controls</div>
           <h1 className="text-[28px] font-semibold tracking-h2 text-text-base">Настройки</h1>
           <p className="text-[15px] text-text-secondary">Управление аккаунтом</p>
+        </div>
+      </div>
+
+      {/* ── Основная информация профиля ── */}
+      <div className="rounded-[16px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-6 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
+        <div className="mb-4 flex items-center gap-2">
+          <UserIcon className="h-4 w-4 text-text-secondary" />
+          <h2 className="text-[13px] font-[510] tracking-caption text-text-base">Основная информация профиля</h2>
+        </div>
+
+        {/* предпросмотр обложки + аватар */}
+        <div className="mb-5 overflow-hidden rounded-xl border border-border">
+          <div
+            className="h-24 w-full"
+            style={{ background: coverBg(pCover) }}
+          />
+          <div className="flex items-center gap-3 px-4 py-3 bg-bg-card">
+            <div className="-mt-9 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-4 border-bg-base bg-bg-elevated">
+              {pLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={pLogo} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-xl font-semibold text-text-muted">
+                  {(pName || '?').slice(0, 1).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-text-base">{pName || 'Без имени'}</p>
+              <p className="truncate text-xs text-text-muted">{pStatus || 'Без статуса'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-5">
+          <p className="mb-2 text-xs font-medium text-text-muted">Обложка профиля</p>
+          <div className="grid grid-cols-5 gap-2">
+            {COVER_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPCover(p.id)}
+                title={p.label}
+                className={`h-12 cursor-pointer rounded-lg border-2 transition ${
+                  pCover === p.id
+                    ? 'border-accent shadow-[0_0_0_3px_rgba(255,255,255,0.05)]'
+                    : 'border-transparent'
+                }`}
+                style={{ background: p.bg }}
+              >
+                {pCover === p.id && (
+                  <Check className="mx-auto h-4 w-4 text-white" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <Input
+            label="Имя профиля"
+            value={pName}
+            onChange={(e) => setPName(e.target.value.slice(0, 256))}
+            placeholder="Ваше имя или название"
+          />
+          <Input
+            label="Короткий статус"
+            value={pStatus}
+            onChange={(e) => setPStatus(e.target.value.slice(0, 80))}
+            placeholder="Открыт к новым проектам"
+          />
+          <Input
+            label="URL аватара"
+            value={pLogo}
+            onChange={(e) => setPLogo(e.target.value)}
+            placeholder="https://…"
+          />
+          <div className="space-y-1">
+            <label className="text-[11px] font-[510] uppercase tracking-[0.08em] text-text-secondary">
+              О себе ({pBio.length}/2000)
+            </label>
+            <textarea
+              value={pBio}
+              onChange={(e) => setPBio(e.target.value.slice(0, 2000))}
+              rows={4}
+              placeholder="Коротко расскажите о себе или о компании"
+              className="w-full resize-none rounded-[10px] border border-border bg-bg-card px-3 py-2.5 text-sm text-text-base placeholder:text-text-faint transition-all duration-200 focus:border-border-focus focus:bg-bg-elevated focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {profileErr && (
+          <p className="mt-3 rounded-[10px] border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">{profileErr}</p>
+        )}
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-xs text-text-faint">
+            Email и тип аккаунта менять нельзя — обратитесь в поддержку.
+          </p>
+          <Button onClick={saveProfile} loading={profileSaving} className="flex items-center gap-2">
+            {profileSaved ? <><span>✓</span> Сохранено</> : <><Save className="w-4 h-4" /> Сохранить</>}
+          </Button>
         </div>
       </div>
 

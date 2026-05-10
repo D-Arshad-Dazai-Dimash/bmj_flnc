@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Rocket, Users, Search, ShieldCheck, Lightbulb,
   ArrowLeft, CheckCircle2, Sparkles, FileText,
+  Save, FolderOpen, Trash2, Calendar, Send, Clock, X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocaleRouter } from '@/hooks/useLocaleRouter'
@@ -13,6 +14,14 @@ import type { OrderType } from '@/lib/database.types'
 import { calculateCommission, tengeToTiyn, tiynToTenge, formatTenge } from '@/lib/pricing'
 import dynamic from 'next/dynamic'
 import { listDrafts, type TzDraft, type TzMessage } from '@/hooks/useTzDraft'
+import {
+  listProjectDrafts,
+  saveProjectDraft,
+  deleteProjectDraft,
+  scheduleProjectDraft,
+  projectDraftPreviewTitle,
+  type ProjectDraft,
+} from '@/lib/projectDrafts'
 
 const AiTzWizard   = dynamic(() => import('@/components/dashboard/AiTzWizard'),   { ssr: false })
 const DraftsPanel  = dynamic(() => import('@/components/dashboard/DraftsPanel'),  { ssr: false })
@@ -261,6 +270,89 @@ export default function CreateProjectPage() {
   const [draftsCount, setDraftsCount] = useState(0)
   const [aiInit, setAiInit] = useState<{ id: string | null; messages?: TzMessage[]; title?: string }>({ id: null })
 
+  // ── Проектные черновики формы (localStorage MVP) ──
+  const [projectDrafts, setProjectDrafts] = useState<ProjectDraft[]>([])
+  const [showProjectDrafts, setShowProjectDrafts] = useState(false)
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
+  const [draftSavedFlash, setDraftSavedFlash] = useState(false)
+  const refreshDrafts = () => setProjectDrafts(listProjectDrafts())
+  useEffect(() => { refreshDrafts() }, [showProjectDrafts])
+
+  function handleSaveDraft() {
+    if (!base.title && !base.description && !selectedType) return
+    const saved = saveProjectDraft({
+      id: currentDraftId,
+      type: selectedType,
+      title: base.title,
+      description: base.description,
+      budget: base.budget,
+      deadline: base.deadline,
+      extras,
+    })
+    setCurrentDraftId(saved.id)
+    refreshDrafts()
+    setDraftSavedFlash(true)
+    setTimeout(() => setDraftSavedFlash(false), 1800)
+  }
+
+  function handleLoadDraft(d: ProjectDraft) {
+    setSelectedType(d.type)
+    setBase({
+      title: d.title,
+      description: d.description,
+      budget: d.budget,
+      deadline: d.deadline,
+    })
+    setExtras(d.extras || {})
+    setCurrentDraftId(d.id)
+    setShowProjectDrafts(false)
+    setErrMsg(null)
+  }
+
+  function handleDeleteDraft(id: string) {
+    deleteProjectDraft(id)
+    if (currentDraftId === id) setCurrentDraftId(null)
+    refreshDrafts()
+  }
+
+  async function handlePublishDraft(d: ProjectDraft) {
+    if (!user?.profileId) {
+      setErrMsg('Не удалось определить ваш профиль.')
+      return
+    }
+    if (!d.title.trim()) {
+      alert('Черновик нельзя опубликовать: нет названия.')
+      return
+    }
+    if (!d.description.trim()) {
+      alert('Черновик нельзя опубликовать: нет описания.')
+      return
+    }
+    try {
+      const fullDesc = d.type ? buildDescription(d.description, d.type, d.extras || {}) : d.description
+      const budgetNum = d.budget ? Number(d.budget) : undefined
+      await api.projects.create({
+        title: d.title,
+        description: fullDesc || undefined,
+        clientProfileId: user.profileId,
+        budget: budgetNum,
+        deadline: d.deadline || undefined,
+      })
+      deleteProjectDraft(d.id)
+      refreshDrafts()
+      setShowProjectDrafts(false)
+      setSuccess(true)
+      setTimeout(() => router.push('/dashboard/projects'), 1500)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Не удалось опубликовать черновик')
+    }
+  }
+
+  function handleSchedule(id: string, when: string) {
+    scheduleProjectDraft(id, when || null)
+    refreshDrafts()
+  }
+
   // Обновляем счётчик черновиков при маунте и после закрытия панелей
   useEffect(() => { setDraftsCount(listDrafts().length) }, [showAi, showDrafts])
 
@@ -370,6 +462,16 @@ export default function CreateProjectPage() {
         onClose={() => setShowDrafts(false)}
         onPick={openWizardForDraft}
       />
+      {showProjectDrafts && (
+        <ProjectDraftsPanel
+          drafts={projectDrafts}
+          onClose={() => setShowProjectDrafts(false)}
+          onLoad={handleLoadDraft}
+          onDelete={handleDeleteDraft}
+          onPublish={handlePublishDraft}
+          onSchedule={handleSchedule}
+        />
+      )}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }} className="space-y-8 max-w-3xl">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -377,19 +479,29 @@ export default function CreateProjectPage() {
             <h1 className="text-[30px] font-semibold leading-[1.02] tracking-h1 text-text-base">Разместить заказ</h1>
             <p className="mt-2 text-[15px] text-text-secondary">Выберите тип услуги, чтобы разместить заказ</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {draftsCount > 0 && (
               <button
                 onClick={() => setShowDrafts(true)}
                 className="flex items-center gap-2 rounded-[10px] border border-border bg-bg-card px-4 py-2.5 text-sm font-[510] tracking-caption text-text-base transition-all duration-200 hover:bg-bg-elevated hover:border-accent/40"
               >
                 <FileText className="w-4 h-4 text-accent-light" />
-                Черновики
+                ИИ-черновики
                 <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-semibold">
                   {draftsCount}
                 </span>
               </button>
             )}
+            <button
+              onClick={() => setShowProjectDrafts(true)}
+              className="flex items-center gap-2 rounded-[10px] border border-border bg-bg-card px-4 py-2.5 text-sm font-[510] tracking-caption text-text-base transition-all duration-200 hover:bg-bg-elevated hover:border-accent/40"
+            >
+              <FolderOpen className="w-4 h-4 text-accent-light" />
+              Черновики заказа
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-accent/20 text-accent-light text-[11px] font-semibold">
+                {projectDrafts.length}
+              </span>
+            </button>
             <button
               onClick={openWizardFresh}
               className="flex items-center gap-2 rounded-[10px] border border-[rgba(201,143,177,0.24)] bg-[linear-gradient(135deg,rgba(201,143,177,0.10),rgba(122,88,172,0.12))] px-4 py-2.5 text-sm font-[510] tracking-caption text-[#f0d3e0] transition-all duration-200 hover:brightness-110"
@@ -430,6 +542,7 @@ export default function CreateProjectPage() {
   const extraFields = EXTRA_FIELDS[selectedType]
 
   return (
+    <>
     <motion.div
       key="form"
       initial={{ opacity: 0, x: 24 }}
@@ -570,10 +683,215 @@ export default function CreateProjectPage() {
 
         {errMsg && <p className="rounded-[10px] border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">{errMsg}</p>}
 
-        <Button type="submit" loading={loading} className="w-full">
-          Опубликовать заказ
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="submit" loading={loading} className="flex-1">
+            Опубликовать заказ
+          </Button>
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="inline-flex items-center gap-2 rounded-[10px] border border-border bg-bg-card px-4 py-2.5 text-sm font-[510] text-text-base transition-colors hover:bg-bg-elevated"
+            title="Сохранить в черновики (только в этом браузере)"
+          >
+            {draftSavedFlash ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Save className="w-4 h-4" />}
+            {draftSavedFlash ? 'Сохранено' : 'В черновик'}
+          </button>
+        </div>
       </form>
     </motion.div>
+    {showProjectDrafts && (
+      <ProjectDraftsPanel
+        drafts={projectDrafts}
+        onClose={() => setShowProjectDrafts(false)}
+        onLoad={handleLoadDraft}
+        onDelete={handleDeleteDraft}
+        onPublish={handlePublishDraft}
+        onSchedule={handleSchedule}
+      />
+    )}
+    </>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Панель «Черновики заказа» — список ProjectDraft с действиями
+// ────────────────────────────────────────────────────────────────────────────
+
+function ProjectDraftsPanel({
+  drafts,
+  onClose,
+  onLoad,
+  onDelete,
+  onPublish,
+  onSchedule,
+}: {
+  drafts:     ProjectDraft[]
+  onClose:    () => void
+  onLoad:     (d: ProjectDraft) => void
+  onDelete:   (id: string) => void
+  onPublish:  (d: ProjectDraft) => void
+  onSchedule: (id: string, when: string) => void
+}) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.96, opacity: 0, y: 12 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.96, opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-bg-card"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <header className="flex items-center justify-between border-b border-border px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-text-base">Черновики заказа</p>
+              <p className="text-xs text-text-faint">
+                Сохраняются в этом браузере · {drafts.length}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="cursor-pointer rounded-lg p-1.5 text-text-faint hover:bg-bg-hover hover:text-text-base"
+              aria-label="Закрыть"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </header>
+
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            {drafts.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-bg-base/40 p-10 text-center">
+                <FolderOpen className="mx-auto mb-2 h-6 w-6 text-text-faint" />
+                <p className="text-sm font-medium text-text-base">Пока нет черновиков</p>
+                <p className="mt-1 text-xs text-text-muted">
+                  Заполните форму и нажмите «В черновик» — он появится здесь.
+                </p>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {drafts.map(d => (
+                  <DraftRow
+                    key={d.id}
+                    draft={d}
+                    onLoad={() => onLoad(d)}
+                    onDelete={() => onDelete(d.id)}
+                    onPublish={() => onPublish(d)}
+                    onSchedule={(when) => onSchedule(d.id, when)}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+function DraftRow({
+  draft,
+  onLoad,
+  onDelete,
+  onPublish,
+  onSchedule,
+}: {
+  draft:      ProjectDraft
+  onLoad:     () => void
+  onDelete:   () => void
+  onPublish:  () => void
+  onSchedule: (when: string) => void
+}) {
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [when, setWhen] = useState(draft.scheduledAt ? draft.scheduledAt.slice(0, 10) : '')
+
+  const ready = !!(draft.title.trim() && draft.description.trim())
+
+  return (
+    <li className="rounded-xl border border-border bg-bg-base p-4 transition-colors hover:bg-bg-elevated">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-text-base">
+            {projectDraftPreviewTitle(draft)}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-muted">
+            <span>обновлён {new Date(draft.savedAt).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+            {draft.type && <span>· {draft.type}</span>}
+            {draft.budget && <span>· {Number(draft.budget).toLocaleString('ru-RU')} ₸</span>}
+            {draft.scheduledAt && (
+              <span className="inline-flex items-center gap-1 text-amber-300">
+                <Clock className="h-3 w-3" />
+                запланирован на {new Date(draft.scheduledAt).toLocaleDateString('ru-RU')}
+              </span>
+            )}
+            {!ready && <span className="text-rose-300">не готов к публикации</span>}
+          </div>
+        </div>
+        <button
+          onClick={onDelete}
+          title="Удалить черновик"
+          className="shrink-0 rounded-md p-1.5 text-text-faint transition-colors hover:bg-rose-500/10 hover:text-rose-300"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={onLoad}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-text-base transition-colors hover:bg-bg-hover"
+        >
+          <FolderOpen className="h-3.5 w-3.5" /> Открыть в форме
+        </button>
+        <button
+          onClick={onPublish}
+          disabled={!ready}
+          className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+          title={ready ? 'Опубликовать сейчас' : 'Заполните название и описание'}
+        >
+          <Send className="h-3.5 w-3.5" /> Опубликовать
+        </button>
+        <button
+          onClick={() => setScheduleOpen(v => !v)}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-bg-hover"
+        >
+          <Calendar className="h-3.5 w-3.5" /> {draft.scheduledAt ? 'Изменить дату' : 'Запланировать'}
+        </button>
+      </div>
+
+      {scheduleOpen && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-bg-card p-3">
+          <input
+            type="date"
+            value={when}
+            onChange={(e) => setWhen(e.target.value)}
+            className="flex-1 rounded-md border border-border bg-bg-base px-2 py-1.5 text-xs text-text-base focus:border-white/30 focus:outline-none"
+          />
+          <button
+            onClick={() => { onSchedule(when); setScheduleOpen(false) }}
+            className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-black hover:bg-white/90"
+          >
+            Сохранить дату
+          </button>
+          {draft.scheduledAt && (
+            <button
+              onClick={() => { onSchedule(''); setWhen(''); setScheduleOpen(false) }}
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-text-muted hover:bg-bg-hover"
+            >
+              Снять
+            </button>
+          )}
+        </div>
+      )}
+      <p className="mt-2 text-[10px] text-text-faint">
+        Запланированная дата сохраняется локально — реальной автопубликации пока нет, нужно нажать «Опубликовать» после наступления даты.
+      </p>
+    </li>
   )
 }

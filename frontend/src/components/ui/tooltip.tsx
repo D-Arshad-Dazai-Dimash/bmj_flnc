@@ -3,28 +3,33 @@
 import * as React from 'react'
 
 /**
- * Лёгкий tooltip без зависимостей. Появляется при hover/focus,
- * не блокирует клики (pointer-events-none на обёртке всплывашки).
+ * Tooltip — пасс-сквозной враппер, добавляющий нативный `title=""`
+ * к дочернему элементу. Используем браузерный tooltip, чтобы
+ * подсказка НИКОГДА не перекрывала кликабельный элемент:
+ * браузер показывает её с задержкой и сбоку от курсора, а не
+ * поверх контента.
+ *
+ * API сохранён (`label`, `side`, `children`) для совместимости.
+ * `side` игнорируется — позицию выбирает ОС/браузер.
  */
 export function Tooltip({
   label,
   children,
-  side = 'top',
 }: {
   label: string
-  children: React.ReactNode
+  children: React.ReactElement
   side?: 'top' | 'bottom'
 }) {
+  if (React.isValidElement(children)) {
+    const existing = (children.props as { title?: string }).title
+    return React.cloneElement(
+      children as React.ReactElement<{ title?: string }>,
+      { title: existing ?? label },
+    )
+  }
   return (
-    <span className="group relative inline-flex">
+    <span title={label} className="inline-flex">
       {children}
-      <span
-        className={`pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-2 py-1 text-[11px] font-medium text-text-base opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${
-          side === 'top' ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]'
-        }`}
-      >
-        {label}
-      </span>
     </span>
   )
 }

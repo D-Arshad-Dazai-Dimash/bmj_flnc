@@ -163,15 +163,13 @@ export default function PublicProfilePage() {
       <div className="flex items-center justify-between py-3">
         <BackButton fallbackHref="/profiles" />
         {isOwner && (
-          <Tooltip label="Редактировать профиль">
-            <button
-              onClick={() => setEditing(true)}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-xs text-text-secondary transition-colors hover:border-white/20 hover:bg-bg-hover hover:text-text-base"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Редактировать
-            </button>
-          </Tooltip>
+          <LocaleLink
+            href="/dashboard/settings"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-xs text-text-secondary transition-colors hover:border-white/20 hover:bg-bg-hover hover:text-text-base"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Редактировать
+          </LocaleLink>
         )}
       </div>
 
@@ -548,7 +546,7 @@ function ProjectsGrid({
   onTogglePin: (id: string) => void
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className="grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3">
       {items.map((p) => (
         <ProjectTile
           key={p.id}
@@ -579,7 +577,7 @@ function ProjectTile({
     >
       <LocaleLink
         href={`/dashboard/orders/${p.id}`}
-        className="group block cursor-pointer overflow-hidden rounded-lg border border-border bg-bg-card transition-all duration-150 hover:border-white/20 hover:bg-bg-elevated"
+        className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-bg-card transition-all duration-150 hover:border-white/20 hover:bg-bg-elevated"
       >
         <div
           className="h-12 w-full opacity-80 transition-opacity group-hover:opacity-100"
@@ -587,28 +585,22 @@ function ProjectTile({
             background: coverBg((p.title.charCodeAt(0) + p.title.length) % 10),
           }}
         />
-        <div className="space-y-1.5 p-2.5">
-          <p className="line-clamp-2 text-[13px] font-medium leading-snug text-text-base">
+        <div className="flex flex-1 flex-col gap-1.5 p-2.5">
+          <p className="line-clamp-2 min-h-[2.4em] text-[13px] font-medium leading-snug text-text-base">
             {p.title}
           </p>
           <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
             <StatusPill status={p.status} />
             {p.isClient && (
-              <Tooltip label="Вы заказчик">
-                <Briefcase className="h-3 w-3 text-text-faint" />
-              </Tooltip>
+              <span title="Вы заказчик"><Briefcase className="h-3 w-3 text-text-faint" /></span>
             )}
             {p.isExecutor && (
-              <Tooltip label="Вы исполнитель">
-                <Wrench className="h-3 w-3 text-text-faint" />
-              </Tooltip>
+              <span title="Вы исполнитель"><Wrench className="h-3 w-3 text-text-faint" /></span>
             )}
           </div>
-          {p.budget != null && (
-            <p className="text-[11px] font-medium text-text-secondary">
-              {formatTenge(p.budget)} ₸
-            </p>
-          )}
+          <p className="mt-auto text-[11px] font-medium text-text-secondary">
+            {p.budget != null ? `${formatTenge(p.budget)} ₸` : ' '}
+          </p>
         </div>
       </LocaleLink>
       {canPin && (
