@@ -73,97 +73,100 @@ export default function ProfilesDirectoryPage() {
     }
   }
 
-  // --- UI: градиентный фон, карточки с тенью, border glow для верифицированных ---
-  return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#1a2236] via-[#232b47] to-[#2a3152] py-8 px-0 sm:px-2 md:px-6 space-y-8">
-      <div>
-        <h1 className="text-[32px] font-bold tracking-tight text-white drop-shadow-lg mb-1 flex items-center gap-2">
-          <span className="inline-block bg-gradient-to-r from-[#7fd7ff] via-[#a88bff] to-[#ffb8e2] bg-clip-text text-transparent">Профили пользователей</span>
-        </h1>
-        <p className="text-[16px] text-[#b6c6e3] font-medium">Публичные и безопасные карточки: имя, статус, деятельность и публикации проектов</p>
-      </div>
+  // Vercel-style: монохром, сетка карточек, тонкие границы, минимализм
+  const fieldCls = 'w-full rounded-md border border-border bg-bg-base px-3 py-2 text-sm text-text-base placeholder:text-text-faint transition-colors focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/10'
 
-      <div className="grid gap-5 rounded-2xl border border-[#2e3650] bg-gradient-to-br from-[#232b47]/80 to-[#2a3152]/90 p-6 md:grid-cols-[1fr_220px] shadow-xl">
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+      <header className="border-b border-border pb-8">
+        <h1 className="text-[34px] font-semibold tracking-[-0.02em] text-text-base">Профили</h1>
+        <p className="mt-2 text-[15px] text-text-muted">Публичные карточки исполнителей, компаний и команд</p>
+      </header>
+
+      <div className="grid gap-3 md:grid-cols-[1fr_220px]">
         <label className="block">
-          <span className="mb-1 block text-xs text-[#b6c6e3]">Поиск по имени и описанию</span>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-[#8fa2c7]" />
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-text-faint" />
             <input
               value={qInput}
               onChange={e => setQInput(e.target.value)}
-              placeholder="Например: backend, mobile, studio"
-              className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] py-2 pl-8 pr-3 text-sm text-white placeholder:text-[#8fa2c7] focus:border-[#7fd7ff] focus:outline-none transition"
+              placeholder="Поиск по имени или описанию…"
+              className={`${fieldCls} pl-9`}
             />
           </div>
         </label>
 
-        <label className="block">
-          <span className="mb-1 block text-xs text-[#b6c6e3]">Тип профиля</span>
-          <select
-            value={accountType}
-            onChange={e => setAccountType(e.target.value as AccountTypeFilter)}
-            className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
-          >
-            <option value="">Все</option>
-            <option value="Individual">Исполнители</option>
-            <option value="Company">Компании</option>
-            <option value="Clan">Команды</option>
-          </select>
-        </label>
+        <select
+          value={accountType}
+          onChange={e => setAccountType(e.target.value as AccountTypeFilter)}
+          className={fieldCls}
+        >
+          <option value="">Все типы</option>
+          <option value="Individual">Исполнители</option>
+          <option value="Company">Компании</option>
+          <option value="Clan">Команды</option>
+        </select>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#7fd7ff] border-t-transparent" /></div>
+        <div className="flex justify-center py-20"><div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" /></div>
       ) : error ? (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-300 shadow-lg">{error}</div>
+        <div className="rounded-xl border border-red-500/20 bg-red-500/[0.06] p-5 text-sm text-red-300">{error}</div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-[#2e3650] bg-[#232b47] p-10 text-center text-lg text-[#b6c6e3] shadow-lg">Профили не найдены</div>
+        <div className="rounded-xl border border-border bg-bg-card p-12 text-center">
+          <p className="text-base font-medium text-text-base">Профили не найдены</p>
+          <p className="mt-1 text-sm text-text-muted">Попробуйте другой запрос или тип профиля</p>
+        </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((p, i) => (
-              <motion.article
+              <motion.div
                 key={p.id}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.18, delay: Math.min(i * 0.02, 0.2) }}
-                className={`rounded-2xl border bg-gradient-to-br from-[#232b47]/80 to-[#2a3152]/90 p-5 shadow-xl transition-all duration-200 hover:scale-[1.025] hover:shadow-2xl hover:border-[#7fd7ff] ${p.isVerified ? 'border-emerald-400/60 ring-2 ring-emerald-300/30' : 'border-[#2e3650]'}`}
               >
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <p className="truncate text-lg font-semibold text-white drop-shadow-sm">{p.name}</p>
-                  {p.isVerified && (
-                    <span className="inline-flex items-center gap-1 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[11px] text-emerald-200 shadow">
-                      <ShieldCheck className="h-4 w-4" /> verified
-                    </span>
-                  )}
-                </div>
-
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[#b6c6e3]">
-                  <span>{p.accountType}</span>
-                  <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {p.memberCount}</span>
-                  {p.status && <span className="chip border-[#7fd7ff]/30 bg-[#7fd7ff]/10 text-[#7fd7ff]">{p.status}</span>}
-                </div>
-
-                {p.bio && <p className="mb-3 line-clamp-3 text-sm text-[#b6c6e3]">{p.bio}</p>}
-
                 <Link
                   href={`/profiles/${p.id}`}
-                  className="inline-flex items-center rounded-xl border border-[#7fd7ff] bg-gradient-to-r from-[#7fd7ff]/20 to-[#a88bff]/20 px-4 py-2 text-sm text-white font-semibold shadow hover:scale-105 hover:bg-[#7fd7ff]/30 transition-all duration-200"
+                  className="group block h-full rounded-xl border border-border bg-bg-card p-5 transition-all duration-150 hover:border-white/20 hover:bg-bg-elevated"
                 >
-                  Открыть профиль
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-bg-elevated text-sm font-medium text-text-base">
+                      {p.name.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-[15px] font-medium text-text-base">{p.name}</p>
+                        {p.isVerified && (
+                          <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-text-muted">{p.accountType}</p>
+                    </div>
+                  </div>
+
+                  {p.bio && <p className="mb-4 line-clamp-2 text-sm text-text-secondary">{p.bio}</p>}
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-text-muted">
+                    <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {p.memberCount}</span>
+                    {p.status && <span className="truncate">{p.status}</span>}
+                  </div>
                 </Link>
-              </motion.article>
+              </motion.div>
             ))}
           </div>
 
           {hasMore && (
-            <button
-              onClick={onLoadMore}
-              disabled={loadingMore}
-              className="rounded-xl border border-[#2e3650] bg-[#232b47] px-5 py-2 text-base text-[#b6c6e3] font-medium shadow hover:bg-[#2a3152] hover:text-white transition-all duration-200 disabled:opacity-50"
-            >
-              {loadingMore ? 'Загрузка...' : 'Показать ещё'}
-            </button>
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={onLoadMore}
+                disabled={loadingMore}
+                className="rounded-md border border-border bg-bg-card px-4 py-2 text-sm text-text-base transition-colors hover:border-white/20 hover:bg-bg-elevated disabled:opacity-50"
+              >
+                {loadingMore ? 'Загрузка…' : 'Показать ещё'}
+              </button>
+            </div>
           )}
         </>
       )}

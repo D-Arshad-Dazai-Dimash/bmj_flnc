@@ -82,7 +82,7 @@ function ProposalModal({
           <button
             onClick={() => onSubmit({ coverLetter: coverLetter.trim(), proposedBudget: budget ? Number(budget) : null })}
             disabled={sending}
-            className="inline-flex items-center gap-2 rounded-[8px] border border-[rgba(73,71,171,0.28)] bg-[linear-gradient(135deg,rgba(55,111,177,0.22),rgba(73,71,171,0.26),rgba(122,88,172,0.22))] px-4 py-2 text-sm font-[510] text-[#dcdcff] transition-all duration-200 hover:brightness-110 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors duration-150 hover:bg-white/90 disabled:opacity-50"
           >
             <Send className="h-3.5 w-3.5" />
             {sending ? 'Отправляем...' : 'Отправить отклик'}
@@ -103,43 +103,45 @@ function ProjectCard({
   onPropose: (project: ProjectSummaryDto) => void
 }) {
   return (
-    <article className="rounded-[14px] border border-border bg-bg-card p-5 shadow-[0_1px_0_rgba(255,255,255,0.03)] transition-all duration-200 hover:border-border-bright hover:bg-bg-elevated">
-      <div className="mb-2 flex items-start justify-between gap-4">
+    <article className="group rounded-xl border border-border bg-bg-card p-6 transition-all duration-150 hover:border-white/20 hover:bg-bg-elevated">
+      <div className="mb-3 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="line-clamp-2 text-[17px] font-semibold text-text-base">{project.title}</h3>
-          <p className="mt-1 text-xs text-text-faint">Опубликовано {new Date(project.createdAt).toLocaleDateString('ru-RU')}</p>
+          <h3 className="line-clamp-2 text-[17px] font-semibold tracking-tight text-text-base">{project.title}</h3>
+          <p className="mt-1 text-xs text-text-faint">{new Date(project.createdAt).toLocaleDateString('ru-RU')}</p>
         </div>
-        <span className="chip border-[rgba(72,152,188,0.26)] bg-[rgba(72,152,188,0.08)] text-[#9fdcec]">Открыт</span>
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Открыт
+        </span>
       </div>
 
-      {project.description && <p className="mb-3 line-clamp-3 text-sm leading-6 text-text-secondary">{project.description}</p>}
+      {project.description && <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-text-secondary">{project.description}</p>}
 
-      <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-text-faint">
+      <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-text-muted">
         {project.budget != null && (
-          <span className="inline-flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5" />{project.budget.toLocaleString('ru-RU')} ₸</span>
+          <span className="inline-flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5" /><span className="font-medium text-text-base">{project.budget.toLocaleString('ru-RU')} ₸</span></span>
         )}
         {project.deadline && (
           <span className="inline-flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />до {new Date(project.deadline).toLocaleDateString('ru-RU')}</span>
         )}
-        <span>{project.applicationCount} откликов</span>
+        <span className="inline-flex items-center gap-1.5">{project.applicationCount} откликов</span>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <Link
           href={`/profiles/${project.clientProfileId}`}
-          className="text-sm text-[#c7d8ff] underline-offset-4 transition-colors hover:text-[#dbe6ff] hover:underline"
+          className="text-sm text-text-secondary underline-offset-4 transition-colors hover:text-text-base hover:underline"
         >
-          Профиль заказчика: {project.clientProfileName}
+          {project.clientProfileName}
         </Link>
 
         {hasProposal ? (
-          <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(201,143,177,0.28)] bg-[rgba(201,143,177,0.08)] px-3 py-1.5 text-xs font-[510] text-[#efc7d9]">
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-muted">
             <Clock3 className="h-3 w-3" /> Отклик отправлен
           </span>
         ) : (
           <button
             onClick={() => onPropose(project)}
-            className="rounded-[8px] border border-[rgba(73,71,171,0.25)] bg-[linear-gradient(135deg,rgba(55,111,177,0.18),rgba(73,71,171,0.22),rgba(122,88,172,0.18))] px-3 py-1.5 text-xs font-[510] text-[#dcdcff] transition-all duration-200 hover:brightness-110"
+            className="rounded-md bg-white px-3.5 py-1.5 text-xs font-medium text-black transition-colors duration-150 hover:bg-white/90"
           >
             Откликнуться
           </button>
@@ -245,68 +247,55 @@ export default function OrdersPage() {
     }
   }, [isAuthenticated, proposalTarget, user?.profileId])
 
-  // --- UI: современный градиентный фон, карточки с тенью, плавные анимации ---
-  return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#1a2236] via-[#232b47] to-[#2a3152] py-8 px-0 sm:px-2 md:px-6 space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[32px] font-bold tracking-tight text-white drop-shadow-lg mb-1 flex items-center gap-2">
-            <span className="inline-block bg-gradient-to-r from-[#7fd7ff] via-[#a88bff] to-[#ffb8e2] bg-clip-text text-transparent">Лента заказов</span>
-          </h1>
-          <p className="text-[16px] text-[#b6c6e3] font-medium">Поиск задач в стиле job-board: фильтруйте, сравнивайте, откликайтесь</p>
-        </div>
-      </div>
+  // Vercel-style: монохром, тонкие границы, белая primary-кнопка, чистая типографика
+  const fieldCls = 'w-full rounded-md border border-border bg-bg-base px-3 py-2 text-sm text-text-base placeholder:text-text-faint transition-colors focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/10'
 
-      <div className="grid gap-7 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="h-fit space-y-5 rounded-2xl border border-[#2e3650] bg-gradient-to-br from-[#232b47]/80 to-[#2a3152]/90 p-6 shadow-xl lg:sticky lg:top-5">
-          <div className="flex items-center justify-between mb-2">
-            <p className="inline-flex items-center gap-2 text-base font-semibold text-white"><SlidersHorizontal className="h-5 w-5" /> Фильтры</p>
-            <button onClick={resetFilters} className="text-xs text-[#8fa2c7] hover:text-white transition">Сбросить</button>
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-10 px-4 py-10 sm:px-6">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-8">
+        <div>
+          <h1 className="text-[34px] font-semibold tracking-[-0.02em] text-text-base">Лента заказов</h1>
+          <p className="mt-2 text-[15px] text-text-muted">Найдите подходящие проекты — фильтруйте по бюджету, сроку и типу заказчика.</p>
+        </div>
+        {!loading && items.length > 0 && (
+          <span className="text-xs text-text-muted">{items.length}{hasMore ? '+' : ''} результатов</span>
+        )}
+      </header>
+
+      <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="h-fit space-y-5 rounded-xl border border-border bg-bg-card p-5 lg:sticky lg:top-6">
+          <div className="flex items-center justify-between">
+            <p className="inline-flex items-center gap-2 text-sm font-medium text-text-base"><SlidersHorizontal className="h-4 w-4" /> Фильтры</p>
+            <button onClick={resetFilters} className="text-xs text-text-muted underline-offset-4 transition-colors hover:text-text-base hover:underline">Сбросить</button>
           </div>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-[#b6c6e3]">Поиск</span>
+            <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-text-faint">Поиск</span>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-[#8fa2c7]" />
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-text-faint" />
               <input
                 value={qInput}
                 onChange={e => setQInput(e.target.value)}
-                placeholder="Например: React, API, mobile"
-                className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] py-2 pl-8 pr-3 text-sm text-white placeholder:text-[#8fa2c7] focus:border-[#7fd7ff] focus:outline-none transition"
+                placeholder="React, API, mobile…"
+                className={`${fieldCls} pl-8`}
               />
             </div>
           </label>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <label>
-              <span className="mb-1 block text-xs text-[#b6c6e3]">Бюджет от</span>
-              <input
-                type="number"
-                min={0}
-                value={minBudget}
-                onChange={e => setMinBudget(e.target.value)}
-                className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
-              />
+              <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-text-faint">От, ₸</span>
+              <input type="number" min={0} value={minBudget} onChange={e => setMinBudget(e.target.value)} className={fieldCls} />
             </label>
             <label>
-              <span className="mb-1 block text-xs text-[#b6c6e3]">Бюджет до</span>
-              <input
-                type="number"
-                min={0}
-                value={maxBudget}
-                onChange={e => setMaxBudget(e.target.value)}
-                className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
-              />
+              <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-text-faint">До, ₸</span>
+              <input type="number" min={0} value={maxBudget} onChange={e => setMaxBudget(e.target.value)} className={fieldCls} />
             </label>
           </div>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-[#b6c6e3]">Тип заказчика</span>
-            <select
-              value={clientType}
-              onChange={e => setClientType(e.target.value as ClientType)}
-              className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
-            >
+            <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-text-faint">Тип заказчика</span>
+            <select value={clientType} onChange={e => setClientType(e.target.value as ClientType)} className={fieldCls}>
               <option value="">Любой</option>
               <option value="Individual">Частный</option>
               <option value="Company">Компания</option>
@@ -315,41 +304,34 @@ export default function OrdersPage() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-[#b6c6e3]">Дедлайн до</span>
-            <input
-              type="date"
-              value={deadlineTo}
-              onChange={e => setDeadlineTo(e.target.value)}
-              className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
-            />
+            <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-text-faint">Дедлайн до</span>
+            <input type="date" value={deadlineTo} onChange={e => setDeadlineTo(e.target.value)} className={fieldCls} />
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-[#b6c6e3]">Сортировка</span>
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value as SortValue)}
-              className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
-            >
+            <span className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-text-faint">Сортировка</span>
+            <select value={sort} onChange={e => setSort(e.target.value as SortValue)} className={fieldCls}>
               <option value="newest">Сначала новые</option>
-              <option value="budget_desc">Бюджет по убыванию</option>
-              <option value="budget_asc">Бюджет по возрастанию</option>
+              <option value="budget_desc">Бюджет ↓</option>
+              <option value="budget_asc">Бюджет ↑</option>
               <option value="deadline_asc">Ближайший дедлайн</option>
             </select>
           </label>
         </aside>
 
-        <section className="space-y-5">
+        <section className="space-y-4">
           {loading ? (
-            <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#7fd7ff] border-t-transparent" /></div>
+            <div className="flex justify-center py-20"><div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" /></div>
           ) : errMsg ? (
-            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-300 shadow-lg">{errMsg}</div>
+            <div className="rounded-xl border border-red-500/20 bg-red-500/[0.06] p-5 text-sm text-red-300">{errMsg}</div>
           ) : items.length === 0 ? (
-            <div className="rounded-2xl border border-[#2e3650] bg-[#232b47] p-10 text-center text-lg text-[#b6c6e3] shadow-lg">По этим фильтрам заказов пока нет</div>
+            <div className="rounded-xl border border-border bg-bg-card p-12 text-center">
+              <p className="text-base font-medium text-text-base">Ничего не найдено</p>
+              <p className="mt-1 text-sm text-text-muted">Попробуйте изменить фильтры или сбросить их</p>
+            </div>
           ) : (
             <>
-              <div className="text-sm text-[#8fa2c7]">Найдено: {items.length}{hasMore ? '+' : ''}</div>
-              <div className="space-y-5">
+              <div className="space-y-3">
                 {items.map(item => (
                   <ProjectCard
                     key={item.id}
@@ -361,13 +343,13 @@ export default function OrdersPage() {
               </div>
 
               {hasMore && (
-                <div className="pt-2">
+                <div className="flex justify-center pt-4">
                   <button
                     onClick={onLoadMore}
                     disabled={loadingMore}
-                    className="rounded-xl border border-[#2e3650] bg-[#232b47] px-5 py-2 text-base text-[#b6c6e3] font-medium shadow hover:bg-[#2a3152] hover:text-white transition-all duration-200 disabled:opacity-50"
+                    className="rounded-md border border-border bg-bg-card px-4 py-2 text-sm text-text-base transition-colors hover:border-white/20 hover:bg-bg-elevated disabled:opacity-50"
                   >
-                    {loadingMore ? 'Загрузка...' : 'Показать ещё'}
+                    {loadingMore ? 'Загрузка…' : 'Показать ещё'}
                   </button>
                 </div>
               )}

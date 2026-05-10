@@ -56,8 +56,8 @@ export default function PublicProfilePage() {
 
   useEffect(() => { reload() }, [reload])
 
-  if (loading)            return <div className="p-8 text-text-muted">Загрузка…</div>
-  if (error || !profile)  return <div className="p-8 text-red-300">{error ?? 'Профиль недоступен'}</div>
+  if (loading)            return <div className="flex justify-center py-20"><div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" /></div>
+  if (error || !profile)  return <div className="p-8 text-sm text-red-300">{error ?? 'Профиль недоступен'}</div>
 
   const pinnedIds = new Set(profile.pinnedProjectIds ?? [])
   const pinned    = projects.filter(p => pinnedIds.has(p.id))
@@ -258,10 +258,10 @@ function ProjectsGrid({
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18 }}
-          className="group relative rounded-xl border border-border bg-bg-card overflow-hidden hover:border-accent/40 transition-colors"
+          className="group relative overflow-hidden rounded-xl border border-border bg-bg-card transition-all duration-150 hover:border-white/20 hover:bg-bg-elevated"
         >
           <div
-            className="h-20 w-full opacity-80"
+            className="h-16 w-full opacity-70"
             style={{ background: coverBg((p.title.charCodeAt(0) + p.title.length) % 10) }}
           />
           <div className="p-3 space-y-1.5">
@@ -298,14 +298,14 @@ function ProjectsGrid({
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
-    Open:        'border-blue-500/40 bg-blue-500/10 text-blue-300',
-    InProgress:  'border-amber-500/40 bg-amber-500/10 text-amber-300',
-    Review:      'border-violet-500/40 bg-violet-500/10 text-violet-300',
-    Completed:   'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-    Cancelled:   'border-rose-500/40 bg-rose-500/10 text-rose-300',
+    Open:        'border-blue-500/20 bg-blue-500/[0.06] text-blue-300',
+    InProgress:  'border-amber-500/20 bg-amber-500/[0.06] text-amber-300',
+    Review:      'border-violet-500/20 bg-violet-500/[0.06] text-violet-300',
+    Completed:   'border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-300',
+    Cancelled:   'border-rose-500/20 bg-rose-500/[0.06] text-rose-300',
   }
   const cls = map[status] ?? 'border-border bg-bg-elevated text-text-muted'
-  return <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] ${cls}`}>{status}</span>
+  return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${cls}`}>{status}</span>
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
