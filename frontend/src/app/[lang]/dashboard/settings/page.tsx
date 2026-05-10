@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { api } from '@/lib/api'
 import { COVER_PRESETS, coverBg } from '@/lib/coverPresets'
+import { avatarSrc } from '@/lib/avatar'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -162,14 +163,8 @@ export default function SettingsPage() {
           />
           <div className="flex items-center gap-3 px-4 py-3 bg-bg-card">
             <div className="-mt-9 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-4 border-bg-base bg-bg-elevated">
-              {pLogo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={pLogo} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-xl font-semibold text-text-muted">
-                  {(pName || '?').slice(0, 1).toUpperCase()}
-                </span>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={avatarSrc(pLogo)} alt="" className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-text-base">{pName || 'Без имени'}</p>

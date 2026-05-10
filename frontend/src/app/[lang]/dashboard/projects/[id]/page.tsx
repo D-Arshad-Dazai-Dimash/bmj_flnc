@@ -23,6 +23,7 @@ import {
 } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { formatTenge } from '@/lib/pricing'
+import { DEFAULT_AVATAR_URL } from '@/lib/avatar'
 import LocaleLink from '@/components/ui/LocaleLink'
 import { BackButton } from '@/components/ui/back-button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -404,8 +405,9 @@ function PartyCard({
         href={`/profiles/${profileId}`}
         className="group flex items-center gap-3 rounded-md p-1 -m-1 transition-colors hover:bg-bg-hover"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-bg-elevated">
-          <UserIcon className="h-4 w-4 text-text-muted" />
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-bg-elevated">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={DEFAULT_AVATAR_URL} alt="" className="h-full w-full object-cover" />
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-text-base group-hover:underline underline-offset-4">

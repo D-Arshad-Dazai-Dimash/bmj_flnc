@@ -31,8 +31,9 @@ import {
 import { RatingBadge } from '@/components/reviews/RatingBadge'
 import { ReviewsList } from '@/components/reviews/ReviewsList'
 import { COVER_PRESETS, coverBg } from '@/lib/coverPresets'
-import { useAuth } from '@/context/AuthContext'
 import { formatTenge } from '@/lib/pricing'
+import { avatarSrc } from '@/lib/avatar'
+import { useAuth } from '@/context/AuthContext'
 import LocaleLink from '@/components/ui/LocaleLink'
 import { BackButton } from '@/components/ui/back-button'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -181,18 +182,12 @@ export default function PublicProfilePage() {
         />
         <div className="relative z-10 -mt-10 flex items-end gap-3 px-1 sm:-mt-12 sm:gap-4 sm:px-2">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-bg-base bg-bg-elevated shadow-lg sm:h-24 sm:w-24">
-            {profile.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.logoUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="text-3xl font-semibold text-text-muted">
-                {profile.name.slice(0, 1).toUpperCase()}
-              </span>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={avatarSrc(profile.logoUrl)}
+              alt=""
+              className="h-full w-full object-cover"
+            />
           </div>
 
           {/* быстрые цифры справа от аватара (компактно) */}
