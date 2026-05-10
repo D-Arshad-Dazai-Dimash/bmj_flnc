@@ -384,6 +384,10 @@ export const api = {
     list: () =>
       request<ProjectSummaryDto[]>('/api/projects/my'),
 
+    /** Детали проекта по id (публично) */
+    get: (id: string) =>
+      request<ProjectDetailDto>(`/api/projects/${id}`),
+
     /** Публичная лента открытых проектов с фильтрами */
     feed: (opts: ProjectFeedOptions = {}) => {
       const params = new URLSearchParams()

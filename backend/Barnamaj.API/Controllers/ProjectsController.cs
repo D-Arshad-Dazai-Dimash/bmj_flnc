@@ -132,6 +132,29 @@ public sealed class ProjectsController : ControllerBase
     }
 
     // ════════════════════════════════════════════════════════════
+    // GET /api/projects/{id}
+    // ════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Возвращает детальную карточку проекта (публично).
+    /// </summary>
+    /// <response code="200">Проект найден.</response>
+    /// <response code="404">Проект не найден.</response>
+    [HttpGet("{id:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ProjectDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(
+        [FromRoute] Guid id,
+        CancellationToken ct)
+    {
+        var result = await _projectService.GetByIdAsync(id, ct);
+        if (result is null)
+            return NotFound(new { error = "Проект не найден." });
+        return Ok(result);
+    }
+
+    // ════════════════════════════════════════════════════════════
     // PATCH /api/projects/{id}/status
     // ════════════════════════════════════════════════════════════
 

@@ -48,6 +48,13 @@ public interface IProjectService
         CancellationToken ct = default);
 
     /// <summary>
+    /// Возвращает детальную карточку проекта по идентификатору (публично).
+    /// </summary>
+    Task<ProjectDetailDto?> GetByIdAsync(
+        Guid projectId,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Изменяет статус проекта (отмена или завершение).
     /// Только Owner профиля-заказчика может менять статус.
     /// Допустимые переходы: Open/InProgress → Cancelled; InProgress → Completed.
@@ -274,6 +281,26 @@ public sealed class ProjectService : IProjectService
             ApplicationCount:  x.AppCount,
             CreatedAt:         x.Project.CreatedAt
         )).ToList();
+    }
+
+    // ── GET BY ID ─────────────────────────────────────────────
+    public async Task<ProjectDetailDto?> GetByIdAsync(
+        Guid projectId,
+        CancellationToken ct = default)
+    {
+        var project = await _db.Projects
+            .AsNoTracking()
+            .Include(p => p.ClientProfile)
+            .Include(p => p.ExecutorProfile)
+            .FirstOrDefaultAsync(p => p.Id == projectId, ct);
+
+        if (project is null)
+            return null;
+
+        var appCount = await _db.ProjectApplications
+            .CountAsync(a => a.ProjectId == projectId && a.Status == ApplicationStatus.Pending, ct);
+
+        return ToDetailDto(project, project.ClientProfile, project.ExecutorProfile, appCount);
     }
 
     // ── PATCH STATUS ──────────────────────────────────────────
