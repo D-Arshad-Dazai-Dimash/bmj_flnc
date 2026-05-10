@@ -28,6 +28,9 @@ import LocaleLink from '@/components/ui/LocaleLink'
 import { BackButton } from '@/components/ui/back-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ReviewForm } from '@/components/reviews/ReviewForm'
+import { useLocaleRouter } from '@/hooks/useLocaleRouter'
+import { listThreadsFor, getMessages, type ChatThreadMeta } from '@/lib/chatStore'
+import { createContract } from '@/lib/contractsStore'
 
 // ─────────────────────────────────────────────────────────────────────
 // Workroom — детальная страница проекта для участников.
@@ -70,6 +73,9 @@ export default function ProjectWorkroomPage({
 
   const [statusBusy, setStatusBusy] = useState<string | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [contractOpen, setContractOpen] = useState<{ executorProfileId: string; executorName: string } | null>(null)
+  const [threads, setThreads] = useState<ChatThreadMeta[]>([])
+  const router = useLocaleRouter()
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -89,6 +95,22 @@ export default function ProjectWorkroomPage({
   }, [id])
 
   useEffect(() => { reload() }, [reload])
+
+  // подтянем чаты заказчика, чтобы найти откликнувшихся по этому проекту
+  useEffect(() => {
+    if (!user?.profileId) return
+    const refresh = () => setThreads(listThreadsFor(user.profileId))
+    refresh()
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.startsWith('bj.chat.')) refresh()
+    }
+    window.addEventListener('storage', onStorage)
+    const t = setInterval(refresh, 5000)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      clearInterval(t)
+    }
+  }, [user?.profileId])
 
   const isOwner    = !!(user?.profileId && project?.clientProfileId === user.profileId)
   const isExecutor = !!(user?.profileId && project?.executorProfileId === user.profileId)
@@ -230,6 +252,22 @@ export default function ProjectWorkroomPage({
             )}
           </section>
 
+          {/* откликнувшиеся (только для владельца) */}
+          {isOwner && (
+            <ApplicantsSection
+              project={project}
+              threads={threads}
+              myProfileId={user!.profileId!}
+              onChat={(otherId) => {
+                const tid = [user!.profileId!, otherId].sort().join('::')
+                router.push(`/dashboard/chat/${encodeURIComponent(tid)}`)
+              }}
+              onApprove={(executorProfileId, executorName) =>
+                setContractOpen({ executorProfileId, executorName })
+              }
+            />
+          )}
+
           {/* отзывы */}
           <section className="rounded-xl border border-border bg-bg-card p-6">
             <div className="mb-3 flex items-center justify-between">
@@ -352,6 +390,21 @@ export default function ProjectWorkroomPage({
       {reviewOpen && (
         <ReviewForm projectId={project.id} onClose={() => setReviewOpen(false)} />
       )}
+
+      {contractOpen && (
+        <CreateContractModal
+          project={project}
+          executorProfileId={contractOpen.executorProfileId}
+          executorName={contractOpen.executorName}
+          meId={user!.profileId!}
+          meName={user!.profileName ?? 'Я'}
+          onClose={() => setContractOpen(null)}
+          onCreated={(contractId) => {
+            setContractOpen(null)
+            router.push(`/dashboard/contracts/${contractId}`)
+          }}
+        />
+      )}
     </motion.div>
   )
 }
@@ -449,3 +502,292 @@ function WorkroomSkeleton() {
     </div>
   )
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Откликнувшиеся: backend пока не отдаёт список заявок, поэтому
+// извлекаем потенциальных кандидатов из локальных чат-тредов, в которых
+// есть сообщение, помеченное projectId == текущему проекту.
+// ─────────────────────────────────────────────────────────────────────
+
+
+function ApplicantsSection({
+  project,
+  threads,
+  myProfileId,
+  onChat,
+  onApprove,
+}: {
+  project: ProjectDetailDto
+  threads: ChatThreadMeta[]
+  myProfileId: string
+  onChat: (otherProfileId: string) => void
+  onApprove: (executorProfileId: string, executorName: string) => void
+}) {
+  // отбираем тех, кто прислал сообщение по этому проекту
+  const applicants = useMemo(() => {
+    const out: Array<{ profileId: string; name: string; lastAt?: string; lastMessage?: string }> = []
+    for (const t of threads) {
+      const msgs = getMessages(t.id)
+      const matched = msgs.find(m => m.projectId === project.id && m.fromProfileId !== myProfileId)
+      if (!matched) continue
+      const otherId = t.participants.find(p => p !== myProfileId) ?? matched.fromProfileId
+      const name = t.participantNames?.[otherId] ?? 'Исполнитель'
+      const last = msgs[msgs.length - 1]
+      out.push({
+        profileId: otherId,
+        name,
+        lastAt: last?.createdAt,
+        lastMessage: last?.text,
+      })
+    }
+    // дедуп по profileId
+    const seen = new Set<string>()
+    return out.filter(a => (seen.has(a.profileId) ? false : (seen.add(a.profileId), true)))
+  }, [threads, project.id, myProfileId])
+
+  if (applicants.length === 0 && project.applicationCount === 0) return null
+
+  return (
+    <section className="rounded-xl border border-border bg-bg-card p-6">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-text-faint">
+          <UserIcon className="h-3 w-3" /> Откликнувшиеся
+          {project.applicationCount > 0 && (
+            <span className="ml-1 rounded-full bg-bg-elevated px-1.5 py-0.5 text-[10px] text-text-secondary">
+              {project.applicationCount}
+            </span>
+          )}
+        </h2>
+      </div>
+
+      {applicants.length === 0 ? (
+        <p className="text-sm text-text-muted">
+          Получено откликов: {project.applicationCount}. Подробности появятся, когда исполнитель напишет вам.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {applicants.map(a => (
+            <li key={a.profileId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-bg-base p-3">
+              <div className="min-w-0">
+                <LocaleLink
+                  href={`/profiles/${a.profileId}`}
+                  className="text-sm font-medium text-text-base hover:underline"
+                >
+                  {a.name}
+                </LocaleLink>
+                {a.lastMessage && (
+                  <p className="mt-0.5 line-clamp-1 text-[12px] text-text-muted">{a.lastMessage}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onChat(a.profileId)}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-[11.5px] text-text-secondary hover:bg-bg-elevated hover:text-text-base"
+                >
+                  <MessageSquare className="h-3 w-3" />
+                  Написать
+                </button>
+                <button
+                  onClick={() => onApprove(a.profileId, a.name)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/90 px-2.5 py-1.5 text-[11.5px] font-medium text-white hover:bg-emerald-500"
+                >
+                  <CheckCircle2 className="h-3 w-3" />
+                  Одобрить → контракт
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Модалка создания контракта (этапы по умолчанию = 1 на всю сумму).
+// ─────────────────────────────────────────────────────────────────────
+function CreateContractModal({
+  project,
+  executorProfileId,
+  executorName,
+  meId,
+  meName,
+  onClose,
+  onCreated,
+}: {
+  project: ProjectDetailDto
+  executorProfileId: string
+  executorName: string
+  meId: string
+  meName: string
+  onClose: () => void
+  onCreated: (contractId: string) => void
+}) {
+  const defaultTotal = project.budget ?? 0
+  const [total, setTotal] = useState<string>(defaultTotal ? String(defaultTotal) : '')
+  const [milestones, setMilestones] = useState<Array<{ title: string; amount: string; dueDate: string }>>([
+    { title: 'Полный объём работ', amount: defaultTotal ? String(defaultTotal) : '', dueDate: project.deadline ?? '' },
+  ])
+  const [submitting, setSubmitting] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const addMilestone = () => setMilestones(prev => [...prev, { title: '', amount: '', dueDate: '' }])
+  const removeMilestone = (idx: number) => setMilestones(prev => prev.filter((_, i) => i !== idx))
+  const updateMilestone = (idx: number, key: 'title' | 'amount' | 'dueDate', value: string) => {
+    setMilestones(prev => prev.map((m, i) => (i === idx ? { ...m, [key]: value } : m)))
+  }
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErr(null)
+    const totalNum = Number(total.replace(/\s/g, ''))
+    if (!Number.isFinite(totalNum) || totalNum <= 0) {
+      setErr('Укажите сумму контракта')
+      return
+    }
+    if (milestones.length === 0) {
+      setErr('Должен быть хотя бы один этап')
+      return
+    }
+    const parsed = milestones.map(m => ({
+      title: m.title.trim(),
+      amount: Number(m.amount.toString().replace(/\s/g, '')),
+      dueDate: m.dueDate || undefined,
+    }))
+    if (parsed.some(m => !m.title || !Number.isFinite(m.amount) || m.amount <= 0)) {
+      setErr('У каждого этапа должны быть название и положительная сумма')
+      return
+    }
+    const sum = parsed.reduce((a, b) => a + b.amount, 0)
+    if (Math.abs(sum - totalNum) > 0.5) {
+      setErr(`Сумма этапов (${sum.toLocaleString('ru-RU')} ₸) не совпадает с суммой контракта (${totalNum.toLocaleString('ru-RU')} ₸)`)
+      return
+    }
+    setSubmitting(true)
+    try {
+      const c = createContract({
+        projectId:         project.id,
+        projectTitle:      project.title,
+        clientProfileId:   project.clientProfileId,
+        clientName:        project.clientProfileName,
+        executorProfileId,
+        executorName,
+        totalAmount:       totalNum,
+        milestones:        parsed,
+        initiatorProfileId: meId,
+        initiatorName:     meName,
+      })
+      onCreated(c.id)
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Не удалось создать контракт')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-xl border border-border bg-bg-card p-5 shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-text-base">Создать контракт</h3>
+            <p className="mt-0.5 text-xs text-text-muted">с {executorName} по проекту «{project.title}»</p>
+          </div>
+          <button onClick={onClose} className="text-text-faint hover:text-text-base">
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-text-muted">Сумма контракта, ₸</span>
+            <input
+              value={total}
+              onChange={e => setTotal(e.target.value.replace(/[^\d\s]/g, ''))}
+              inputMode="numeric"
+              className="w-full rounded-lg border border-border bg-bg-base px-3 py-2 text-sm text-text-base focus:border-accent/60 focus:outline-none"
+            />
+          </label>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-text-muted">Этапы</span>
+              <button
+                type="button"
+                onClick={addMilestone}
+                className="text-[11px] text-text-secondary hover:text-text-base"
+              >
+                + добавить этап
+              </button>
+            </div>
+            <div className="space-y-2">
+              {milestones.map((m, idx) => (
+                <div key={idx} className="rounded-lg border border-border bg-bg-base p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[11px] text-text-faint">Этап #{idx + 1}</span>
+                    {milestones.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeMilestone(idx)}
+                        className="text-[11px] text-text-faint hover:text-red-300"
+                      >
+                        удалить
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    placeholder="Название этапа"
+                    value={m.title}
+                    onChange={e => updateMilestone(idx, 'title', e.target.value)}
+                    className="mt-1.5 w-full rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-[13px] text-text-base focus:border-accent/60 focus:outline-none"
+                  />
+                  <div className="mt-1.5 grid grid-cols-2 gap-2">
+                    <input
+                      placeholder="Сумма, ₸"
+                      value={m.amount}
+                      onChange={e => updateMilestone(idx, 'amount', e.target.value.replace(/[^\d\s]/g, ''))}
+                      inputMode="numeric"
+                      className="rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-[13px] text-text-base focus:border-accent/60 focus:outline-none"
+                    />
+                    <input
+                      type="date"
+                      value={m.dueDate}
+                      onChange={e => updateMilestone(idx, 'dueDate', e.target.value)}
+                      className="rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-[13px] text-text-base focus:border-accent/60 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {err && (
+            <div className="rounded-md border border-red-500/20 bg-red-500/[0.06] p-2 text-xs text-red-300">
+              {err}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-border bg-bg-card px-3 py-2 text-xs text-text-secondary hover:bg-bg-hover"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/90 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {submitting ? 'Создание…' : 'Создать контракт'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+

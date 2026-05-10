@@ -8,14 +8,17 @@ import {
   Banknote,
   Heart,
   Users,
-  ChevronRight,
   User as UserIcon,
+  Send,
+  CheckCircle2,
 } from 'lucide-react'
 import { api, ApiError, type ProjectSummaryDto } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import LocaleLink from '@/components/ui/LocaleLink'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getLikedIds, toggleLike } from '@/lib/socialStore'
+import { getAppliedIds, markApplied } from '@/lib/appliedStore'
+import { ensureThread, sendMessage } from '@/lib/chatStore'
 
 type SortValue = 'newest' | 'budget_asc' | 'budget_desc' | 'deadline_asc'
 type ClientType = 'Individual' | 'Company' | 'Clan' | ''
@@ -24,11 +27,19 @@ type Tab = 'all' | 'liked'
 function CompactProjectCard({
   project,
   liked,
+  applied,
+  isOwn,
+  applying,
   onToggleLike,
+  onQuickApply,
 }: {
   project: ProjectSummaryDto
   liked: boolean
+  applied: boolean
+  isOwn: boolean
+  applying: boolean
   onToggleLike: (id: string) => void
+  onQuickApply: (project: ProjectSummaryDto) => void
 }) {
   return (
     <LocaleLink
@@ -85,6 +96,39 @@ function CompactProjectCard({
         </span>
       </div>
 
+      {/* Кнопка быстрого отклика */}
+      {!isOwn && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (applied || applying) return
+            onQuickApply(project)
+          }}
+          disabled={applied || applying}
+          aria-pressed={applied}
+          title={applied ? 'Вы уже отправили отклик' : 'Отправить быстрый отклик'}
+          className={`mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition-all ${
+            applied
+              ? 'cursor-not-allowed border border-border bg-bg-elevated text-text-muted'
+              : applying
+              ? 'bg-white/60 text-black/70'
+              : 'bg-white text-black hover:bg-white/90'
+          }`}
+        >
+          {applied ? (
+            <>
+              <CheckCircle2 className="h-3.5 w-3.5" /> Вы уже откликнулись
+            </>
+          ) : (
+            <>
+              <Send className="h-3.5 w-3.5" /> Откликнуться
+            </>
+          )}
+        </button>
+      )}
+
       {/* лайк (абсолютно справа сверху, внутри блока бейджей нельзя — поэтому overlay) */}
       <button
         type="button"
@@ -104,9 +148,6 @@ function CompactProjectCard({
       >
         <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
       </button>
-
-      {/* стрелочка-индикатор */}
-      <ChevronRight className="absolute right-4 bottom-5 h-4 w-4 text-text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-text-base" />
     </LocaleLink>
   )
 }
@@ -150,10 +191,13 @@ export default function OrdersPage() {
   const [hasMore, setHasMore] = useState(true)
 
   const [likedSet, setLikedSet] = useState<Set<string>>(new Set())
+  const [appliedSet, setAppliedSet] = useState<Set<string>>(new Set())
+  const [applyingId, setApplyingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user?.id) return
     setLikedSet(getLikedIds(user.id))
+    setAppliedSet(getAppliedIds(user.id))
   }, [user?.id])
 
   const handleToggleLike = useCallback(
@@ -168,6 +212,49 @@ export default function OrdersPage() {
       toggleLike(user.id, projectId)
     },
     [user?.id],
+  )
+
+  const handleQuickApply = useCallback(
+    async (project: ProjectSummaryDto) => {
+      if (!user?.id || !user.profileId) {
+        setErrMsg('Войдите в аккаунт исполнителя, чтобы отправлять отклики.')
+        return
+      }
+      setApplyingId(project.id)
+      try {
+        await api.projects.apply(project.id, {
+          applicantProfileId: user.profileId,
+        })
+        markApplied(user.id, project.id)
+        setAppliedSet((prev) => new Set(prev).add(project.id))
+        // Уведомляем заказчика в чате
+        try {
+          ensureThread(
+            user.profileId,
+            user.profileName ?? 'Я',
+            project.clientProfileId,
+            project.clientProfileName,
+          )
+          sendMessage({
+            threadId: [user.profileId, project.clientProfileId].sort().join('::'),
+            fromProfileId: user.profileId,
+            text: `Здравствуйте! Откликнулся на ваш заказ «${project.title}».`,
+            projectId: project.id,
+          })
+        } catch { /* чат — best-effort */ }
+      } catch (e) {
+        // если сервер вернул 409 (уже подавал) — тоже отмечаем
+        if (e instanceof ApiError && e.statusCode === 409) {
+          markApplied(user.id, project.id)
+          setAppliedSet((prev) => new Set(prev).add(project.id))
+        } else {
+          alert(e instanceof Error ? e.message : 'Не удалось отправить отклик')
+        }
+      } finally {
+        setApplyingId(null)
+      }
+    },
+    [user?.id, user?.profileId],
   )
 
   useEffect(() => {
@@ -422,7 +509,11 @@ export default function OrdersPage() {
                     key={item.id}
                     project={item}
                     liked={likedSet.has(item.id)}
+                    applied={appliedSet.has(item.id)}
+                    isOwn={user?.profileId === item.clientProfileId}
+                    applying={applyingId === item.id}
                     onToggleLike={handleToggleLike}
+                    onQuickApply={handleQuickApply}
                   />
                 ))}
               </div>

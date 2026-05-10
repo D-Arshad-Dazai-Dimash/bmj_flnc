@@ -20,6 +20,8 @@ import { BackButton } from '@/components/ui/back-button'
 import { Tooltip } from '@/components/ui/tooltip'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getLikedIds, toggleLike } from '@/lib/socialStore'
+import { isApplied, markApplied } from '@/lib/appliedStore'
+import { ensureThread, sendMessage } from '@/lib/chatStore'
 
 function ProposalModal({
   project,
@@ -183,6 +185,7 @@ export default function OrderDetailsPage({
   useEffect(() => {
     if (!user?.id) return
     setLiked(getLikedIds(user.id).has(id))
+    if (isApplied(user.id, id)) setProposalSent(true)
   }, [user?.id, id])
 
   const onToggleLike = useCallback(() => {
@@ -205,10 +208,40 @@ export default function OrderDetailsPage({
           coverLetter: data.coverLetter || undefined,
           proposedBudget: data.proposedBudget ?? undefined,
         })
+        if (user.id) markApplied(user.id, project.id, {
+          coverLetter: data.coverLetter || undefined,
+          proposedBudget: data.proposedBudget,
+        })
         setProposalSent(true)
         setProposalOpen(false)
+        // Уведомляем заказчика в чате
+        try {
+          if (user.profileId) {
+            ensureThread(
+              user.profileId,
+              user.profileName ?? 'Я',
+              project.clientProfileId,
+              project.clientProfileName,
+            )
+            sendMessage({
+              threadId: [user.profileId, project.clientProfileId].sort().join('::'),
+              fromProfileId: user.profileId,
+              text:
+                `Здравствуйте! Откликнулся на ваш заказ «${project.title}».` +
+                (data.proposedBudget ? `\nПредлагаю бюджет: ${data.proposedBudget.toLocaleString('ru-RU')} ₸.` : '') +
+                (data.coverLetter ? `\n\n${data.coverLetter}` : ''),
+              projectId: project.id,
+            })
+          }
+        } catch { /* чат — best-effort */ }
       } catch (e) {
-        setErrMsg(e instanceof ApiError ? e.message : 'Не удалось отправить отклик')
+        if (e instanceof ApiError && e.statusCode === 409 && user.id) {
+          markApplied(user.id, project.id)
+          setProposalSent(true)
+          setProposalOpen(false)
+        } else {
+          setErrMsg(e instanceof ApiError ? e.message : 'Не удалось отправить отклик')
+        }
       } finally {
         setSending(false)
       }
@@ -371,7 +404,7 @@ export default function OrderDetailsPage({
           ) : proposalSent ? (
             <span className="inline-flex items-center gap-1.5 text-emerald-300">
               <Clock3 className="h-3.5 w-3.5" />
-              Отклик отправлен
+              Отклик отправлен — заказчик получит уведомление.
             </span>
           ) : !isAuthenticated ? (
             <span className="text-text-muted">
@@ -390,14 +423,44 @@ export default function OrderDetailsPage({
           )}
         </div>
 
-        <button
-          onClick={() => setProposalOpen(true)}
-          disabled={!canApply}
-          className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors duration-150 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Send className="h-3.5 w-3.5" />
-          Откликнуться
-        </button>
+        <div className="flex items-center gap-2">
+          {!isOwnProject && isAuthenticated && user?.profileId && (
+            <button
+              onClick={() => {
+                if (!user.profileId) return
+                ensureThread(
+                  user.profileId,
+                  user.profileName ?? 'Я',
+                  project.clientProfileId,
+                  project.clientProfileName,
+                )
+                const tid = [user.profileId, project.clientProfileId].sort().join('::')
+                window.location.href = window.location.pathname.replace(/\/dashboard\/orders\/.*$/, `/dashboard/chat/${encodeURIComponent(tid)}`)
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-2 text-xs font-medium text-text-base transition-colors hover:bg-bg-elevated"
+            >
+              Написать заказчику
+            </button>
+          )}
+          {proposalSent ? (
+            <button
+              disabled
+              className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-border bg-bg-elevated px-4 py-2 text-sm font-medium text-text-muted"
+            >
+              <Clock3 className="h-3.5 w-3.5" />
+              Вы уже откликнулись
+            </button>
+          ) : (
+            <button
+              onClick={() => setProposalOpen(true)}
+              disabled={!canApply}
+              className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors duration-150 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Откликнуться
+            </button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>

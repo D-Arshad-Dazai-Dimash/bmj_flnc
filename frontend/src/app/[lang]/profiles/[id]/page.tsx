@@ -44,6 +44,9 @@ import {
   getProfilePosts,
   type ProfilePost,
 } from '@/lib/socialStore'
+import { ensureThread, sendMessage, threadIdFor } from '@/lib/chatStore'
+import { createOffer } from '@/lib/contractsStore'
+import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 
 type Tab = 'works' | 'posts' | 'reviews'
 
@@ -159,11 +162,11 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-3 pb-12 sm:px-4">
+    <div className="mx-auto max-w-3xl pb-12">
       {/* шапка с кнопкой назад */}
       <div className="flex items-center justify-between py-3">
         <BackButton fallbackHref="/profiles" />
-        {isOwner && (
+        {isOwner ? (
           <LocaleLink
             href="/dashboard/settings"
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-xs text-text-secondary transition-colors hover:border-white/20 hover:bg-bg-hover hover:text-text-base"
@@ -171,7 +174,14 @@ export default function PublicProfilePage() {
             <Pencil className="h-3.5 w-3.5" />
             Редактировать
           </LocaleLink>
-        )}
+        ) : user?.profileId ? (
+          <ProfileActionsBar
+            meId={user.profileId}
+            meName={user.profileName ?? 'Я'}
+            otherId={profile.id}
+            otherName={profile.name}
+          />
+        ) : null}
       </div>
 
       {/* Обложка + аватар поверх */}
@@ -944,5 +954,221 @@ function Field({
       </div>
       {children}
     </label>
+  )
+}
+
+/**
+ * Кнопки в шапке чужого профиля: «Написать» (создаёт диалог в локальном чате)
+ * и «Предложить проект» (только для клиентов — создаёт ProjectOffer и шлёт
+ * системное сообщение в чат собеседнику).
+ */
+function ProfileActionsBar({
+  meId,
+  meName,
+  otherId,
+  otherName,
+}: {
+  meId: string
+  meName: string
+  otherId: string
+  otherName: string
+}) {
+  const { user } = useAuth()
+  const router = useLocaleRouter()
+  const [offerOpen, setOfferOpen] = useState(false)
+
+  const isClient = user?.accountType === 'Client'
+
+  const goChat = useCallback(() => {
+    ensureThread(meId, meName, otherId, otherName)
+    router.push(`/dashboard/chat/${encodeURIComponent(threadIdFor(meId, otherId))}`)
+  }, [meId, meName, otherId, otherName, router])
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={goChat}
+        className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-bg-card px-2.5 py-1.5 text-xs text-text-secondary transition-colors hover:border-white/20 hover:bg-bg-hover hover:text-text-base"
+      >
+        <MessageSquare className="h-3.5 w-3.5" />
+        Написать
+      </button>
+      {isClient && (
+        <button
+          type="button"
+          onClick={() => setOfferOpen(true)}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-[#7170ff] px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#5f5eff]"
+        >
+          <Briefcase className="h-3.5 w-3.5" />
+          Предложить проект
+        </button>
+      )}
+      {offerOpen && (
+        <OfferProjectModal
+          meId={meId}
+          meName={meName}
+          otherId={otherId}
+          otherName={otherName}
+          onClose={() => setOfferOpen(false)}
+          onSent={(offerId) => {
+            setOfferOpen(false)
+            // System message в чате
+            ensureThread(meId, meName, otherId, otherName)
+            const tid = threadIdFor(meId, otherId)
+            sendMessage({
+              threadId: tid,
+              fromProfileId: meId,
+              text: `Вам отправлено предложение по проекту (#${offerId.slice(0, 8)}). Откройте раздел «Контракты» для деталей.`,
+              system: true,
+            })
+            router.push(`/dashboard/chat/${encodeURIComponent(tid)}`)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function OfferProjectModal({
+  meId,
+  meName,
+  otherId,
+  otherName,
+  onClose,
+  onSent,
+}: {
+  meId: string
+  meName: string
+  otherId: string
+  otherName: string
+  onClose: () => void
+  onSent: (offerId: string) => void
+}) {
+  const [projectTitle, setProjectTitle] = useState('')
+  const [message, setMessage] = useState('')
+  const [budget, setBudget] = useState<string>('')
+  const [deadline, setDeadline] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErr(null)
+    if (projectTitle.trim().length < 3) {
+      setErr('Название проекта слишком короткое')
+      return
+    }
+    if (message.trim().length < 10) {
+      setErr('Опишите задачу подробнее (минимум 10 символов)')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const budgetNum = budget.trim() ? Number(budget.replace(/\s/g, '')) : undefined
+      const offer = createOffer({
+        fromClientProfileId: meId,
+        fromClientName: meName,
+        toExecutorProfileId: otherId,
+        toExecutorName: otherName,
+        projectTitle: projectTitle.trim(),
+        message: message.trim(),
+        budget: Number.isFinite(budgetNum) ? budgetNum : undefined,
+        deadline: deadline || undefined,
+      })
+      onSent(offer.id)
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Не удалось отправить предложение')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-xl border border-border bg-bg-card p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-text-base">Предложить проект</h3>
+            <p className="mt-0.5 text-xs text-text-muted">для {otherName}</p>
+          </div>
+          <button onClick={onClose} className="text-text-faint hover:text-text-base">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          <Field label="Название проекта">
+            <input
+              value={projectTitle}
+              onChange={(e) => setProjectTitle(e.target.value.slice(0, 120))}
+              placeholder="Лендинг для онлайн-школы"
+              maxLength={120}
+              className="w-full rounded-lg border border-border bg-bg-base px-3 py-2 text-sm text-text-base focus:border-accent/60 focus:outline-none"
+            />
+          </Field>
+
+          <Field label="Описание задачи" hint={`${message.length}/2000`}>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value.slice(0, 2000))}
+              rows={5}
+              placeholder="Что нужно сделать, к какому сроку, что важно учесть"
+              className="w-full resize-none rounded-lg border border-border bg-bg-base px-3 py-2 text-sm text-text-base focus:border-accent/60 focus:outline-none"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Бюджет, ₸ (опц.)">
+              <input
+                value={budget}
+                onChange={(e) => setBudget(e.target.value.replace(/[^\d\s]/g, ''))}
+                inputMode="numeric"
+                placeholder="200 000"
+                className="w-full rounded-lg border border-border bg-bg-base px-3 py-2 text-sm text-text-base focus:border-accent/60 focus:outline-none"
+              />
+            </Field>
+            <Field label="Срок (опц.)">
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="w-full rounded-lg border border-border bg-bg-base px-3 py-2 text-sm text-text-base focus:border-accent/60 focus:outline-none"
+              />
+            </Field>
+          </div>
+
+          {err && (
+            <div className="rounded-md border border-red-500/20 bg-red-500/[0.06] p-2 text-xs text-red-300">
+              {err}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-border bg-bg-card px-3 py-2 text-xs text-text-secondary hover:bg-bg-hover"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-1.5 rounded-md bg-[#7170ff] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-[#5f5eff] disabled:opacity-50"
+            >
+              <Send className="h-3.5 w-3.5" />
+              {submitting ? 'Отправка…' : 'Отправить'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }

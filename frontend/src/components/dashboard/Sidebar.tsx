@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from '@/components/ui/LocaleLink'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -10,13 +10,14 @@ import {
   User, Settings, LogOut,
   FileText, Users, ClipboardList,
   PlusSquare, FolderKanban, Search,
-  LayoutDashboard, Shield,
+  LayoutDashboard, Shield, MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 import NotificationBell from './NotificationBell'
 import ThemeToggle from '@/components/ThemeToggle'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { unreadCountFor } from '@/lib/chatStore'
 
 const LOGO_SRC = '/logo.png'
 
@@ -26,12 +27,14 @@ interface NavItem {
   href: string
   label: string
   icon: React.ReactNode
+  badge?: number
 }
 
 // Shared for all roles
 const commonItems: NavItem[] = [
   { href: '/dashboard',          label: 'Обзор',     icon: <LayoutDashboard className="w-4 h-4" /> },
   { href: '/dashboard/profile',  label: 'Профиль',   icon: <User className="w-4 h-4" /> },
+  { href: '/dashboard/chat',     label: 'Чат',        icon: <MessageSquare className="w-4 h-4" /> },
   { href: '/dashboard/settings', label: 'Настройки', icon: <Settings className="w-4 h-4" /> },
 ]
 
@@ -80,7 +83,12 @@ function NavLink({ item }: { item: NavItem }) {
       <span className={cn(isActive ? 'text-[#a8a6ff]' : 'text-text-faint group-hover:text-text-muted transition-colors')}>
         {item.icon}
       </span>
-      {item.label}
+      <span className="flex-1">{item.label}</span>
+      {item.badge != null && item.badge > 0 && (
+        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#7170ff] px-1 text-[10px] font-semibold text-white">
+          {item.badge > 9 ? '9+' : item.badge}
+        </span>
+      )}
     </Link>
   )
 }
@@ -94,6 +102,22 @@ export default function Sidebar() {
 
   const roleItems = user?.accountType === 'Developer' ? developerItems : clientItems
   const roleLabel = user?.accountType === 'Developer' ? '👨‍💻 Разработчик' : '💼 Заказчик'
+
+  // Бейдж непрочитанных для "Чат" (поллинг 1раз/5с из localStorage)
+  const [unread, setUnread] = useState(0)
+  useEffect(() => {
+    if (!user?.profileId) return
+    const tick = () => setUnread(unreadCountFor(user.profileId))
+    tick()
+    const t = setInterval(tick, 5000)
+    const onStorage = () => tick()
+    window.addEventListener('storage', onStorage)
+    return () => { clearInterval(t); window.removeEventListener('storage', onStorage) }
+  }, [user?.profileId])
+
+  const commonItemsWithBadge = commonItems.map(it =>
+    it.href === '/dashboard/chat' ? { ...it, badge: unread } : it,
+  )
 
   const handleLogout = async () => {
     await logout()
@@ -135,7 +159,7 @@ export default function Sidebar() {
       {/* ── Navigation ── */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
         {/* Common */}
-        {commonItems.map(item => <NavLink key={item.href} item={item} />)}
+        {commonItemsWithBadge.map(item => <NavLink key={item.href} item={item} />)}
 
         {/* Role section divider */}
         <div className="my-3 flex items-center gap-2">
