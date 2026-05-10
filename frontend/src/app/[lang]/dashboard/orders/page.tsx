@@ -245,64 +245,67 @@ export default function OrdersPage() {
     }
   }, [isAuthenticated, proposalTarget, user?.profileId])
 
+  // --- UI: современный градиентный фон, карточки с тенью, плавные анимации ---
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#1a2236] via-[#232b47] to-[#2a3152] py-8 px-0 sm:px-2 md:px-6 space-y-8">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-h2 text-text-base">Лента заказов</h1>
-          <p className="text-[15px] text-text-secondary">Поиск задач в стиле job-board: фильтруйте, сравнивайте, откликайтесь</p>
+          <h1 className="text-[32px] font-bold tracking-tight text-white drop-shadow-lg mb-1 flex items-center gap-2">
+            <span className="inline-block bg-gradient-to-r from-[#7fd7ff] via-[#a88bff] to-[#ffb8e2] bg-clip-text text-transparent">Лента заказов</span>
+          </h1>
+          <p className="text-[16px] text-[#b6c6e3] font-medium">Поиск задач в стиле job-board: фильтруйте, сравнивайте, откликайтесь</p>
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="h-fit space-y-4 rounded-[14px] border border-border bg-bg-card p-4 lg:sticky lg:top-5">
-          <div className="flex items-center justify-between">
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-text-base"><SlidersHorizontal className="h-4 w-4" /> Фильтры</p>
-            <button onClick={resetFilters} className="text-xs text-text-faint hover:text-text-secondary">Сбросить</button>
+      <div className="grid gap-7 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="h-fit space-y-5 rounded-2xl border border-[#2e3650] bg-gradient-to-br from-[#232b47]/80 to-[#2a3152]/90 p-6 shadow-xl lg:sticky lg:top-5">
+          <div className="flex items-center justify-between mb-2">
+            <p className="inline-flex items-center gap-2 text-base font-semibold text-white"><SlidersHorizontal className="h-5 w-5" /> Фильтры</p>
+            <button onClick={resetFilters} className="text-xs text-[#8fa2c7] hover:text-white transition">Сбросить</button>
           </div>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-text-secondary">Поиск</span>
+            <span className="mb-1 block text-xs text-[#b6c6e3]">Поиск</span>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-text-faint" />
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-[#8fa2c7]" />
               <input
                 value={qInput}
                 onChange={e => setQInput(e.target.value)}
                 placeholder="Например: React, API, mobile"
-                className="w-full rounded-[10px] border border-border bg-bg-elevated py-2 pl-8 pr-3 text-sm text-text-base placeholder:text-text-faint focus:border-border-focus focus:outline-none"
+                className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] py-2 pl-8 pr-3 text-sm text-white placeholder:text-[#8fa2c7] focus:border-[#7fd7ff] focus:outline-none transition"
               />
             </div>
           </label>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <label>
-              <span className="mb-1 block text-xs text-text-secondary">Бюджет от</span>
+              <span className="mb-1 block text-xs text-[#b6c6e3]">Бюджет от</span>
               <input
                 type="number"
                 min={0}
                 value={minBudget}
                 onChange={e => setMinBudget(e.target.value)}
-                className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+                className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
               />
             </label>
             <label>
-              <span className="mb-1 block text-xs text-text-secondary">Бюджет до</span>
+              <span className="mb-1 block text-xs text-[#b6c6e3]">Бюджет до</span>
               <input
                 type="number"
                 min={0}
                 value={maxBudget}
                 onChange={e => setMaxBudget(e.target.value)}
-                className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+                className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
               />
             </label>
           </div>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-text-secondary">Тип заказчика</span>
+            <span className="mb-1 block text-xs text-[#b6c6e3]">Тип заказчика</span>
             <select
               value={clientType}
               onChange={e => setClientType(e.target.value as ClientType)}
-              className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+              className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
             >
               <option value="">Любой</option>
               <option value="Individual">Частный</option>
@@ -312,21 +315,21 @@ export default function OrdersPage() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-text-secondary">Дедлайн до</span>
+            <span className="mb-1 block text-xs text-[#b6c6e3]">Дедлайн до</span>
             <input
               type="date"
               value={deadlineTo}
               onChange={e => setDeadlineTo(e.target.value)}
-              className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+              className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
             />
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-text-secondary">Сортировка</span>
+            <span className="mb-1 block text-xs text-[#b6c6e3]">Сортировка</span>
             <select
               value={sort}
               onChange={e => setSort(e.target.value as SortValue)}
-              className="w-full rounded-[10px] border border-border bg-bg-elevated px-3 py-2 text-sm text-text-base focus:border-border-focus focus:outline-none"
+              className="w-full rounded-xl border border-[#2e3650] bg-[#232b47] px-3 py-2 text-sm text-white focus:border-[#7fd7ff] focus:outline-none transition"
             >
               <option value="newest">Сначала новые</option>
               <option value="budget_desc">Бюджет по убыванию</option>
@@ -336,17 +339,17 @@ export default function OrdersPage() {
           </label>
         </aside>
 
-        <section className="space-y-4">
+        <section className="space-y-5">
           {loading ? (
-            <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" /></div>
+            <div className="flex justify-center py-16"><div className="h-8 w-8 animate-spin rounded-full border-2 border-[#7fd7ff] border-t-transparent" /></div>
           ) : errMsg ? (
-            <div className="rounded-[14px] border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-300">{errMsg}</div>
+            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-300 shadow-lg">{errMsg}</div>
           ) : items.length === 0 ? (
-            <div className="rounded-[14px] border border-border bg-bg-card p-10 text-center text-sm text-text-secondary">По этим фильтрам заказов пока нет</div>
+            <div className="rounded-2xl border border-[#2e3650] bg-[#232b47] p-10 text-center text-lg text-[#b6c6e3] shadow-lg">По этим фильтрам заказов пока нет</div>
           ) : (
             <>
-              <div className="text-sm text-text-faint">Найдено: {items.length}{hasMore ? '+' : ''}</div>
-              <div className="space-y-4">
+              <div className="text-sm text-[#8fa2c7]">Найдено: {items.length}{hasMore ? '+' : ''}</div>
+              <div className="space-y-5">
                 {items.map(item => (
                   <ProjectCard
                     key={item.id}
@@ -362,7 +365,7 @@ export default function OrdersPage() {
                   <button
                     onClick={onLoadMore}
                     disabled={loadingMore}
-                    className="rounded-[10px] border border-border bg-bg-elevated px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover disabled:opacity-50"
+                    className="rounded-xl border border-[#2e3650] bg-[#232b47] px-5 py-2 text-base text-[#b6c6e3] font-medium shadow hover:bg-[#2a3152] hover:text-white transition-all duration-200 disabled:opacity-50"
                   >
                     {loadingMore ? 'Загрузка...' : 'Показать ещё'}
                   </button>
