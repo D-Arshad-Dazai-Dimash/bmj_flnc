@@ -48,7 +48,7 @@ export function KycGate() {
   const close = () => setDetail(null)
   const goVerify = () => {
     close()
-    router.push(`/${lang}/dashboard/profile?kyc=open`)
+    router.push(`/${lang}/dashboard/settings?section=verification&kyc=open`)
   }
 
   return (

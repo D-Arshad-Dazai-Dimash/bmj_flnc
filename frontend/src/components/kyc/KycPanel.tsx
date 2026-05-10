@@ -46,7 +46,7 @@ export function KycPanel() {
 
   useEffect(() => { refresh() }, [])
 
-  // Авто-открытие визарда после регистрации: /dashboard/profile?kyc=open
+  // Авто-открытие визарда после регистрации: /dashboard/settings?section=verification&kyc=open
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)

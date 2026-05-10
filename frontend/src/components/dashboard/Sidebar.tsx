@@ -11,6 +11,7 @@ import {
   FileText, Users, ClipboardList,
   PlusSquare, FolderKanban, Search,
   LayoutDashboard, Shield, MessageSquare,
+  Bell, ShieldCheck, Trash2,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
@@ -28,14 +29,26 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   badge?: number
+  /** Активность с учётом query (?section=...) */
+  matchSection?: string
+  /** Подпункты, раскрываются под активным родителем. */
+  children?: NavItem[]
 }
 
 // Shared for all roles
+const settingsChildren: NavItem[] = [
+  { href: '/dashboard/settings?section=profile',       label: 'Профиль',      icon: <User className="w-3.5 h-3.5" />,        matchSection: 'profile' },
+  { href: '/dashboard/settings?section=security',      label: 'Безопасность', icon: <Shield className="w-3.5 h-3.5" />,      matchSection: 'security' },
+  { href: '/dashboard/settings?section=verification',  label: 'Верификация',  icon: <ShieldCheck className="w-3.5 h-3.5" />, matchSection: 'verification' },
+  { href: '/dashboard/settings?section=notifications', label: 'Уведомления',  icon: <Bell className="w-3.5 h-3.5" />,        matchSection: 'notifications' },
+  { href: '/dashboard/settings?section=account',       label: 'Аккаунт',      icon: <Trash2 className="w-3.5 h-3.5" />,      matchSection: 'account' },
+]
+
 const commonItems: NavItem[] = [
   { href: '/dashboard',          label: 'Обзор',     icon: <LayoutDashboard className="w-4 h-4" /> },
   { href: '/dashboard/profile',  label: 'Профиль',   icon: <User className="w-4 h-4" /> },
   { href: '/dashboard/chat',     label: 'Чат',        icon: <MessageSquare className="w-4 h-4" /> },
-  { href: '/dashboard/settings', label: 'Настройки', icon: <Settings className="w-4 h-4" /> },
+  { href: '/dashboard/settings', label: 'Настройки', icon: <Settings className="w-4 h-4" />, children: settingsChildren },
 ]
 
 const developerItems: NavItem[] = [
@@ -55,24 +68,37 @@ const clientItems: NavItem[] = [
 
 // ─── Nav item component ────────────────────────────────────────────────────────
 
-function NavLink({ item }: { item: NavItem }) {
+function useStrippedPath() {
   const pathname = usePathname()
-  // pathname includes locale prefix (e.g. /ru/dashboard), item.href doesn't
-  // Strip /{lang}/ prefix for comparison
-  const stripped = pathname.replace(/^\/(ru|en|kz)/, '') || '/'
+  return pathname.replace(/^\/(ru|en|kz)/, '') || '/'
+}
+
+function NavLink({ item }: { item: NavItem }) {
+  const stripped = useStrippedPath()
   const isActive = stripped === item.href || (item.href !== '/dashboard' && stripped.startsWith(item.href))
+
+  // Базовый href без query — для сравнения активности подпункта
+  const baseHref = item.href.split('?')[0]
+  const sectionMatch = item.matchSection
+  const currentSection = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('section')
+    : null
+  const subActive = sectionMatch != null
+    && stripped === baseHref
+    && (currentSection === sectionMatch || (!currentSection && sectionMatch === 'profile'))
 
   return (
     <Link
       href={item.href}
       className={cn(
         'relative flex items-center gap-2.5 px-3 py-2 rounded-[6px] text-[13px] transition-all duration-200 group tracking-caption',
-        isActive
+        sectionMatch ? 'ml-6 pl-3 text-[12px]' : '',
+        (sectionMatch ? subActive : isActive)
           ? 'text-text-base bg-bg-active font-[510] border border-border'
-          : 'text-text-muted hover:text-text-base hover:bg-bg-hover font-[400]'
+          : 'text-text-muted hover:text-text-base hover:bg-bg-hover font-[400]',
       )}
     >
-      {isActive && (
+      {(sectionMatch ? subActive : isActive) && !sectionMatch && (
         <motion.div
           layoutId="sidebar-indicator"
           className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4/5 bg-[#7170ff] rounded-full"
@@ -80,7 +106,7 @@ function NavLink({ item }: { item: NavItem }) {
           layout="position"
         />
       )}
-      <span className={cn(isActive ? 'text-[#a8a6ff]' : 'text-text-faint group-hover:text-text-muted transition-colors')}>
+      <span className={cn((sectionMatch ? subActive : isActive) ? 'text-[#a8a6ff]' : 'text-text-faint group-hover:text-text-muted transition-colors')}>
         {item.icon}
       </span>
       <span className="flex-1">{item.label}</span>
@@ -90,6 +116,23 @@ function NavLink({ item }: { item: NavItem }) {
         </span>
       )}
     </Link>
+  )
+}
+
+function NavGroup({ item }: { item: NavItem }) {
+  const stripped = useStrippedPath()
+  const isParentActive = stripped === item.href || (item.href !== '/dashboard' && stripped.startsWith(item.href))
+  const expanded = isParentActive
+
+  return (
+    <>
+      <NavLink item={item} />
+      {expanded && item.children && (
+        <div className="flex flex-col gap-0.5 mt-0.5 mb-1">
+          {item.children.map(c => <NavLink key={c.href} item={c} />)}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -161,7 +204,11 @@ export default function Sidebar() {
       {/* ── Navigation ── */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
         {/* Common */}
-        {commonItemsWithBadge.map(item => <NavLink key={item.href} item={item} />)}
+        {commonItemsWithBadge.map(item =>
+          item.children
+            ? <NavGroup key={item.href} item={item} />
+            : <NavLink key={item.href} item={item} />,
+        )}
 
         {/* Role section divider */}
         <div className="my-3 flex items-center gap-2">
