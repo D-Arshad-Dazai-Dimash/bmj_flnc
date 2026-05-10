@@ -6,11 +6,22 @@ using System.Text;
 
 namespace Barnamaj.API.Services;
 
+/// <summary>
+/// Результат генерации пары токенов с метаданными для серверного хранения refresh.
+/// </summary>
+public sealed record TokenPair(
+    string AccessToken,    DateTime AccessExpiresAt,
+    string RefreshToken,   DateTime RefreshExpiresAt,
+    Guid   RefreshJti,     Guid     RefreshFamilyId);
+
 public interface IJwtService
 {
-    /// <summary>Сгенерировать access + refresh токены для пользователя.</summary>
-    (string AccessToken, DateTime AccessExpiresAt, string RefreshToken, DateTime RefreshExpiresAt)
-        GenerateTokens(User user, Profile profile);
+    /// <summary>
+    /// Сгенерировать access + refresh токены для пользователя.
+    /// Если <paramref name="refreshFamilyId"/> передан — refresh принадлежит к существующей цепочке rotation,
+    /// иначе создаётся новая family.
+    /// </summary>
+    TokenPair GenerateTokens(User user, Profile profile, Guid? refreshFamilyId = null);
 
     /// <summary>Прочитать ClaimsPrincipal из refresh-токена (без проверки expiry).</summary>
     ClaimsPrincipal? ValidateRefreshToken(string token);
@@ -37,16 +48,25 @@ public sealed class JwtService : IJwtService
         _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
     }
 
-    public (string AccessToken, DateTime AccessExpiresAt, string RefreshToken, DateTime RefreshExpiresAt)
-        GenerateTokens(User user, Profile profile)
+    public TokenPair GenerateTokens(User user, Profile profile, Guid? refreshFamilyId = null)
     {
         var accessExpiresAt  = DateTime.UtcNow.AddMinutes(_settings.AccessTokenExpiresInMinutes);
         var refreshExpiresAt = DateTime.UtcNow.AddDays(_settings.RefreshTokenExpiresInDays);
 
-        var accessToken  = BuildToken(user, profile, accessExpiresAt,  "access");
-        var refreshToken = BuildToken(user, profile, refreshExpiresAt, "refresh");
+        var accessJti  = Guid.NewGuid();
+        var refreshJti = Guid.NewGuid();
+        var familyId   = refreshFamilyId ?? Guid.NewGuid();
 
-        return (accessToken, accessExpiresAt, refreshToken, refreshExpiresAt);
+        var accessToken  = BuildToken(user, profile, accessExpiresAt,  "access",  accessJti,  null);
+        var refreshToken = BuildToken(user, profile, refreshExpiresAt, "refresh", refreshJti, familyId);
+
+        return new TokenPair(
+            AccessToken:      accessToken,
+            AccessExpiresAt:  accessExpiresAt,
+            RefreshToken:     refreshToken,
+            RefreshExpiresAt: refreshExpiresAt,
+            RefreshJti:       refreshJti,
+            RefreshFamilyId:  familyId);
     }
 
     public ClaimsPrincipal? ValidateRefreshToken(string token)
@@ -80,24 +100,27 @@ public sealed class JwtService : IJwtService
         }
     }
 
-    private string BuildToken(User user, Profile profile, DateTime expiresAt, string tokenType)
+    private string BuildToken(User user, Profile profile, DateTime expiresAt, string tokenType, Guid jti, Guid? familyId)
     {
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub,   user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iat,
+            new(JwtRegisteredClaimNames.Sub,   user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.Jti,   jti.ToString()),
+            new(JwtRegisteredClaimNames.Iat,
                 new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString(),
                 ClaimValueTypes.Integer64),
 
             // Кастомные claims Barnamaj
-            new Claim("role",         user.Role.ToString()),
-            new Claim("profile_id",   profile.Id.ToString()),
-            new Claim("profile_name", profile.Name),
-            new Claim("account_type", profile.AccountType.ToString()),
-            new Claim("token_type",   tokenType),
+            new("role",         user.Role.ToString()),
+            new("profile_id",   profile.Id.ToString()),
+            new("profile_name", profile.Name),
+            new("account_type", profile.AccountType.ToString()),
+            new("token_type",   tokenType),
         };
+
+        if (familyId is not null)
+            claims.Add(new Claim("fid", familyId.Value.ToString()));
 
         var credentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
 

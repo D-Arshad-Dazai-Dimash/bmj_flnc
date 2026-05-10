@@ -179,12 +179,16 @@ public sealed class AuthController : ControllerBase
     // ── Выход ────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Выход из системы. Удаляет httpOnly cookies.
+    /// Выход из системы. Удаляет httpOnly cookies и отзывает refresh-токен на сервере.
     /// </summary>
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout(CancellationToken ct)
     {
+        // Серверный revoke refresh-токена (best practice: stateful logout).
+        var refreshToken = Request.Cookies[RefreshTokenCookie];
+        await _authService.LogoutAsync(refreshToken, ct);
+
         ClearAuthCookies();
         return NoContent();
     }

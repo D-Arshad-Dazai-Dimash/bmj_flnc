@@ -239,6 +239,9 @@ try
     // ============================================================
 
     // ── Middleware pipeline (порядок важен!) ─────────────────
+    // Correlation ID должен быть первым — чтобы все остальные middleware видели его в логах.
+    app.UseMiddleware<Barnamaj.API.Middleware.CorrelationIdMiddleware>();
+
     app.UseSerilogRequestLogging(opts =>
     {
         opts.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>

@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { useLocaleRouter } from '@/hooks/useLocaleRouter'
 import { useAuth } from '@/context/AuthContext'
-import { isAtLeast } from '@/context/AuthContext'
+import { useRoleGuard } from '@/hooks/useRoleGuard'
+import { hasAtLeastRole } from '@/lib/roleGuard'
 import Link from '@/components/ui/LocaleLink'
 import { cn } from '@/lib/utils'
 import { Loader2, Shield, LayoutDashboard, Megaphone, Users, ClipboardList, MessageSquare, ToggleRight, Eye, Wallet, FileText, ChevronLeft, Sparkles, ShieldCheck, Star } from 'lucide-react'
@@ -24,24 +23,11 @@ const NAV = [
 ] as const
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading } = useAuth()
-  const router = useLocaleRouter()
+  const { user } = useAuth()
+  const { isLoading, allowed } = useRoleGuard('admin')
   const pathname = usePathname()
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null)
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/admin-auth')
-      return
-    }
-    if (user) {
-      const allowed = isAtLeast(user.role, 'Moderator')
-      setHasAccess(allowed)
-      if (!allowed) router.replace('/dashboard')
-    }
-  }, [user, isLoading, isAuthenticated, router])
-
-  if (isLoading || hasAccess === null) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-bg-base flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-accent animate-spin" />
@@ -49,11 +35,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     )
   }
 
-  if (!hasAccess) return null
+  if (!allowed) return null
 
   const normalizedPath = pathname.replace(/^\/(ru|en|kz)/, '') || '/'
   const visibleNav = NAV.filter(item =>
-    item.minRole === null || isAtLeast(user!.role, item.minRole as 'Moderator' | 'SeniorAdmin' | 'HeadAdmin')
+    item.minRole === null ? true : hasAtLeastRole(user?.role, item.minRole)
   )
 
   return (

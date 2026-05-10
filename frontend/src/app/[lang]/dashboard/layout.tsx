@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useLocaleRouter } from '@/hooks/useLocaleRouter'
-import { useAuth } from '@/context/AuthContext'
+import { useRoleGuard } from '@/hooks/useRoleGuard'
 import Sidebar from '@/components/dashboard/Sidebar'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading } = useAuth()
-  const router = useLocaleRouter()
+  const { isLoading, allowed } = useRoleGuard('dashboard')
   const [timedOut, setTimedOut] = useState(false)
 
   // Если isLoading > 8 секунд — что-то пошло не так
@@ -17,21 +15,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const t = setTimeout(() => setTimedOut(true), 8000)
     return () => clearTimeout(t)
   }, [isLoading])
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/auth?mode=login')
-      return
-    }
-
-    if (!isLoading && isAuthenticated && user) {
-      // Если админ/модератор → переправить на /admin
-      if (user.role === 'Moderator' || user.role === 'SeniorAdmin' || user.role === 'HeadAdmin') {
-        router.replace('/admin')
-        return
-      }
-    }
-  }, [isLoading, isAuthenticated, user?.role, router])
 
   if (isLoading) {
     if (timedOut) {
@@ -55,7 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  if (!isAuthenticated || (user && (user.role === 'Moderator' || user.role === 'SeniorAdmin' || user.role === 'HeadAdmin'))) return null
+  if (!allowed) return null
 
   return (
     <div className="min-h-screen bg-bg-base flex">

@@ -87,6 +87,7 @@ public static class ServiceExtensions
 
         // ── Сервисы приложения ───────────────────────────────
         services.AddSingleton<IJwtService,     JwtService>();
+        services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
         services.AddScoped<IAuthService,       AuthService>();
         services.AddScoped<IProfileService,    ProfileService>();
         services.AddScoped<IProjectService,    ProjectService>();

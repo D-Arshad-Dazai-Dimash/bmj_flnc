@@ -32,6 +32,24 @@ Backend на **ASP.NET Core 8** + **PostgreSQL** + **Docker**.
 - **Admin Dashboard Access Guard**: Админы (`Moderator`, `SeniorAdmin`, `HeadAdmin`) теперь надёжно перенаправляются на `/admin` при попытке доступа к `/dashboard`. Улучшена логика в `dashboard/layout.tsx` — убрана race condition путём исключения `isAtLeast` из `useEffect` зависимостей (проверка `user.role` напрямую).
 - **Cookie Deletion on Logout** (backend fix): `ClearAuthCookies()` теперь использует те же `HttpOnly`, `Secure`, `SameSite` свойства что и `SetAuthCookies()`. Исправлена критическая ошибка где cookies не удалялись, позволяя пользователям оставаться залогиненными после logout.
 
+## Auth Hardening (май 2026)
+
+- **Refresh Token Rotation + Reuse Detection**:
+    - добавлена таблица `refresh_tokens` и серверное хранение refresh-сессий (хранится только SHA-256 hash токена);
+    - реализована sliding-rotation: при каждом `POST /api/auth/refresh` выдаётся новый refresh в той же `family`;
+    - повторное использование старого rotated токена помечается как `reuse_detected` и отзывает всю family (RFC 6819 style).
+- **Server-side logout revocation**:
+    - `POST /api/auth/logout` теперь не только чистит cookies, но и отзывает текущий refresh `jti` в хранилище.
+- **Structured auth logging**:
+    - добавлен `CorrelationIdMiddleware` (`X-Correlation-Id` в request/response);
+    - auth-события (`login`, `register`, `refresh`, `logout`) логируются с полями `user_id`, `ip`, `user_agent`, `family_id`/`jti`.
+- **Frontend centralized role guard**:
+    - добавлены `frontend/src/lib/roleGuard.ts` и `frontend/src/hooks/useRoleGuard.ts`;
+    - `dashboard` и `admin` layout переведены на единый декларативный guard.
+- **Новые тесты**:
+    - backend: `backend/Barnamaj.Tests/Services/RefreshTokenStoreTests.cs` (rotation/reuse/revocation);
+    - frontend e2e: `frontend/e2e/auth-logout.spec.ts`, `frontend/e2e/role-guard.spec.ts`, `frontend/e2e/refresh-rotation.spec.ts`.
+
 ---
 
 ## Структура проекта

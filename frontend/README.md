@@ -69,6 +69,19 @@ src/
 - `access_token` / `refresh_token` выставляются backend-доменом и недоступны в Next middleware на frontend-домене.
 - Поэтому проверка сессии выполняется на клиенте через `GET /api/auth/me` в `AuthContext`, а не через middleware cookie-check.
 
+## Auth Hardening (май 2026)
+
+- Добавлен централизованный role guard:
+    - `src/lib/roleGuard.ts` — единые правила доступа и иерархии ролей;
+    - `src/hooks/useRoleGuard.ts` — redirect-логика для защищённых зон (`dashboard` / `admin`).
+- Layout-guards унифицированы:
+    - `src/app/[lang]/dashboard/layout.tsx` использует `useRoleGuard('dashboard')`;
+    - `src/app/[lang]/admin/layout.tsx` использует `useRoleGuard('admin')`.
+- Добавлены E2E-спеки:
+    - `e2e/auth-logout.spec.ts` — logout инвалидирует сессию (`/api/auth/me -> 401`);
+    - `e2e/role-guard.spec.ts` — проверка redirect по ролям;
+    - `e2e/refresh-rotation.spec.ts` — rotation + reuse detection на refresh cookies.
+
 ## Автодеплой Frontend (Vercel)
 
 - Production Branch в Vercel: `main`.

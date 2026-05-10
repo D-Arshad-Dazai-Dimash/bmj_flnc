@@ -52,6 +52,9 @@ public class AppDbContext : DbContext
     // ── Audit ────────────────────────────────────────────────
     public DbSet<AdminAuditLog>      AdminAuditLogs      => Set<AdminAuditLog>();
 
+    // ── Auth ─────────────────────────────────────────────────
+    public DbSet<RefreshToken>       RefreshTokens       => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
