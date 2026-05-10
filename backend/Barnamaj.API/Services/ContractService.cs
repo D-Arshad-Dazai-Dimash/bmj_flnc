@@ -112,6 +112,8 @@ public sealed class ContractService : IContractService
             ExecutorProfileId: c.ExecutorProfileId,
             ExecutorProfileName: names.GetValueOrDefault(c.ExecutorProfileId) ?? "—",
             TotalAmount: c.TotalAmount,
+            EscrowFunded: c.EscrowFunded,
+            EscrowReleased: c.EscrowReleased,
             Status: c.Status.ToString(),
             CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
             Milestones: milestones, Events: events
@@ -141,6 +143,148 @@ public sealed class ContractService : IContractService
             Action = action, Details = details,
         });
         c.UpdatedAt = DateTime.UtcNow;
+    }
+
+    // ── Эскроу: помощники ──────────────────────────────────────
+    //
+    // ВАЖНО: ContractService предполагает, что и заказчик, и исполнитель —
+    // individual-профили (Profile.Id == User.ProfileId). Для клановых
+    // профилей сейчас бросаем понятную ошибку — отдельный спринт.
+
+    private async Task<(Wallet wallet, Guid userId)> LoadWalletByProfileAsync(
+        Guid profileId, string roleLabel, CancellationToken ct)
+    {
+        var userId = await _db.Users.AsNoTracking()
+            .Where(u => u.ProfileId == profileId)
+            .Select(u => (Guid?)u.Id).FirstOrDefaultAsync(ct);
+        if (userId is null)
+            throw new ContractException(
+                $"Эскроу для группового профиля ({roleLabel}) пока не поддержан.", 400);
+
+        var wallet = await _db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId.Value, ct);
+        if (wallet is null)
+        {
+            wallet = new Wallet { UserId = userId.Value, UpdatedAt = DateTime.UtcNow };
+            _db.Wallets.Add(wallet);
+            await _db.SaveChangesAsync(ct);
+        }
+        return (wallet, userId.Value);
+    }
+
+    /// <summary>
+    /// Заморозить полную сумму контракта на стороне заказчика. Если средств
+    /// недостаточно — кидаем 400 с понятным сообщением (UI должен предложить
+    /// пополнить кошелёк).
+    /// </summary>
+    private async Task EscrowFundAsync(Contract c, CancellationToken ct)
+    {
+        var (clientWallet, clientUserId) = await LoadWalletByProfileAsync(
+            c.ClientProfileId, "заказчик", ct);
+
+        if (clientWallet.AvailableBalance < c.TotalAmount)
+            throw new ContractException(
+                $"Недостаточно средств на счёте заказчика. Требуется {c.TotalAmount}, доступно {clientWallet.AvailableBalance}. " +
+                "Пополните кошелёк и повторите создание контракта.", 400);
+
+        clientWallet.AvailableBalance -= c.TotalAmount;
+        clientWallet.FrozenBalance    += c.TotalAmount;
+        clientWallet.UpdatedAt         = DateTime.UtcNow;
+
+        c.EscrowFunded = c.TotalAmount;
+
+        _db.Transactions.Add(new Transaction
+        {
+            WalletId         = clientWallet.Id,
+            UserId           = clientUserId,
+            Type             = TransactionType.EscrowHold,
+            Status           = TransactionStatus.Completed,
+            Amount           = -c.TotalAmount,
+            Description      = $"Эскроу по контракту {c.Id} (сумма {c.TotalAmount})",
+            RelatedProjectId = c.ProjectId,
+            CreatedAt        = DateTime.UtcNow,
+        });
+    }
+
+    /// <summary>
+    /// Освободить часть эскроу — перевести из FrozenBalance заказчика в
+    /// AvailableBalance исполнителя. Используется при approve этапа.
+    /// </summary>
+    private async Task EscrowReleasePortionAsync(
+        Contract c, decimal amount, string reason, CancellationToken ct)
+    {
+        if (amount <= 0) return;
+
+        var (clientWallet, clientUserId) = await LoadWalletByProfileAsync(
+            c.ClientProfileId, "заказчик", ct);
+        var (executorWallet, executorUserId) = await LoadWalletByProfileAsync(
+            c.ExecutorProfileId, "исполнитель", ct);
+
+        var move = Math.Min(amount, clientWallet.FrozenBalance);
+        if (move <= 0) return;
+
+        clientWallet.FrozenBalance -= move;
+        clientWallet.UpdatedAt      = DateTime.UtcNow;
+
+        executorWallet.AvailableBalance += move;
+        executorWallet.UpdatedAt         = DateTime.UtcNow;
+
+        c.EscrowReleased += move;
+
+        _db.Transactions.Add(new Transaction
+        {
+            WalletId         = clientWallet.Id,
+            UserId           = clientUserId,
+            Type             = TransactionType.EscrowRelease,
+            Status           = TransactionStatus.Completed,
+            Amount           = -move,
+            Description      = reason,
+            RelatedProjectId = c.ProjectId,
+            CreatedAt        = DateTime.UtcNow,
+        });
+        _db.Transactions.Add(new Transaction
+        {
+            WalletId         = executorWallet.Id,
+            UserId           = executorUserId,
+            Type             = TransactionType.EscrowRelease,
+            Status           = TransactionStatus.Completed,
+            Amount           = move,
+            Description      = reason,
+            RelatedProjectId = c.ProjectId,
+            CreatedAt        = DateTime.UtcNow,
+        });
+    }
+
+    /// <summary>
+    /// Вернуть невыпущенную часть эскроу обратно заказчику. Используется
+    /// при отмене / диспуте в пользу заказчика.
+    /// </summary>
+    private async Task EscrowRefundRemainderAsync(
+        Contract c, string reason, CancellationToken ct)
+    {
+        var remainder = c.EscrowFunded - c.EscrowReleased;
+        if (remainder <= 0) return;
+
+        var (clientWallet, clientUserId) = await LoadWalletByProfileAsync(
+            c.ClientProfileId, "заказчик", ct);
+
+        var refund = Math.Min(remainder, clientWallet.FrozenBalance);
+        if (refund <= 0) return;
+
+        clientWallet.FrozenBalance    -= refund;
+        clientWallet.AvailableBalance += refund;
+        clientWallet.UpdatedAt         = DateTime.UtcNow;
+
+        _db.Transactions.Add(new Transaction
+        {
+            WalletId         = clientWallet.Id,
+            UserId           = clientUserId,
+            Type             = TransactionType.Refund,
+            Status           = TransactionStatus.Completed,
+            Amount           = refund,
+            Description      = reason,
+            RelatedProjectId = c.ProjectId,
+            CreatedAt        = DateTime.UtcNow,
+        });
     }
 
     // ── List ───────────────────────────────────────────────────
@@ -190,6 +334,8 @@ public sealed class ContractService : IContractService
                 ExecutorProfileId: c.ExecutorProfileId,
                 ExecutorProfileName: profiles.GetValueOrDefault(c.ExecutorProfileId) ?? "—",
                 TotalAmount: c.TotalAmount,
+                EscrowFunded: c.EscrowFunded,
+                EscrowReleased: c.EscrowReleased,
                 Status: c.Status.ToString(),
                 MilestonesTotal: cn?.Total ?? 0,
                 MilestonesApproved: cn?.Approved ?? 0,
@@ -276,11 +422,16 @@ public sealed class ContractService : IContractService
         }
         AppendEvent(contract, project.ClientProfileId, "Created", $"Этапов: {dto.Milestones.Count}, сумма {dto.TotalAmount}");
 
+        // ЭСКРОУ: замораживаем всю сумму сразу. Если средств нет—
+        // EscrowFundAsync бросит ContractException(400) и контракт НЕ создаётся.
+        await EscrowFundAsync(contract, ct);
+        AppendEvent(contract, project.ClientProfileId, "EscrowFunded", $"Заморожено {contract.TotalAmount} ₸");
+
         _db.Contracts.Add(contract);
         await _db.SaveChangesAsync(ct);
 
         await NotifyAsync(contract, project.ClientProfileId,
-            $"Создан контракт по проекту «{project.Title}» на сумму {dto.TotalAmount}.", ct);
+            $"Создан контракт по проекту «{project.Title}» на сумму {dto.TotalAmount}. Средства заморожены в эскроу.", ct);
 
         return await ToDetailAsync(contract, ct);
     }
@@ -313,6 +464,14 @@ public sealed class ContractService : IContractService
 
         c.Status = next;
         var actor = isClient ? c.ClientProfileId : c.ExecutorProfileId;
+
+        // ЭСКРОУ: при отмене возвращаем остаток заказчику.
+        if (next == ContractStatus.Cancelled)
+        {
+            await EscrowRefundRemainderAsync(c,
+                $"Возврат эскроу по отменённому контракту {c.Id}", ct);
+        }
+
         AppendEvent(c, actor, $"Transition:{next}", dto.Reason);
         await _db.SaveChangesAsync(ct);
 
@@ -374,6 +533,10 @@ public sealed class ContractService : IContractService
 
         m.Status = MilestoneStatus.Approved;
         m.UpdatedAt = DateTime.UtcNow;
+
+        // ЭСКРОУ: выпускаем сумму этапа исполнителю.
+        await EscrowReleasePortionAsync(c, m.Amount,
+            $"Выплата за этап «{m.Title}» по контракту {c.Id}", ct);
 
         // Если все Approved — контракт Released
         if (c.Milestones.All(x => x.Status == MilestoneStatus.Approved))

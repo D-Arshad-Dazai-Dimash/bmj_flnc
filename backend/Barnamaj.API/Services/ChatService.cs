@@ -72,13 +72,18 @@ public interface IChatService
 
 public sealed class ChatService : IChatService
 {
-    private readonly AppDbContext         _db;
-    private readonly ILogger<ChatService> _logger;
+    private readonly AppDbContext              _db;
+    private readonly IContactRedactionService  _redactor;
+    private readonly ILogger<ChatService>      _logger;
 
-    public ChatService(AppDbContext db, ILogger<ChatService> logger)
+    public ChatService(
+        AppDbContext db,
+        IContactRedactionService redactor,
+        ILogger<ChatService> logger)
     {
-        _db     = db;
-        _logger = logger;
+        _db       = db;
+        _redactor = redactor;
+        _logger   = logger;
     }
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -315,6 +320,7 @@ public sealed class ChatService : IChatService
             SenderProfileName:names.GetValueOrDefault(m.SenderProfileId) ?? "—",
             Body:             m.Body,
             IsSystem:         m.IsSystem,
+            WasFiltered:      m.WasFiltered,
             ProjectId:        m.ProjectId,
             CreatedAt:        m.CreatedAt
         )).ToList();
@@ -323,9 +329,13 @@ public sealed class ChatService : IChatService
     public async Task<ChatMessageDto> SendMessageAsync(
         Guid threadId, SendMessageDto dto, Guid currentUserId, CancellationToken ct = default)
     {
-        var body = (dto.Body ?? string.Empty).Trim();
-        if (body.Length == 0) throw new ChatException("Пустое сообщение.");
-        if (body.Length > 5000) throw new ChatException("Сообщение слишком длинное (макс. 5000).");
+        var rawBody = (dto.Body ?? string.Empty).Trim();
+        if (rawBody.Length == 0) throw new ChatException("Пустое сообщение.");
+        if (rawBody.Length > 5000) throw new ChatException("Сообщение слишком длинное (макс. 5000).");
+
+        // ⚠️ Фильтр контактов: прячем телефоны/email/хэндлы мессенджеров.
+        var redaction = _redactor.Redact(rawBody);
+        var body = redaction.Text;
 
         var thread = await GetThreadForUserAsync(threadId, currentUserId, ct, track: true);
         var myProfileIds = await GetUserProfileIdsAsync(currentUserId, ct);
@@ -338,6 +348,7 @@ public sealed class ChatService : IChatService
             SenderProfileId = senderProfileId,
             Body            = body,
             IsSystem        = false,
+            WasFiltered     = redaction.WasRedacted,
             ProjectId       = dto.ProjectId,
             CreatedAt       = now,
         };
@@ -348,6 +359,23 @@ public sealed class ChatService : IChatService
         if (senderProfileId == thread.Profile1Id) thread.Profile1ReadAt = now;
         else thread.Profile2ReadAt = now;
 
+        if (redaction.WasRedacted)
+        {
+            // Аудит для модераторов: категории найденных контактов + количество срабатываний.
+            // Сам оригинальный текст НЕ сохраняем (privacy).
+            _db.AdminAuditLogs.Add(new AdminAuditLog
+            {
+                AdminId      = currentUserId,
+                Action       = "chat.contact_filtered",
+                TargetUserId = currentUserId,
+                Payload      = $"{{\"threadId\":\"{threadId}\",\"messageId\":\"{msg.Id}\",\"hits\":{redaction.Hits},\"categories\":\"{string.Join(",", redaction.Categories)}\"}}",
+                CreatedAt    = now,
+            });
+            _logger.LogInformation(
+                "Chat contact-filter triggered: thread={Thread} sender={Sender} hits={Hits} cats={Cats}",
+                threadId, senderProfileId, redaction.Hits, string.Join(",", redaction.Categories));
+        }
+
         await _db.SaveChangesAsync(ct);
 
         var senderName = await _db.Profiles.AsNoTracking()
@@ -356,6 +384,7 @@ public sealed class ChatService : IChatService
         return new ChatMessageDto(
             Id: msg.Id, ThreadId: threadId, SenderProfileId: senderProfileId,
             SenderProfileName: senderName, Body: body, IsSystem: false,
+            WasFiltered: redaction.WasRedacted,
             ProjectId: msg.ProjectId, CreatedAt: now);
     }
 

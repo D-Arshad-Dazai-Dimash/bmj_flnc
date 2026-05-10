@@ -102,6 +102,7 @@ public static class ServiceExtensions
         services.AddScoped<IContractService,    ContractService>();
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddSingleton<IContentFilterService, ContentFilterService>();
+        services.AddSingleton<IContactRedactionService, ContactRedactionService>();
         services.AddHttpContextAccessor();
 
         // ── KYC (рынок РК) ───────────────────────────────────

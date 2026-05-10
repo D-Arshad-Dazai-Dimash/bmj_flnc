@@ -34,6 +34,8 @@ export interface ChatMessage {
   text: string
   createdAt: string
   system?: boolean
+  /** true — сервер заменил часть текста, потому что сообщение содержало контакты. */
+  filtered?: boolean
   projectId?: string | null
 }
 
@@ -62,6 +64,7 @@ function toMessage(m: ChatMessageDto): ChatMessage {
     text: m.body,
     createdAt: m.createdAt,
     system: m.isSystem,
+    filtered: m.wasFiltered,
     projectId: m.projectId,
   }
 }

@@ -42,3 +42,26 @@ public record AdminAdjustBalanceDto(
     decimal Amount,
     string? Description
 );
+
+/// <summary>
+/// Эскроу-балансы по конкретному контракту глазами текущего пользователя.
+/// Используется на /dashboard/wallet — раздел «Балансы по проектам».
+/// </summary>
+public record ProjectBalanceDto(
+    Guid     ContractId,
+    Guid     ProjectId,
+    string   ProjectTitle,
+    string   Role,             // "Client" | "Executor"
+    string   CounterpartyName,
+    decimal  TotalAmount,
+    decimal  EscrowFunded,
+    decimal  EscrowReleased,
+    string   Status,           // ContractStatus
+    DateTime UpdatedAt
+);
+
+/// <summary>
+/// MVP: ручное пополнение баланса самим пользователем (до интеграции
+/// платёжного провайдера). Только в Development/Demo.
+/// </summary>
+public record DemoTopUpDto(decimal Amount);

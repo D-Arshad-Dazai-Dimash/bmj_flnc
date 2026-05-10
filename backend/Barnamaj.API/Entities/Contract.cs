@@ -49,6 +49,19 @@ public class Contract
     /// <summary>Сумма контракта в тенге (precision 18,2).</summary>
     public decimal TotalAmount { get; set; }
 
+    /// <summary>
+    /// Сколько денег фактически зарезервировано (заморожено) в эскроу.
+    /// Поднимается при переходе Draft/Создание → Active (списывается с
+    /// AvailableBalance клиента в FrozenBalance), уменьшается по мере
+    /// одобрения этапов (переходит в AvailableBalance исполнителя).
+    /// </summary>
+    public decimal EscrowFunded { get; set; } = 0m;
+
+    /// <summary>
+    /// Сколько уже выплачено исполнителю по одобренным этапам.
+    /// </summary>
+    public decimal EscrowReleased { get; set; } = 0m;
+
     public ContractStatus Status { get; set; } = ContractStatus.Draft;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -143,6 +143,12 @@ export default function ChatThreadPage({
                   }`}
                 >
                   <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                  {m.filtered && !m.system && (
+                    <p className={`mt-1 flex items-center gap-1 text-[10px] ${own ? 'text-amber-100/90' : 'text-amber-300/90'}`}>
+                      <span aria-hidden>🛡</span>
+                      Контактные данные скрыты системой. Все договорённости — только через платформу.
+                    </p>
+                  )}
                   <p className={`mt-1 text-[10px] ${own ? 'text-white/65' : 'text-text-faint'}`}>
                     {new Date(m.createdAt).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
                   </p>

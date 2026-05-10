@@ -49,6 +49,7 @@ public sealed record ChatMessageDto(
     string   SenderProfileName,
     string   Body,
     bool     IsSystem,
+    bool     WasFiltered,
     Guid?    ProjectId,
     DateTime CreatedAt
 );

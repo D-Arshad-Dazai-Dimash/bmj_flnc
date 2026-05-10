@@ -171,6 +171,10 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("thread_id");
 
+                    b.Property<bool>("WasFiltered")
+                        .HasColumnType("boolean")
+                        .HasColumnName("was_filtered");
+
                     b.HasKey("Id")
                         .HasName("pk_chat_messages");
 
@@ -262,6 +266,14 @@ namespace Barnamaj.API.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
+
+                    b.Property<decimal>("EscrowFunded")
+                        .HasColumnType("numeric")
+                        .HasColumnName("escrow_funded");
+
+                    b.Property<decimal>("EscrowReleased")
+                        .HasColumnType("numeric")
+                        .HasColumnName("escrow_released");
 
                     b.Property<Guid>("ExecutorProfileId")
                         .HasColumnType("uuid")

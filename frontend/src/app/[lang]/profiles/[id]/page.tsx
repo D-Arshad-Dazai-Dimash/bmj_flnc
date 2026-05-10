@@ -161,7 +161,7 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl pb-12">
+    <div className="mx-auto max-w-6xl px-2 pb-12 sm:px-4">
       {/* шапка с кнопкой назад */}
       <div className="flex items-center justify-between py-3">
         <BackButton fallbackHref="/profiles" />
@@ -183,7 +183,9 @@ export default function PublicProfilePage() {
         ) : null}
       </div>
 
-      {/* Обложка + аватар поверх */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0">
+
       <div className="relative">
         <div
           className="h-32 w-full rounded-xl sm:h-40"
@@ -390,6 +392,71 @@ export default function PublicProfilePage() {
           </div>
         )}
       </div>
+        </div>{/* /main column */}
+
+        {/* ── Right rail (sticky aside, lg+) ── */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-6 space-y-3">
+            <SideCard title="О профиле">
+              <ul className="space-y-2 text-xs text-text-secondary leading-5">
+                <li className="flex items-center justify-between">
+                  <span className="text-text-muted">Тип</span>
+                  <span className="text-text-base">{accountTypeLabel(profile.accountType)}</span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <span className="text-text-muted">Верификация</span>
+                  <span className={profile.isVerified ? 'text-emerald-300' : 'text-text-faint'}>
+                    {profile.isVerified ? 'Подтверждён' : 'Не подтверждён'}
+                  </span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <span className="text-text-muted">Регистрация</span>
+                  <span className="text-text-base">{new Date(profile.createdAt).toLocaleDateString('ru')}</span>
+                </li>
+                {profile.memberCount > 0 && (
+                  <li className="flex items-center justify-between">
+                    <span className="text-text-muted">Участников</span>
+                    <span className="text-text-base">{profile.memberCount}</span>
+                  </li>
+                )}
+              </ul>
+            </SideCard>
+
+            <SideCard title="Активность">
+              <ul className="space-y-2 text-xs text-text-secondary leading-5">
+                <li className="flex items-center justify-between">
+                  <span className="text-text-muted">Всего работ</span>
+                  <span className="text-text-base font-[510]">{projects.length}</span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <span className="text-text-muted">Завершено</span>
+                  <span className="text-emerald-300 font-[510]">{completedCount}</span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <span className="text-text-muted">В работе</span>
+                  <span className="text-sky-300 font-[510]">{inProgressCount}</span>
+                </li>
+                {summary && summary.ratingsCount > 0 && (
+                  <li className="flex items-center justify-between">
+                    <span className="text-text-muted">Средняя оценка</span>
+                    <span className="text-amber-300 font-[510]">
+                      {summary.avgRating?.toFixed(2)} ★
+                    </span>
+                  </li>
+                )}
+              </ul>
+            </SideCard>
+
+            <SideCard title="Безопасная сделка">
+              <p className="text-xs text-text-muted leading-5">
+                Все договорённости — только через платформу. Платежи идут через эскроу:
+                деньги замораживаются до приёмки этапов.
+                Любые контакты в чате автоматически фильтруются.
+              </p>
+            </SideCard>
+          </div>
+        </aside>
+      </div>{/* /grid */}
 
       {editing && profile && (
         <EditProfileModal
@@ -413,6 +480,15 @@ function CompactStat({ value, label }: { value: number; label: string }) {
     <div className="text-center">
       <p className="text-base font-semibold text-text-base sm:text-lg">{value}</p>
       <p className="text-[10px] uppercase tracking-wider text-text-faint">{label}</p>
+    </div>
+  )
+}
+
+function SideCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-[14px] border border-border bg-bg-card p-4">
+      <p className="mb-3 text-[11px] font-[510] uppercase tracking-[0.08em] text-text-faint">{title}</p>
+      {children}
     </div>
   )
 }

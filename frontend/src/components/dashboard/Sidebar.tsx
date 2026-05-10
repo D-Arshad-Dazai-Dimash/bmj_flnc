@@ -11,7 +11,7 @@ import {
   FileText, Users, ClipboardList,
   PlusSquare, FolderKanban, Search,
   LayoutDashboard, Shield, MessageSquare,
-  Bell, ShieldCheck, Trash2,
+  Bell, ShieldCheck, Trash2, Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
@@ -47,6 +47,7 @@ const settingsChildren: NavItem[] = [
 const commonItems: NavItem[] = [
   { href: '/dashboard',          label: 'Обзор',     icon: <LayoutDashboard className="w-4 h-4" /> },
   { href: '/dashboard/profile',  label: 'Профиль',   icon: <User className="w-4 h-4" /> },
+  { href: '/dashboard/wallet',   label: 'Кошелёк',  icon: <Wallet className="w-4 h-4" /> },
   { href: '/dashboard/chat',     label: 'Чат',        icon: <MessageSquare className="w-4 h-4" /> },
   { href: '/dashboard/settings', label: 'Настройки', icon: <Settings className="w-4 h-4" />, children: settingsChildren },
 ]

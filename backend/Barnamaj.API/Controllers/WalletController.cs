@@ -37,4 +37,28 @@ public sealed class WalletController : ControllerBase
         var result = await _walletService.GetHistoryAsync(CurrentUserId, page, pageSize, ct);
         return Ok(result);
     }
+
+    // GET /api/wallet/projects — балансы по контрактам пользователя.
+    [HttpGet("projects")]
+    public async Task<IActionResult> GetProjectBalances(CancellationToken ct)
+    {
+        var result = await _walletService.GetProjectBalancesAsync(CurrentUserId, ct);
+        return Ok(result);
+    }
+
+    // POST /api/wallet/demo/topup — MVP-пополнение пользователем своего кошелька.
+    // ⚠️ До интеграции платёжного провайдера. Сумма ограничена 10 млн.
+    [HttpPost("demo/topup")]
+    public async Task<IActionResult> DemoTopUp([FromBody] DemoTopUpDto dto, CancellationToken ct)
+    {
+        try
+        {
+            var wallet = await _walletService.DemoTopUpAsync(CurrentUserId, dto.Amount, ct);
+            return Ok(wallet);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }

@@ -17,6 +17,12 @@ public interface IWalletService
     /// <summary>Пагинированная история транзакций.</summary>
     Task<WalletHistoryDto> GetHistoryAsync(Guid userId, int page = 1, int pageSize = 20, CancellationToken ct = default);
 
+    /// <summary>Балансы по проектам/контрактам, в которых участвует пользователь.</summary>
+    Task<IReadOnlyList<ProjectBalanceDto>> GetProjectBalancesAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>MVP-пополнение пользователем своего кошелька (до интеграции провайдера).</summary>
+    Task<WalletDto> DemoTopUpAsync(Guid userId, decimal amount, CancellationToken ct = default);
+
     // ── Admin ──────────────────────────────────────────────────────────────
     Task<IReadOnlyList<AdminWalletSummaryDto>> GetAllWalletsAsync(CancellationToken ct = default);
     Task<WalletDto> AdminAdjustBalanceAsync(Guid userId, decimal amount, string? description, Guid adminId, CancellationToken ct = default);
@@ -127,4 +133,91 @@ public class WalletService : IWalletService
 
     private static TransactionDto ToTxDto(Transaction t) =>
         new(t.Id, t.Type.ToString(), t.Status.ToString(), t.Amount, t.Description, t.RelatedProjectId, t.CreatedAt);
+
+    // ── Project balances (эскроу по контрактам) ──────────────────────────
+    public async Task<IReadOnlyList<ProjectBalanceDto>> GetProjectBalancesAsync(
+        Guid userId, CancellationToken ct = default)
+    {
+        // Профили пользователя (own + group). Эскроу сейчас работает только
+        // для individual-профилей, но чтобы не ломать UI кланов — вернём
+        // ВСЕ контракты, в которых участвуют любые профили пользователя.
+        var profileIds = await GetUserProfileIdsAsync(userId, ct);
+        if (profileIds.Count == 0) return Array.Empty<ProjectBalanceDto>();
+
+        var contracts = await _db.Contracts.AsNoTracking()
+            .Where(c => profileIds.Contains(c.ClientProfileId)
+                     || profileIds.Contains(c.ExecutorProfileId))
+            .OrderByDescending(c => c.UpdatedAt)
+            .ToListAsync(ct);
+        if (contracts.Count == 0) return Array.Empty<ProjectBalanceDto>();
+
+        var pids = contracts.SelectMany(c => new[] { c.ClientProfileId, c.ExecutorProfileId }).ToHashSet();
+        var names = await _db.Profiles.AsNoTracking()
+            .Where(p => pids.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Name, ct);
+
+        var prjIds = contracts.Select(c => c.ProjectId).ToHashSet();
+        var titles = await _db.Projects.AsNoTracking()
+            .Where(p => prjIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Title, ct);
+
+        return contracts.Select(c =>
+        {
+            var asClient = profileIds.Contains(c.ClientProfileId);
+            var counter  = asClient ? c.ExecutorProfileId : c.ClientProfileId;
+            return new ProjectBalanceDto(
+                ContractId:       c.Id,
+                ProjectId:        c.ProjectId,
+                ProjectTitle:     titles.GetValueOrDefault(c.ProjectId) ?? "—",
+                Role:             asClient ? "Client" : "Executor",
+                CounterpartyName: names.GetValueOrDefault(counter) ?? "—",
+                TotalAmount:      c.TotalAmount,
+                EscrowFunded:     c.EscrowFunded,
+                EscrowReleased:   c.EscrowReleased,
+                Status:           c.Status.ToString(),
+                UpdatedAt:        c.UpdatedAt);
+        }).ToList();
+    }
+
+    private async Task<HashSet<Guid>> GetUserProfileIdsAsync(Guid userId, CancellationToken ct)
+    {
+        var own = await _db.Users.AsNoTracking()
+            .Where(u => u.Id == userId && u.ProfileId != null)
+            .Select(u => u.ProfileId!.Value).ToListAsync(ct);
+        var groups = await _db.Memberships.AsNoTracking()
+            .Where(m => m.UserId == userId && m.Status == MembershipStatus.Active)
+            .Select(m => m.ProfileId).ToListAsync(ct);
+        return own.Concat(groups).ToHashSet();
+    }
+
+    // ── Demo top-up (MVP, пока нет провайдера платежей) ──────────────────
+    public async Task<WalletDto> DemoTopUpAsync(Guid userId, decimal amount, CancellationToken ct = default)
+    {
+        if (amount <= 0)            throw new InvalidOperationException("Сумма пополнения должна быть положительной.");
+        if (amount > 10_000_000m)   throw new InvalidOperationException("Слишком большая сумма для demo-пополнения.");
+
+        var wallet = await _db.Wallets.FirstOrDefaultAsync(w => w.UserId == userId, ct);
+        if (wallet == null)
+        {
+            wallet = new Wallet { UserId = userId, UpdatedAt = DateTime.UtcNow };
+            _db.Wallets.Add(wallet);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        wallet.AvailableBalance += amount;
+        wallet.UpdatedAt         = DateTime.UtcNow;
+
+        _db.Transactions.Add(new Transaction
+        {
+            WalletId    = wallet.Id,
+            UserId      = userId,
+            Type        = TransactionType.Deposit,
+            Status      = TransactionStatus.Completed,
+            Amount      = amount,
+            Description = "Demo-пополнение (MVP, до интеграции платёжного провайдера)",
+            CreatedAt   = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync(ct);
+        return ToDto(wallet);
+    }
 }

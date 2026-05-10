@@ -553,6 +553,14 @@ export const api = {
     /** История транзакций (paginated) */
     history: (page = 1, pageSize = 20) =>
       request<WalletHistoryDto>(`/api/wallet/history?page=${page}&pageSize=${pageSize}`),
+    /** Балансы в эскроу по всем контрактам пользователя. */
+    projects: () => request<ProjectBalanceDto[]>('/api/wallet/projects'),
+    /** Demo-пополнение своего кошелька (MVP, до интеграции провайдера). */
+    demoTopUp: (amount: number) =>
+      request<WalletDto>('/api/wallet/demo/topup', {
+        method: 'POST',
+        body: JSON.stringify({ amount }),
+      }),
   },
 
   // ── Admin: Finance ──────────────────────────────────────────────────────────
@@ -746,6 +754,8 @@ export interface ChatMessageDto {
   senderProfileName: string
   body: string
   isSystem: boolean
+  /** true — сообщение прошло через фильтр контактов и часть текста была заменена. */
+  wasFiltered: boolean
   projectId: string | null
   createdAt: string
 }
@@ -794,6 +804,10 @@ export interface ContractSummaryDto {
   executorProfileId: string
   executorProfileName: string
   totalAmount: number
+  /** Сколько реально заморожено в эскроу («лежит у платформы»). */
+  escrowFunded: number
+  /** Сколько уже выплачено исполнителю по одобренным этапам. */
+  escrowReleased: number
   status: ContractStatusStr
   milestonesTotal: number
   milestonesApproved: number
@@ -981,6 +995,20 @@ export interface WalletHistoryDto {
   total: number
   page: number
   pageSize: number
+}
+
+export interface ProjectBalanceDto {
+  contractId: string
+  projectId: string
+  projectTitle: string
+  /** "Client" — текущий пользователь заказчик; "Executor" — исполнитель. */
+  role: 'Client' | 'Executor'
+  counterpartyName: string
+  totalAmount: number
+  escrowFunded: number
+  escrowReleased: number
+  status: ContractStatusStr
+  updatedAt: string
 }
 
 export interface AdminWalletSummaryDto {
