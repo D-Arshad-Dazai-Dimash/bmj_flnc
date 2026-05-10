@@ -26,6 +26,11 @@ Backend на **ASP.NET Core 8** + **PostgreSQL** + **Docker**.
 - Из-за этого Next middleware на frontend-домене не должен использовать cookie-presence как источник истины для auth.
 - Проверка сессии выполняется клиентским запросом `GET /api/auth/me` (с `credentials: include`).
 
+## Auth & Routing Fixes (январь 2026)
+
+- **Post-Logout Redirect**: `logout()` теперь перенаправляет на `/[lang]/auth?mode=login` вместо оставления на текущей странице. Исправлены `Sidebar.tsx` и `Navbar.tsx` handlers.
+- **Admin Dashboard Access Guard**: Админы (`Moderator`, `SeniorAdmin`, `HeadAdmin`) теперь надёжно перенаправляются на `/admin` при попытке доступа к `/dashboard`. Улучшена логика в `dashboard/layout.tsx` — убрана race condition путём исключения `isAtLeast` из `useEffect` зависимостей (проверка `user.role` напрямую).
+
 ---
 
 ## Структура проекта
